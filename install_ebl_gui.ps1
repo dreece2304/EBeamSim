@@ -3,7 +3,7 @@
 
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ProjectPath = "C:\Users\dreec\Geant4Projects\EBLSimulation"
+    [string]$ProjectPath = "C:\Users\dreec\Geant4Projects\EBeamSim"
 )
 
 $GuiPath = "$ProjectPath\scripts\gui"

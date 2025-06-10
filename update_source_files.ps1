@@ -1,5 +1,5 @@
 # PowerShell script to update source files with new includes and namespaces
-# Usage: .\update_source_files.ps1 -ProjectPath "C:\Users\dreec\Geant4Projects\EBLSimulation"
+# Usage: .\update_source_files.ps1 -ProjectPath "C:\Users\dreec\Geant4Projects\EBeamSim"
 
 param(
     [Parameter(Mandatory=$true)]

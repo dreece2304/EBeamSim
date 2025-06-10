@@ -1,5 +1,5 @@
 # PowerShell script to create the modular GUI structure
-# Usage: .\create_gui_structure.ps1 -GuiPath "C:\Users\dreec\Geant4Projects\EBLSimulation\scripts\gui"
+# Usage: .\create_gui_structure.ps1 -GuiPath "C:\Users\dreec\Geant4Projects\EBeamSim\scripts\gui"
 
 param(
     [Parameter(Mandatory=$true)]
@@ -319,7 +319,7 @@ class Config:
         possible_paths = [
             Path("../../build/bin/ebl_sim.exe"),
             Path("../../out/build/x64-Release/bin/ebl_sim.exe"),
-            Path("C:/Users/dreec/Geant4Projects/EBLSimulation/build/bin/ebl_sim.exe"),
+            Path("C:/Users/dreec/Geant4Projects/EBeamSim/build/bin/ebl_sim.exe"),
         ]
         
         for path in possible_paths:

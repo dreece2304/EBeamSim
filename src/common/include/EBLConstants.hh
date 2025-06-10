@@ -47,11 +47,13 @@ namespace EBL {
     }
 
     // Output configuration
-    namespace Output {
+        namespace Output {
         const G4String DEFAULT_FILENAME = "ebl_psf_data.csv";
         const G4String BEAMER_FILENAME = "beamer_psf.dat";
         const G4String SUMMARY_FILENAME = "simulation_summary.txt";
         const G4String DEFAULT_DIRECTORY = "";
+        const G4String DEFAULT_OUTPUT_DIR = "";
+        const G4String PSF_DATA_FILENAME = "ebl_psf_data.csv";
     }
 }
 

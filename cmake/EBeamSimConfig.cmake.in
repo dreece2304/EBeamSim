@@ -1,0 +1,26 @@
+# EBeamSim CMake Configuration File
+@PACKAGE_INIT@
+
+# Find dependencies
+find_package(Geant4 REQUIRED)
+
+# Include targets file
+include("${CMAKE_CURRENT_LIST_DIR}/EBeamSimTargets.cmake")
+
+# Set variables for user
+set(EBeamSim_INCLUDE_DIRS "@CMAKE_INSTALL_PREFIX@/include/ebeam_sim")
+set(EBeamSim_LIBRARIES 
+    EBeam::ebl_common
+    EBeam::ebl_geometry
+    EBeam::ebl_physics
+    EBeam::ebl_beam
+    EBeam::ebl_actions
+)
+
+# Provide version information
+set(EBeamSim_VERSION "@PROJECT_VERSION@")
+set(EBeamSim_VERSION_MAJOR "@PROJECT_VERSION_MAJOR@")
+set(EBeamSim_VERSION_MINOR "@PROJECT_VERSION_MINOR@")
+set(EBeamSim_VERSION_PATCH "@PROJECT_VERSION_PATCH@")
+
+check_required_components(EBeamSim)

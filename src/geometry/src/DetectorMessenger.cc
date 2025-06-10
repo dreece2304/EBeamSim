@@ -1,4 +1,4 @@
-// DetectorMessenger.cc
+﻿// DetectorMessenger.cc
 #include "DetectorMessenger.hh"
 #include "DetectorConstruction.hh"
 
@@ -71,16 +71,16 @@ void DetectorMessenger::SetNewValue(G4UIcommand* command, G4String newValue)
         G4String composition = newValue;
 
         // Remove leading and trailing quotes
-        if (composition.length() >= 2) {
-            if (composition[0] == '"' && composition[composition.length()-1] == '"') {
-                composition = composition.substr(1, composition.length()-2);
+        if (static_cast<G4int>(composition.length()) >= 2) {
+            if (composition[0] == '"' && composition[static_cast<G4int>(composition.length())-1] == '"') {
+                composition = composition.substr(1, static_cast<G4int>(composition.length())-2);
             }
         }
 
         // Also remove single quotes if used
-        if (composition.length() >= 2) {
-            if (composition[0] == '\'' && composition[composition.length()-1] == '\'') {
-                composition = composition.substr(1, composition.length()-2);
+        if (static_cast<G4int>(composition.length()) >= 2) {
+            if (composition[0] == '\'' && composition[static_cast<G4int>(composition.length())-1] == '\'') {
+                composition = composition.substr(1, static_cast<G4int>(composition.length())-2);
             }
         }
 

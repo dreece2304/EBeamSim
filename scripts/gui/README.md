@@ -17,7 +17,8 @@
 - core/ - Core functionality (config, runner, data manager)
 - widgets/ - UI widgets (material, beam, simulation, etc.)
 - utils/ - Utility functions
-- esources/ - Stylesheets and icons
+- 
+esources/ - Stylesheets and icons
 - dialogs/ - Dialog windows
 
 ## Features

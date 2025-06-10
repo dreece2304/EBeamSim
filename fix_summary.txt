@@ -1,0 +1,16 @@
+Remaining Manual Fixes (if any):
+================================
+
+1. If G4ParticleTable errors persist, add to PrimaryGeneratorMessenger.cc:
+   #include "G4ParticleTable.hh"
+   #include "G4ParticleDefinition.hh"
+
+2. For any remaining size_t warnings, wrap with static_cast<G4int>():
+   Example: static_cast<G4int>(someString.length())
+
+3. These are warnings, not errors - the code should compile even with them.
+
+4. To suppress specific warnings in Visual Studio:
+   - Right-click project -> Properties
+   - C/C++ -> Advanced
+   - Disable Specific Warnings: 4267;4244

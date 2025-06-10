@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(EBLSimulation VERSION 1.0.0 LANGUAGES CXX)
+project(EBeamSim VERSION 1.0.0 LANGUAGES CXX)
 
 # Project options
 option(BUILD_TESTING "Build unit tests" OFF)
@@ -83,30 +83,30 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/data/output)
 include(CMakePackageConfigHelpers)
 
 # Export targets
-install(EXPORT EBLSimulationTargets
-    FILE EBLSimulationTargets.cmake
+install(EXPORT EBeamSimTargets
+    FILE EBeamSimTargets.cmake
     NAMESPACE EBL::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/EBLSimulation
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/EBeamSim
 )
 
 # Create package version file
 write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/EBLSimulationConfigVersion.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/EBeamSimConfigVersion.cmake"
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY AnyNewerVersion
 )
 
 # Create package config file
-configure_file(cmake/EBLSimulationConfig.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/EBLSimulationConfig.cmake"
+configure_file(cmake/EBeamSim.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/EBeamSimConfig.cmake"
     @ONLY
 )
 
 # Install package files
 install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/EBLSimulationConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/EBLSimulationConfigVersion.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/EBLSimulation
+    "${CMAKE_CURRENT_BINARY_DIR}/EBeamSimConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/EBeamSimConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/EBeamSim
 )
 
 # Print configuration summary

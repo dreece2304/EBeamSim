@@ -1,5 +1,5 @@
 # PowerShell script to create the widget files
-# Usage: .\create_widget_files.ps1 -GuiPath "C:\Users\dreec\Geant4Projects\EBLSimulation\scripts\gui"
+# Usage: .\create_widget_files.ps1 -GuiPath "C:\Users\dreec\Geant4Projects\EBeamSim\scripts\gui"
 
 param(
     [Parameter(Mandatory=$true)]

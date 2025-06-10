@@ -1,4 +1,4 @@
-ï»¿// DetectorConstruction.cc
+// DetectorConstruction.cc
 #include "DetectorConstruction.hh"
 #include "DetectorMessenger.hh"
 #include "EBLConstants.hh"
@@ -22,19 +22,19 @@
 #include <regex>
 
 DetectorConstruction::DetectorConstruction()
-: G4VUserDetectorConstruction(),
-  fScoringVolume(nullptr),
-  fWorldVolume(nullptr),
-  fResistRegion(nullptr),
-  fActualResistThickness(EBL::Resist::DEFAULT_THICKNESS),
-  fResistDensity(EBL::Resist::DEFAULT_DENSITY),
-  fResistVisualizationThickness(EBL::Resist::DEFAULT_THICKNESS),
-  fParametersChanged(true),
-  fMessenger(nullptr)
+    : G4VUserDetectorConstruction(),
+    fScoringVolume(nullptr),
+    fWorldVolume(nullptr),
+    fResistRegion(nullptr),
+    fActualResistThickness(EBL::Resist::DEFAULT_THICKNESS),
+    fResistDensity(EBL::Resist::DEFAULT_DENSITY),
+    fResistVisualizationThickness(EBL::Resist::DEFAULT_THICKNESS),
+    fParametersChanged(true),
+    fMessenger(nullptr)
 {
     // Initialize with default Alucone composition
     SetResistComposition(EBL::Resist::ALUCONE_COMPOSITION);
-    
+
     // Create messenger for UI commands
     fMessenger = new DetectorMessenger(this);
 }
@@ -48,10 +48,10 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 {
     // Get NIST material manager
     G4NistManager* nist = G4NistManager::Instance();
-    
+
     // Option to switch on/off checking of volumes overlaps
     G4bool checkOverlaps = true;
-    
+
     // World - must be large enough to contain backscattered electrons
     G4double world_size = EBL::Geometry::WORLD_SIZE;
 
@@ -59,69 +59,69 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     // Use G4_Galactic which is an ultra-high vacuum in Geant4
     G4Material* vacuum = nist->FindOrBuildMaterial("G4_Galactic");
 
-    G4Box* solidWorld = new G4Box("World", 0.5*world_size, 0.5*world_size, 0.5*world_size);
+    G4Box* solidWorld = new G4Box("World", 0.5 * world_size, 0.5 * world_size, 0.5 * world_size);
 
     fWorldVolume = new G4LogicalVolume(solidWorld, vacuum, "World");
 
     G4VPhysicalVolume* physWorld =
         new G4PVPlacement(nullptr,              // no rotation
-                          G4ThreeVector(),      // at (0,0,0)
-                          fWorldVolume,         // its logical volume
-                          "World",              // its name
-                          nullptr,              // its mother volume
-                          false,                // no boolean operation
-                          0,                    // copy number
-                          checkOverlaps);       // check overlaps
+            G4ThreeVector(),      // at (0,0,0)
+            fWorldVolume,         // its logical volume
+            "World",              // its name
+            nullptr,              // its mother volume
+            false,                // no boolean operation
+            0,                    // copy number
+            checkOverlaps);       // check overlaps
 
     // Substrate (silicon) - MUST be thick enough to stop all electrons!
-    // For 100 keV electrons, range in Si is ~100 Âµm
+    // For 100 keV electrons, range in Si is ~100 µm
     // We want substrate thick enough to capture all backscattered electrons
     G4Material* si_mat = nist->FindOrBuildMaterial("G4_Si");
 
     // Calculate substrate thickness based on beam energy
     // Rule of thumb: 2x the electron range for the beam energy
-    // For 100 keV in Si: range ~ 100 Âµm, so use 200 Âµm substrate
-    G4double substrate_thickness = 200.0*micrometer;  // Thick enough to stop all electrons
-    G4double substrate_xy = 0.8*world_size;  // Large lateral size
+    // For 100 keV in Si: range ~ 100 µm, so use 200 µm substrate
+    G4double substrate_thickness = 200.0 * micrometer;  // Thick enough to stop all electrons
+    G4double substrate_xy = 0.8 * world_size;  // Large lateral size
 
     G4Box* solidSubstrate =
-        new G4Box("Substrate", 0.5*substrate_xy, 0.5*substrate_xy, 0.5*substrate_thickness);
+        new G4Box("Substrate", 0.5 * substrate_xy, 0.5 * substrate_xy, 0.5 * substrate_thickness);
 
     G4LogicalVolume* logicSubstrate =
         new G4LogicalVolume(solidSubstrate, si_mat, "Substrate");
 
     // Position substrate so its top surface is at z=0
-    G4double substrate_z_pos = -0.5*substrate_thickness;
+    G4double substrate_z_pos = -0.5 * substrate_thickness;
 
     new G4PVPlacement(nullptr,                // no rotation
-                      G4ThreeVector(0, 0, substrate_z_pos), // position
-                      logicSubstrate,         // its logical volume
-                      "Substrate",            // its name
-                      fWorldVolume,           // its mother volume
-                      false,                  // no boolean operation
-                      0,                      // copy number
-                      checkOverlaps);         // check overlaps
+        G4ThreeVector(0, 0, substrate_z_pos), // position
+        logicSubstrate,         // its logical volume
+        "Substrate",            // its name
+        fWorldVolume,           // its mother volume
+        false,                  // no boolean operation
+        0,                      // copy number
+        checkOverlaps);         // check overlaps
 
     // Resist layer (on top of substrate)
     G4Material* resist_mat = CreateResistMaterial();
 
     G4Box* solidResist =
-        new G4Box("Resist", 0.5*substrate_xy, 0.5*substrate_xy, 0.5*fActualResistThickness);
+        new G4Box("Resist", 0.5 * substrate_xy, 0.5 * substrate_xy, 0.5 * fActualResistThickness);
 
     G4LogicalVolume* logicResist =
         new G4LogicalVolume(solidResist, resist_mat, "Resist");
 
     // Resist sits directly on substrate (top of substrate is at z=0)
-    G4double resist_z_pos = 0.5*fActualResistThickness;
+    G4double resist_z_pos = 0.5 * fActualResistThickness;
 
     new G4PVPlacement(nullptr,               // no rotation
-                      G4ThreeVector(0, 0, resist_z_pos), // position
-                      logicResist,           // its logical volume
-                      "Resist",              // its name
-                      fWorldVolume,          // its mother volume
-                      false,                 // no boolean operation
-                      0,                     // copy number
-                      checkOverlaps);        // check overlaps
+        G4ThreeVector(0, 0, resist_z_pos), // position
+        logicResist,           // its logical volume
+        "Resist",              // its name
+        fWorldVolume,          // its mother volume
+        false,                 // no boolean operation
+        0,                     // copy number
+        checkOverlaps);        // check overlaps
 
     // Set visualization attributes
     G4VisAttributes* grayVisAtt = new G4VisAttributes(G4Colour(0.5, 0.5, 0.5));
@@ -143,15 +143,15 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     G4cout << "\n=== Detector Construction ===" << G4endl;
     G4cout << "World size: " << G4BestUnit(world_size, "Length") << G4endl;
     G4cout << "Substrate: " << G4BestUnit(substrate_thickness, "Length")
-           << " thick Si" << G4endl;
-    G4cout << "  Bottom at z=" << G4BestUnit(substrate_z_pos - 0.5*substrate_thickness, "Length") << G4endl;
+        << " thick Si" << G4endl;
+    G4cout << "  Bottom at z=" << G4BestUnit(substrate_z_pos - 0.5 * substrate_thickness, "Length") << G4endl;
     G4cout << "  Top at z=" << G4BestUnit(0.0, "Length") << " (reference)" << G4endl;
     G4cout << "Resist: " << G4BestUnit(fActualResistThickness, "Length")
-           << " thick" << G4endl;
+        << " thick" << G4endl;
     G4cout << "  Bottom at z=" << G4BestUnit(0.0, "Length") << G4endl;
     G4cout << "  Top at z=" << G4BestUnit(fActualResistThickness, "Length") << G4endl;
     G4cout << "Recommended beam start: z="
-           << G4BestUnit(fActualResistThickness + 100*nanometer, "Length") << G4endl;
+        << G4BestUnit(fActualResistThickness + 100 * nanometer, "Length") << G4endl;
     G4cout << "===========================\n" << G4endl;
 
     return physWorld;
@@ -163,15 +163,15 @@ void DetectorConstruction::ConstructSDandField()
     // These cuts determine the minimum range for secondary particle production
     // CRITICAL for PSF accuracy - must be very small!
     G4ProductionCuts* resistCuts = new G4ProductionCuts();
-    resistCuts->SetProductionCut(0.1*nanometer, "gamma");     // Very fine
-    resistCuts->SetProductionCut(0.1*nanometer, "e-");        // Critical for PSF
-    resistCuts->SetProductionCut(0.1*nanometer, "e+");        // Critical for PSF
-    resistCuts->SetProductionCut(0.1*nanometer, "proton");    // Just in case
+    resistCuts->SetProductionCut(0.1 * nanometer, "gamma");     // Very fine
+    resistCuts->SetProductionCut(0.1 * nanometer, "e-");        // Critical for PSF
+    resistCuts->SetProductionCut(0.1 * nanometer, "e+");        // Critical for PSF
+    resistCuts->SetProductionCut(0.1 * nanometer, "proton");    // Just in case
 
     fResistRegion->SetProductionCuts(resistCuts);
 
     G4cout << "Set production cuts for resist region: "
-           << G4BestUnit(0.1*nanometer, "Length") << G4endl;
+        << G4BestUnit(0.1 * nanometer, "Length") << G4endl;
 }
 
 G4Material* DetectorConstruction::CreateResistMaterial()
@@ -227,16 +227,17 @@ G4Material* DetectorConstruction::CreateResistMaterial()
             if (elements.find(elementSymbol) != elements.end()) {
                 resistMaterial->AddElement(elements[elementSymbol], fraction);
                 G4cout << "  Added " << elementSymbol << " with fraction " << fraction << G4endl;
-            } else {
+            }
+            else {
                 G4Exception("DetectorConstruction::CreateResistMaterial", "InvalidElement",
-                            FatalException, ("Element " + elementSymbol + " not found").c_str());
+                    FatalException, ("Element " + elementSymbol + " not found").c_str());
             }
         }
 
         // Print final material info
         G4cout << "Created resist material:" << G4endl;
         G4cout << "  Name: " << resistMaterial->GetName() << G4endl;
-        G4cout << "  Density: " << resistMaterial->GetDensity()/(g/cm3) << " g/cm3" << G4endl;
+        G4cout << "  Density: " << resistMaterial->GetDensity() / (g / cm3) << " g/cm3" << G4endl;
         G4cout << "  Number of elements: " << resistMaterial->GetNumberOfElements() << G4endl;
         G4cout << "  Composition: ";
         for (const auto& pair : fResistElements) {
@@ -247,9 +248,10 @@ G4Material* DetectorConstruction::CreateResistMaterial()
         // Verify material is valid
         if (resistMaterial->GetNumberOfElements() == 0) {
             G4Exception("DetectorConstruction::CreateResistMaterial", "NoElements",
-                        FatalException, "Resist material has no elements!");
+                FatalException, "Resist material has no elements!");
         }
-    } else {
+    }
+    else {
         // Reuse existing material
         resistMaterial = G4Material::GetMaterial("Resist_" + G4String(std::to_string(G4Threading::G4GetThreadId())));
 
@@ -270,7 +272,7 @@ void DetectorConstruction::SetResistThickness(G4double thickness)
     fParametersChanged = true;
 
     G4RunManager::GetRunManager()->GeometryHasBeenModified();
-    G4cout << "Resist thickness set to " << thickness/nanometer << " nm" << G4endl;
+    G4cout << "Resist thickness set to " << thickness / nanometer << " nm" << G4endl;
 }
 
 void DetectorConstruction::SetResistDensity(G4double density)
@@ -279,7 +281,7 @@ void DetectorConstruction::SetResistDensity(G4double density)
     fParametersChanged = true;
 
     G4RunManager::GetRunManager()->GeometryHasBeenModified();
-    G4cout << "Resist density set to " << density/(g/cm3) << " g/cm3" << G4endl;
+    G4cout << "Resist density set to " << density / (g / cm3) << " g/cm3" << G4endl;
 }
 
 void DetectorConstruction::SetResistVisualizationThickness(G4double thickness)
@@ -313,9 +315,9 @@ void DetectorConstruction::SetResistComposition(G4String composition)
 
     // Remove any outer quotes that might have been passed
     if (composition.length() >= 2) {
-        if ((composition[0] == '"' && composition[composition.length()-1] == '"') ||
-            (composition[0] == '\'' && composition[composition.length()-1] == '\'')) {
-            composition = composition.substr(1, composition.length()-2);
+        if ((composition[0] == '"' && composition[composition.length() - 1] == '"') ||
+            (composition[0] == '\'' && composition[composition.length() - 1] == '\'')) {
+            composition = composition.substr(1, composition.length() - 2);
             G4cout << "Removed outer quotes, now: '" << composition << "'" << G4endl;
         }
     }
@@ -330,7 +332,7 @@ void DetectorConstruction::SetResistComposition(G4String composition)
 
     G4cout << "Found " << elements.size() << " element specifications" << G4endl;
 
-    // Helper function to sanitize strings
+    // Helper lambda to sanitize strings
     auto sanitize = [](G4String str) -> G4String {
         // Remove leading/trailing whitespace and quotes
         size_t start = str.find_first_not_of(" \t\n\r\"'");
@@ -341,7 +343,7 @@ void DetectorConstruction::SetResistComposition(G4String composition)
         }
 
         return str.substr(start, end - start + 1);
-    };
+        };
 
     // Process each element:count pair
     for (const auto& element : elements) {
@@ -375,10 +377,12 @@ void DetectorConstruction::SetResistComposition(G4String composition)
 
                 AddResistElement(symbol, count);
                 G4cout << "  Successfully added element: " << symbol << " count: " << count << G4endl;
-            } catch (const std::exception& e) {
+            }
+            catch (const std::exception& e) {
                 G4cerr << "  ERROR parsing count for " << symbol << ": " << e.what() << G4endl;
             }
-        } else {
+        }
+        else {
             G4cerr << "  ERROR: Invalid element specification (no colon): '" << element << "'" << G4endl;
         }
     }

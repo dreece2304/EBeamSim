@@ -1,4 +1,4 @@
-#include "DataManager.hh"
+﻿#include "DataManager.hh"
 #include "EBLConstants.hh"
 #include "G4UnitsTable.hh"
 #include "G4SystemOfUnits.hh"
@@ -54,7 +54,7 @@ void DataManager::SetOutputDirectory(const G4String& dir) {
 
 void DataManager::CreateOutputDirectory() {
     try {
-        std::filesystem::create_directories(fOutputDir);
+        std::filesystem::create_directories(std::string(fOutputDir));
     }
     catch (const std::exception& e) {
         G4cerr << "Warning: Could not create output directory: " << e.what() << G4endl;
@@ -234,4 +234,9 @@ void DataManager::SaveBEAMERFormat() {
 
 void DataManager::SaveSummary() {
     // Implementation similar to RunAction::SaveSummary()
+}
+void DataManager::AddPSFData(G4double radius, G4double energy) {
+    // Wrapper function for PSF data collection
+    // Simply delegates to AddRadialDeposit
+    this->AddRadialDeposit(radius, energy);
 }

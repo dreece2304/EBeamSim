@@ -1,146 +1,87 @@
-// PrimaryGeneratorAction.cc
-#include "PrimaryGeneratorAction.hh"
+﻿// PrimaryGeneratorMessenger.cc
 #include "PrimaryGeneratorMessenger.hh"
-#include "DetectorConstruction.hh"
-#include "AluconeTest.h"
+#include "PrimaryGeneratorAction.hh"
 
-#include "G4LogicalVolumeStore.hh"
-#include "G4LogicalVolume.hh"
-#include "G4Box.hh"
-#include "G4RunManager.hh"
-#include "G4ParticleGun.hh"
-#include "G4ParticleTable.hh"
-#include "G4ParticleDefinition.hh"
+#include "G4UIdirectory.hh"
+#include "G4UIcmdWithADoubleAndUnit.hh"
+#include "G4UIcmdWith3VectorAndUnit.hh"
+#include "G4UIcmdWith3Vector.hh"
+#include "G4UIcmdWithAString.hh"
 #include "G4SystemOfUnits.hh"
-#include "G4UnitsTable.hh"  // For G4BestUnit
-#include "Randomize.hh"
+#include "G4ParticleTable.hh"
 
-PrimaryGeneratorAction::PrimaryGeneratorAction(DetectorConstruction* detConstruction)
-: G4VUserPrimaryGeneratorAction(),
-  fParticleGun(nullptr),
-  fDetConstruction(detConstruction),
-  fElectron(nullptr),
-  fBeamEnergy(AluconeTest::DEFAULT_BEAM_ENERGY),
-  fBeamSize(AluconeTest::DEFAULT_BEAM_SIZE),
-  fBeamPosition(G4ThreeVector(0., 0., AluconeTest::DEFAULT_BEAM_Z)),
-  fBeamDirection(G4ThreeVector(0., 0., -1.)),  // Downward
-  fMessenger(nullptr)
+PrimaryGeneratorMessenger::PrimaryGeneratorMessenger(PrimaryGeneratorAction* primaryGen)
+: G4UImessenger(),
+  fPrimaryGenerator(primaryGen)
 {
-    G4int n_particle = 1;
-    fParticleGun = new G4ParticleGun(n_particle);
+    fGunDirectory = new G4UIdirectory("/gun/");
+    fGunDirectory->SetGuidance("Particle gun control commands.");
 
-    // Default particle kinematic
-    G4ParticleTable* particleTable = G4ParticleTable::GetParticleTable();
-    fElectron = particleTable->FindParticle("e-");
+    fParticleCmd = new G4UIcmdWithAString("/gun/particle", this);
+    fParticleCmd->SetGuidance("Set particle type.");
+    fParticleCmd->SetParameterName("ParticleType", false);
+    fParticleCmd->SetDefaultValue("e-");
+    fParticleCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
 
-    fParticleGun->SetParticleDefinition(fElectron);
-    fParticleGun->SetParticleEnergy(fBeamEnergy);
-    fParticleGun->SetParticlePosition(fBeamPosition);
-    fParticleGun->SetParticleMomentumDirection(fBeamDirection);
+    fEnergyCmd = new G4UIcmdWithADoubleAndUnit("/gun/energy", this);
+    fEnergyCmd->SetGuidance("Set particle kinetic energy.");
+    fEnergyCmd->SetParameterName("Energy", false);
+    fEnergyCmd->SetRange("Energy>0.");
+    fEnergyCmd->SetUnitCategory("Energy");
+    fEnergyCmd->SetDefaultUnit("keV");
+    fEnergyCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
 
-    // Create messenger for UI commands
-    fMessenger = new PrimaryGeneratorMessenger(this);
+    fPositionCmd = new G4UIcmdWith3VectorAndUnit("/gun/position", this);
+    fPositionCmd->SetGuidance("Set particle initial position.");
+    fPositionCmd->SetParameterName("X", "Y", "Z", false);
+    fPositionCmd->SetUnitCategory("Length");
+    fPositionCmd->SetDefaultUnit("nm");
+    fPositionCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
 
-    G4cout << "PrimaryGeneratorAction initialized with:" << G4endl;
-    G4cout << "  Beam energy: " << G4BestUnit(fBeamEnergy, "Energy") << G4endl;
-    G4cout << "  Beam size (FWHM): " << G4BestUnit(fBeamSize, "Length") << G4endl;
-    G4cout << "  Default position: (" << fBeamPosition.x()/nm << ", "
-           << fBeamPosition.y()/nm << ", " << fBeamPosition.z()/nm << ") nm" << G4endl;
+    fDirectionCmd = new G4UIcmdWith3Vector("/gun/direction", this);
+    fDirectionCmd->SetGuidance("Set particle momentum direction.");
+    fDirectionCmd->SetParameterName("Px", "Py", "Pz", false);
+    fDirectionCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
+
+    fBeamSizeCmd = new G4UIcmdWithADoubleAndUnit("/gun/beamSize", this);
+    fBeamSizeCmd->SetGuidance("Set beam diameter (FWHM).");
+    fBeamSizeCmd->SetParameterName("BeamSize", false);
+    fBeamSizeCmd->SetRange("BeamSize>=0.");
+    fBeamSizeCmd->SetUnitCategory("Length");
+    fBeamSizeCmd->SetDefaultUnit("nm");
+    fBeamSizeCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
 }
 
-PrimaryGeneratorAction::~PrimaryGeneratorAction()
+PrimaryGeneratorMessenger::~PrimaryGeneratorMessenger()
 {
-    delete fParticleGun;
-    delete fMessenger;
+    delete fBeamSizeCmd;
+    delete fDirectionCmd;
+    delete fPositionCmd;
+    delete fEnergyCmd;
+    delete fParticleCmd;
+    delete fGunDirectory;
 }
 
-void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
+void PrimaryGeneratorMessenger::SetNewValue(G4UIcommand* command, G4String newValue)
 {
-    // Generate a Gaussian beam with specified diameter (FWHM)
-    // FWHM = 2.355 * sigma, so sigma = FWHM / 2.355
-    G4double sigma = fBeamSize / (2.0 * std::sqrt(2.0 * std::log(2.0)));
-
-    // Sample position from 2D Gaussian distribution
-    G4double x = G4RandGauss::shoot(0., sigma);
-    G4double y = G4RandGauss::shoot(0., sigma);
-
-    // Get the resist thickness to position beam correctly
-    G4double resistThickness = fDetConstruction->GetActualResistThickness();
-
-    // Default Z position: 100 nm above resist top surface
-    // In our geometry, resist bottom is at z=0, top is at z=resistThickness
-    G4double defaultZ = resistThickness + 100.0*nanometer;
-
-    // Use user-specified Z if it's been set, otherwise use smart default
-    G4double z = fBeamPosition.z();
-    if (std::abs(z - AluconeTest::DEFAULT_BEAM_Z) < 1.0*nanometer) {
-        // User hasn't changed from default, use smart positioning
-        z = defaultZ;
-    }
-
-    // Warn if beam position seems wrong
-    static G4bool warnedAboutPosition = false;
-    if (!warnedAboutPosition) {
-        if (z < resistThickness) {
-            G4cout << "WARNING: Beam starts inside or below resist! z="
-                   << G4BestUnit(z, "Length") << " < resist top="
-                   << G4BestUnit(resistThickness, "Length") << G4endl;
-            warnedAboutPosition = true;
-        } else if (z > resistThickness + 10.0*micrometer) {
-            G4cout << "WARNING: Beam starts very far from resist! z="
-                   << G4BestUnit(z, "Length") << " >> resist top="
-                   << G4BestUnit(resistThickness, "Length") << G4endl;
-            warnedAboutPosition = true;
+    if (command == fParticleCmd) {
+        // Handle particle type change
+        G4ParticleTable* particleTable = G4ParticleTable::GetParticleTable();
+        G4ParticleDefinition* particle = particleTable->FindParticle(newValue);
+        if (particle) {
+            fPrimaryGenerator->GetParticleGun()->SetParticleDefinition(particle);
         }
     }
-
-    // Set the electron position with Gaussian spread in x,y
-    fParticleGun->SetParticlePosition(G4ThreeVector(x + fBeamPosition.x(),
-                                                     y + fBeamPosition.y(),
-                                                     z));
-
-    // Set direction (typically straight down for EBL)
-    fParticleGun->SetParticleMomentumDirection(fBeamDirection);
-
-    // Set energy
-    fParticleGun->SetParticleEnergy(fBeamEnergy);
-
-    // Debug output for first few events
-    G4int eventID = anEvent->GetEventID();
-    if (eventID < 5 || (eventID < 100 && eventID % 20 == 0)) {
-        G4cout << "Event " << eventID << ": e- at ("
-               << (x + fBeamPosition.x())/nm << ", "
-               << (y + fBeamPosition.y())/nm << ", "
-               << z/nm << ") nm, "
-               << "E=" << fBeamEnergy/keV << " keV" << G4endl;
+    else if (command == fEnergyCmd) {
+        fPrimaryGenerator->SetBeamEnergy(fEnergyCmd->GetNewDoubleValue(newValue));
     }
-
-    // Generate the primary electron
-    fParticleGun->GeneratePrimaryVertex(anEvent);
-}
-
-void PrimaryGeneratorAction::SetBeamEnergy(G4double energy)
-{
-    fBeamEnergy = energy;
-    G4cout << "Beam energy set to " << G4BestUnit(energy, "Energy") << G4endl;
-}
-
-void PrimaryGeneratorAction::SetBeamSize(G4double size)
-{
-    fBeamSize = size;
-    G4cout << "Beam diameter (FWHM) set to " << G4BestUnit(size, "Length") << G4endl;
-}
-
-void PrimaryGeneratorAction::SetBeamPosition(const G4ThreeVector& position)
-{
-    fBeamPosition = position;
-    G4cout << "Beam position set to (" << position.x()/nm << ", "
-           << position.y()/nm << ", " << position.z()/nm << ") nm" << G4endl;
-}
-
-void PrimaryGeneratorAction::SetBeamDirection(const G4ThreeVector& direction)
-{
-    fBeamDirection = direction.unit(); // Normalize
-    G4cout << "Beam direction set to (" << fBeamDirection.x() << ", "
-           << fBeamDirection.y() << ", " << fBeamDirection.z() << ")" << G4endl;
+    else if (command == fPositionCmd) {
+        fPrimaryGenerator->SetBeamPosition(fPositionCmd->GetNew3VectorValue(newValue));
+    }
+    else if (command == fDirectionCmd) {
+        fPrimaryGenerator->SetBeamDirection(fDirectionCmd->GetNew3VectorValue(newValue));
+    }
+    else if (command == fBeamSizeCmd) {
+        fPrimaryGenerator->SetBeamSize(fBeamSizeCmd->GetNewDoubleValue(newValue));
+    }
 }

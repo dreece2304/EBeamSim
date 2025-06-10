@@ -29,7 +29,7 @@ set_target_properties(ebl_physics PROPERTIES
 
 # Install library
 install(TARGETS ebl_physics
-    EXPORT EBLSimulationTargets
+    EXPORT EBeamSimTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

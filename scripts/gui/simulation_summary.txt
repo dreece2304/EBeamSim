@@ -1,0 +1,13 @@
+EBL Simulation Summary
+=====================
+Events simulated: 0
+Total energy deposited: 27.0492 keV
+
+Energy distribution:
+50% of energy within: 0 fm 
+90% of energy within: 0 fm 
+99% of energy within: 0 fm 
+
+Resist parameters:
+Thickness: 30 nm 
+Density: 1.35 g/cm3 

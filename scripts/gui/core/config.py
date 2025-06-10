@@ -69,7 +69,7 @@ class Config:
         possible_paths = [
             Path("../../build/bin/ebl_sim.exe"),
             Path("../../out/build/x64-Release/bin/ebl_sim.exe"),
-            Path("C:/Users/dreec/Geant4Projects/EBLSimulation/build/bin/ebl_sim.exe"),
+            Path("C:/Users/dreec/Geant4Projects/EBeamSim/build/bin/ebl_sim.exe"),
         ]
         
         for path in possible_paths:

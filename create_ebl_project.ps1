@@ -1,5 +1,5 @@
 # PowerShell script to create the complete EBL project structure
-# Usage: .\create_ebl_project.ps1 -ProjectPath "C:\Users\dreec\Geant4Projects\EBLSimulation"
+# Usage: .\create_ebl_project.ps1 -ProjectPath "C:\Users\dreec\Geant4Projects\EBeamSim"
 
 param(
     [Parameter(Mandatory=$true)]
@@ -48,7 +48,7 @@ Write-Host "Directory structure created!" -ForegroundColor Green
 # Create main CMakeLists.txt
 $mainCMake = @'
 cmake_minimum_required(VERSION 3.16)
-project(EBLSimulation VERSION 1.0.0 LANGUAGES CXX)
+project(EBeamSim VERSION 1.0.0 LANGUAGES CXX)
 
 # Project options
 option(BUILD_TESTING "Build unit tests" OFF)

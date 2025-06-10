@@ -1,4 +1,4 @@
-// ebl_sim.cc
+﻿// ebl_sim.cc
 #include "DetectorConstruction.hh"
 #include "ActionInitialization.hh"
 #include "PhysicsList.hh"
@@ -54,7 +54,7 @@ int main(int argc, char** argv)
     
     // Choose the Random engine and initialize with time-based seed
     CLHEP::HepRandom::setTheEngine(new CLHEP::RanecuEngine());
-    G4long seed = time(NULL);
+    G4long seed = static_cast<G4long>(time(NULL));
     CLHEP::HepRandom::setTheSeed(seed);
     
     // Construct the default run manager
