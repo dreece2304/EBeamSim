@@ -1,0 +1,44 @@
+# Basic visualization macro for manual/debugging use
+# This is only used when running ebl_sim directly with -u flag
+# The GUI does NOT use this - it only visualizes output data
+
+# Use OpenGL
+/vis/open OGL 600x600-0+0
+
+# Basic setup
+/vis/viewer/set/autoRefresh false
+/vis/verbose errors
+
+# Draw geometry
+/vis/drawVolume
+
+# Set viewing angle
+/vis/viewer/set/viewpointThetaPhi 90. 180.
+/vis/viewer/zoom 1.4
+
+# Wireframe view
+/vis/viewer/set/style wireframe
+
+# Add trajectories
+/vis/scene/add/trajectories smooth
+
+# Show only electrons and gammas
+/vis/filtering/trajectories/create/particleFilter
+/vis/filtering/trajectories/particleFilter-0/add e-
+/vis/filtering/trajectories/particleFilter-0/add e+
+/vis/filtering/trajectories/particleFilter-0/add gamma
+
+# Color by particle type
+/vis/modeling/trajectories/create/drawByParticleID
+/vis/modeling/trajectories/drawByParticleID-0/default/setDrawStepPts true
+
+# Add scale
+/vis/scene/add/axes 0 0 0 100 nm
+/vis/scene/add/scale
+
+# Hide world volume
+/vis/geometry/set/visibility World 0 false
+
+# Re-enable auto refresh
+/vis/viewer/set/autoRefresh true
+/vis/verbose warnings

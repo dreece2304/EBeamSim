@@ -1,0 +1,37 @@
+# Standard run macro for batch mode PSF generation
+# Usage: ./ebl_sim run.mac
+# This will generate PSF data files for the GUI to visualize
+
+# Verbose settings
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+# Initialize geometry and physics
+/run/initialize
+
+# Set resist properties (Alucone from XPS)
+/det/setResistComposition "Al:1,C:5,H:4,O:2"
+/det/setResistThickness 30 nm
+/det/setResistDensity 1.35 g/cm3
+/det/update
+
+# Enable physics processes
+/process/em/fluo 1
+/process/em/auger 1
+
+# Configure beam
+/gun/particle e-
+/gun/energy 100 keV
+/gun/position 0 0 100 nm
+/gun/direction 0 0 -1
+/gun/beamSize 2 nm
+
+# Run simulation
+# 100k events gives good statistics for PSF
+/run/beamOn 100000
+
+# Output files will be:
+# - ebl_psf_data_30nm.csv (for general analysis)
+# - beamer_psf.dat (for BEAMER software)
+# - simulation_summary.txt

@@ -1,0 +1,88 @@
+# Build directories
+build/
+out/
+cmake-build-*/
+Release/
+Debug/
+x64/
+x86/
+
+# Visual Studio files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# CLion
+.idea/
+cmake-build-debug/
+cmake-build-release/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.lib
+*.a
+*.pdb
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Output data
+*.csv
+*.dat
+*.root
+*.log
+data/output/*
+!data/output/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Documentation
+docs/_build/
+docs/api/
+*.doxygen
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Geant4 specific
+*.wrl
+*.heprep
+*.eps
+*.prim
+G4History.macro
+g4_*.wrl

@@ -1,0 +1,12 @@
+{
+    "name": "Alucone",
+    "density": 1.35,
+    "density_unit": "g/cm3",
+    "composition": {
+        "Al": 1,
+        "C": 5,
+        "H": 4,
+        "O": 2
+    },
+    "description": "Alucone resist from TMA + butyne-1,4-diol MLD process"
+}

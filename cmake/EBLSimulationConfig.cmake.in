@@ -1,0 +1,26 @@
+# EBLSimulation CMake Configuration File
+@PACKAGE_INIT@
+
+# Find dependencies
+find_package(Geant4 REQUIRED)
+
+# Include targets file
+include("${CMAKE_CURRENT_LIST_DIR}/EBLSimulationTargets.cmake")
+
+# Set variables for user
+set(EBLSimulation_INCLUDE_DIRS "@CMAKE_INSTALL_PREFIX@/include/ebl_sim")
+set(EBLSimulation_LIBRARIES 
+    EBL::ebl_common
+    EBL::ebl_geometry
+    EBL::ebl_physics
+    EBL::ebl_beam
+    EBL::ebl_actions
+)
+
+# Provide version information
+set(EBLSimulation_VERSION "@PROJECT_VERSION@")
+set(EBLSimulation_VERSION_MAJOR "@PROJECT_VERSION_MAJOR@")
+set(EBLSimulation_VERSION_MINOR "@PROJECT_VERSION_MINOR@")
+set(EBLSimulation_VERSION_PATCH "@PROJECT_VERSION_PATCH@")
+
+check_required_components(EBLSimulation)
