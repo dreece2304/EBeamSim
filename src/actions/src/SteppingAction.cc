@@ -1,4 +1,4 @@
-﻿// SteppingAction.cc
+﻿// SteppingAction.cc - Fixed version
 #include "SteppingAction.hh"
 #include "EventAction.hh"
 #include "DetectorConstruction.hh"
@@ -6,6 +6,7 @@
 #include "G4Step.hh"
 #include "G4RunManager.hh"
 #include "G4SystemOfUnits.hh"
+#include "G4UnitsTable.hh"  // Added for G4BestUnit
 
 SteppingAction::SteppingAction(EventAction* eventAction, DetectorConstruction* detConstruction)
 : G4UserSteppingAction(),
@@ -21,7 +22,9 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
 {
     // Get energy deposit in this step
     G4double edep = step->GetTotalEnergyDeposit();
-    if (edep <= 0.) return;
+    
+    // CRITICAL: Skip steps with negligible energy to avoid numerical noise
+    if (edep < 1.0e-5 * eV) return;
     
     // Get position of energy deposition (use midpoint of step for accuracy)
     G4ThreeVector prePos = step->GetPreStepPoint()->GetPosition();
@@ -29,7 +32,6 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
     G4ThreeVector pos = (prePos + postPos) * 0.5;
     
     // Add ALL energy deposits to event action for PSF calculation
-    // This captures energy in resist, substrate, and backscattered electrons
     fEventAction->AddEnergyDeposit(edep, pos.x(), pos.y(), pos.z());
     
     // Track statistics for validation
@@ -48,8 +50,8 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
         substrateSteps++;
     }
     
-    // Log every 100000 steps for monitoring
-    if (totalSteps % 100000 == 0) {
+    // Log every 1000000 steps for monitoring
+    if (totalSteps % 1000000 == 0) {
         G4cout << "Steps: " << totalSteps 
                << " (Resist: " << resistSteps 
                << ", Substrate: " << substrateSteps 

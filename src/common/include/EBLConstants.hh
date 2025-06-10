@@ -40,7 +40,7 @@ namespace EBL {
     // PSF scoring parameters
     namespace PSF {
         constexpr G4bool USE_LOG_BINNING = true;
-        constexpr G4int NUM_RADIAL_BINS = 250;
+        constexpr G4int NUM_RADIAL_BINS = 128;
         constexpr G4double MIN_RADIUS = 0.05 * nanometer;
         constexpr G4double MAX_RADIUS = 100.0 * micrometer;
         constexpr G4double MIN_ENERGY_DEPOSIT = 1.0 * eV;
@@ -58,3 +58,4 @@ namespace EBL {
 }
 
 #endif
+

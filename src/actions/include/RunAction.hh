@@ -1,11 +1,13 @@
-﻿// RunAction.hh
+﻿// RunAction.hh - Optimized with Minimal Accumulables
 #ifndef RunAction_h
 #define RunAction_h 1
 
 #include "G4UserRunAction.hh"
 #include "globals.hh"
 #include <vector>
+#include <mutex>
 #include "G4Accumulable.hh"
+#include "G4Threading.hh"
 
 class G4Run;
 class DetectorConstruction;
@@ -33,16 +35,24 @@ private:
     DetectorConstruction* fDetConstruction;
     PrimaryGeneratorAction* fPrimaryGenerator;
 
-    // For energy deposition analysis
+    // For energy deposition analysis - thread local storage
     std::vector<G4double> fRadialEnergyProfile;
     std::vector<std::vector<G4double>> f2DEnergyProfile;
-    
+
+    // Only scalar accumulables - much more efficient!
     G4Accumulable<G4double> fTotalEnergyDeposit;
     G4Accumulable<G4double> fResistEnergyTotal;
     G4Accumulable<G4double> fSubstrateEnergyTotal;
     G4Accumulable<G4double> fAboveResistEnergyTotal;
-    
+
     G4int fNumEvents;
+
+    // For thread-safe accumulation of histograms
+    // We'll use mutex-protected accumulation at end of run instead of per-event
+    static std::mutex fArrayMergeMutex;
+    static std::vector<G4double> fMasterRadialProfile;
+    static std::vector<std::vector<G4double>> fMaster2DProfile;
+    static G4bool fMasterArraysInitialized;
 
     // Helper functions for logarithmic binning
     G4double GetBinRadius(G4int bin) const;
@@ -54,6 +64,9 @@ private:
     void SaveBEAMERFormat(const std::string& outputDir);
     void Save2DFormat(const std::string& outputDir);
     void SaveSummary(const std::string& outputDir);
+
+    // Thread-safe merge of local arrays to master
+    void MergeLocalArrays();
 };
 
 #endif

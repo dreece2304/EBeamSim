@@ -8,30 +8,37 @@
 class G4VPhysicsConstructor;
 class PhysicsMessenger;
 
-class PhysicsList : public G4VModularPhysicsList {
+class PhysicsList : public G4VModularPhysicsList
+{
 public:
     PhysicsList();
     virtual ~PhysicsList();
 
+    // Mandatory methods
     virtual void ConstructParticle();
     virtual void ConstructProcess();
     virtual void SetCuts();
 
+    // Optional: Add methods to change physics on the fly
+    void SetEmPhysics(const G4String& name);
+
+    // Setters for cuts
+    void SetGammaCut(G4double val) { fCutForGamma = val; }
+    void SetElectronCut(G4double val) { fCutForElectron = val; }
+    void SetPositronCut(G4double val) { fCutForPositron = val; }
+
 private:
-    // Electromagnetic physics options
+    void SetupEmParameters();
+
+private:
     G4VPhysicsConstructor* fEmPhysics;
     G4VPhysicsConstructor* fDecayPhysics;
 
-    // Production cuts by particle
     G4double fCutForGamma;
     G4double fCutForElectron;
     G4double fCutForPositron;
 
-    // Messenger for UI commands
     PhysicsMessenger* fMessenger;
-
-    // Setup method for EM parameters
-    void SetupEmParameters();
 };
 
 #endif

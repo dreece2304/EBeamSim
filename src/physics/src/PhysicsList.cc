@@ -1,4 +1,4 @@
-// PhysicsList.cc
+// PhysicsList.cc - Compatible with Geant4 11.3.2
 #include "PhysicsList.hh"
 #include "PhysicsMessenger.hh"
 
@@ -20,13 +20,13 @@
 #include "G4ProductionCuts.hh"
 
 PhysicsList::PhysicsList()
-: G4VModularPhysicsList(),
-  fEmPhysics(nullptr),
-  fDecayPhysics(nullptr),
-  fCutForGamma(0.1*nanometer),     // Very fine cuts for accuracy
-  fCutForElectron(0.1*nanometer),  // Critical for PSF resolution
-  fCutForPositron(0.1*nanometer),
-  fMessenger(nullptr)
+    : G4VModularPhysicsList(),
+    fEmPhysics(nullptr),
+    fDecayPhysics(nullptr),
+    fCutForGamma(0.1 * nanometer),
+    fCutForElectron(0.1 * nanometer),
+    fCutForPositron(0.1 * nanometer),
+    fMessenger(nullptr)
 {
     G4LossTableManager::Instance();
 
@@ -59,56 +59,86 @@ void PhysicsList::SetupEmParameters()
     G4EmParameters* param = G4EmParameters::Instance();
 
     // Enable all secondary particle production
-    param->SetFluo(true);           // Fluorescence
-    param->SetAuger(true);          // Auger electrons
-    param->SetAugerCascade(true);   // Full Auger cascade
-    param->SetPixe(true);           // Particle induced X-ray emission
+    param->SetFluo(true);
+    param->SetAuger(true);
+    param->SetAugerCascade(true);
+    param->SetPixe(true);
 
-    // Set energy range - critical for capturing all electrons
-    param->SetMinEnergy(10*eV);     // Track electrons down to 10 eV
-    param->SetMaxEnergy(1*GeV);     // Up to 1 GeV
-    param->SetLowestElectronEnergy(10*eV);  // Don't kill low-energy electrons
-    param->SetLowestMuHadEnergy(1*keV);
+    // CRITICAL for Auger/fluorescence below cuts
+    param->SetDeexcitationIgnoreCut(true);
 
-    // Multiple scattering parameters - critical for PSF accuracy
-    param->SetMscStepLimitType(fUseDistanceToBoundary);  // Most accurate
-    param->SetMscRangeFactor(0.02);    // Smaller = more accurate (default 0.04)
-    param->SetMscGeomFactor(2.5);      // Default, good for thin layers
-    param->SetMscSkin(3.0);            // Default
+    // Set energy range - these are set differently in 11.3
+    param->SetMinEnergy(10 * eV);
+    param->SetMaxEnergy(1 * GeV);
+    param->SetLowestElectronEnergy(10 * eV);
+    param->SetLowestMuHadEnergy(1 * keV);
 
-    // Very important: small step near boundaries for accurate position
-    param->SetStepFunction(0.1, 0.1*nanometer);  // dRoverRange, finalRange
+    // Multiple scattering parameters - these should work in 11.3
+    param->SetMscStepLimitType(fUseDistanceToBoundary);
+    param->SetMscRangeFactor(0.02);
+    param->SetMscGeomFactor(2.5);
+    param->SetMscSkin(3.0);
+    param->SetMscSafetyFactor(0.6);
+
+    // Lateral displacement
+    param->SetMuHadLateralDisplacement(true);
+    // SetMscLateralDisplacement doesn't exist in 11.3.2
+
+    // Step function
+    param->SetStepFunction(0.1, 0.1 * nanometer);
+    param->SetStepFunctionMuHad(0.1, 0.05 * nanometer);
 
     // Energy loss parameters
-    param->SetLossFluctuations(true);   // Include Landau fluctuations
-    param->SetLinearLossLimit(0.01);    // 1% - default
-    param->SetBuildCSDARange(true);     // Build CSDA range tables
+    param->SetLossFluctuations(true);
+    param->SetLinearLossLimit(0.01);
+    param->SetBuildCSDARange(true);
+    param->SetUseCutAsFinalRange(false);
 
-    // Bremsstrahlung and pair production
-    param->SetBremsstrahlungTh(1*MeV);  // Enable above 1 MeV
+    // Bremsstrahlung
+    param->SetBremsstrahlungTh(1 * MeV);
 
-    // Apply cuts properly
+    // Angular settings
+    param->SetFactorForAngleLimit(1.0);
+
+    // Apply cuts
     param->SetApplyCuts(true);
 
-    // Number of bins for tables - more bins = better accuracy
-    param->SetNumberOfBinsPerDecade(20);  // Default is 7, we want more
+    // Number of bins
+    param->SetNumberOfBinsPerDecade(20);
 
-    // Verbose output for debugging
+    // Note: SetDEDXBinning and SetLambdaBinning might not exist in 11.3.2
+    // These are often set through SetNumberOfBinsPerDecade which affects all tables
+
+    // Integral approach
+    param->SetIntegral(true);
+
+    // Note: SetSpline, SetMinKinEnergy, SetMaxKinEnergy don't exist as setters in 11.3.2
+    // The min/max energies are read-only properties
+
+    // Verbose
     param->SetVerbose(1);
 
-    // Print to verify
-    G4cout << "\nEM Parameters configured for EBL:" << G4endl;
-    G4cout << "  Min energy: " << param->MinKinEnergy()/eV << " eV" << G4endl;
-    G4cout << "  Max energy: " << param->MaxKinEnergy()/MeV << " MeV" << G4endl;
+    // Print configuration
+    G4cout << "\n========================================" << G4endl;
+    G4cout << "EM Parameters configured for EBL (Geant4 11.3.2):" << G4endl;
+    G4cout << "  Min energy: " << param->MinKinEnergy() / eV << " eV" << G4endl;
+    G4cout << "  Max energy: " << param->MaxKinEnergy() / MeV << " MeV" << G4endl;
     G4cout << "  Fluorescence: " << param->Fluo() << G4endl;
     G4cout << "  Auger: " << param->Auger() << G4endl;
+    G4cout << "  Auger cascade: " << param->AugerCascade() << G4endl;
+    G4cout << "  Deexcitation ignore cut: " << param->DeexcitationIgnoreCut() << G4endl;
+    G4cout << "  PIXE: " << param->Pixe() << G4endl;
     G4cout << "  MSC range factor: " << param->MscRangeFactor() << G4endl;
     G4cout << "  Number of bins per decade: " << param->NumberOfBinsPerDecade() << G4endl;
+    G4cout << "========================================\n" << G4endl;
 }
 
 void PhysicsList::ConstructParticle()
 {
     fDecayPhysics->ConstructParticle();
+
+    // Ensure EM particles are constructed
+    fEmPhysics->ConstructParticle();
 }
 
 void PhysicsList::ConstructProcess()
@@ -125,7 +155,7 @@ void PhysicsList::ConstructProcess()
 
 void PhysicsList::SetCuts()
 {
-    // Set default production cuts - these are CRITICAL for PSF accuracy
+    // Set default production cuts
     SetCutValue(fCutForGamma, "gamma");
     SetCutValue(fCutForElectron, "e-");
     SetCutValue(fCutForPositron, "e+");
@@ -142,13 +172,13 @@ void PhysicsList::SetCuts()
 
     if (resistRegion) {
         G4ProductionCuts* resistCuts = new G4ProductionCuts();
-        resistCuts->SetProductionCut(0.1*nanometer, "gamma");
-        resistCuts->SetProductionCut(0.1*nanometer, "e-");
-        resistCuts->SetProductionCut(0.1*nanometer, "e+");
+        resistCuts->SetProductionCut(0.1 * nanometer, "gamma");
+        resistCuts->SetProductionCut(0.1 * nanometer, "e-");
+        resistCuts->SetProductionCut(0.1 * nanometer, "e+");
         resistRegion->SetProductionCuts(resistCuts);
 
         G4cout << "  Special cuts for resist region: "
-               << G4BestUnit(0.1*nanometer, "Length") << G4endl;
+            << G4BestUnit(0.1 * nanometer, "Length") << G4endl;
     }
 
     // Dump the full particle/process list for verification
@@ -156,16 +186,16 @@ void PhysicsList::SetCuts()
         DumpCutValuesTable();
     }
 
-    // Additional check for energy thresholds
+    // Additional checks
     G4EmParameters* param = G4EmParameters::Instance();
     G4double lowestE = param->LowestElectronEnergy();
     G4cout << "\nLowest electron tracking energy: "
-           << G4BestUnit(lowestE, "Energy") << G4endl;
+        << G4BestUnit(lowestE, "Energy") << G4endl;
 
-    // Warning if cuts might be too large for EBL
-    if (fCutForElectron > 1.0*nanometer) {
+    // Warning if cuts might be too large
+    if (fCutForElectron > 1.0 * nanometer) {
         G4cout << "\nWARNING: Electron production cut > 1 nm may be too coarse for EBL simulation!"
-               << G4endl;
+            << G4endl;
         G4cout << "         PSF accuracy requires sub-nm production thresholds." << G4endl;
     }
 }

@@ -63,24 +63,26 @@ void DetectorMessenger::SetNewValue(G4UIcommand* command, G4String newValue)
         G4String unit;
         iss >> value >> unit;
 
-        G4double density = value * (g/cm3);  // Assume g/cm3 for now
+        G4double density = value * (g / cm3);  // Assume g/cm3 for now
         fDetector->SetResistDensity(density);
     }
     else if (command == fCompositionCmd) {
         // Remove quotes if present
         G4String composition = newValue;
 
-        // Remove leading and trailing quotes
-        if (static_cast<G4int>(composition.length()) >= 2) {
-            if (composition[0] == '"' && composition[static_cast<G4int>(composition.length())-1] == '"') {
-                composition = composition.substr(1, static_cast<G4int>(composition.length())-2);
+        // Remove leading and trailing quotes - fix the size_t to int conversion
+        size_t length = composition.length();
+        if (length >= 2) {
+            if (composition[0] == '"' && composition[length - 1] == '"') {
+                composition = composition.substr(1, length - 2); // Use size_t for substr arguments
             }
         }
 
         // Also remove single quotes if used
-        if (static_cast<G4int>(composition.length()) >= 2) {
-            if (composition[0] == '\'' && composition[static_cast<G4int>(composition.length())-1] == '\'') {
-                composition = composition.substr(1, static_cast<G4int>(composition.length())-2);
+        length = composition.length();  // Update length after potential modification
+        if (length >= 2) {
+            if (composition[0] == '\'' && composition[length - 1] == '\'') {
+                composition = composition.substr(1, length - 2);
             }
         }
 
