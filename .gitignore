@@ -1,3 +1,6 @@
+#===============================================
+# Build and Compilation
+#===============================================
 # Build directories
 build/
 out/
@@ -6,25 +9,8 @@ Release/
 Debug/
 x64/
 x86/
-
-# Visual Studio files
-.vs/
-*.suo
-*.user
-*.userosscache
-*.sln
-*.vcxproj
-*.vcxproj.filters
-*.vcxproj.user
-
-# CLion
-.idea/
-cmake-build-debug/
-cmake-build-release/
-
-# VS Code
-.vscode/
-*.code-workspace
+**/build/
+**/out/
 
 # Compiled files
 *.o
@@ -36,8 +22,11 @@ cmake-build-release/
 *.lib
 *.a
 *.pdb
+*.ilk
 
+#===============================================
 # CMake
+#===============================================
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
@@ -46,6 +35,36 @@ compile_commands.json
 CTestTestfile.cmake
 _deps/
 
+#===============================================
+# IDE and Editors
+#===============================================
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+ipch/
+*.ipch
+
+# CLion
+.idea/
+cmake-build-debug/
+cmake-build-release/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+#===============================================
+# Project Output and Data
+#===============================================
 # Output data
 *.csv
 *.dat
@@ -53,8 +72,33 @@ _deps/
 *.log
 data/output/*
 !data/output/.gitkeep
+**/output/
+simulation_summary.txt
+ebl_psf_data.csv
+beamer_psf.dat
+ebl_2d_data.csv
 
+#===============================================
+# Backup and Temporary Files
+#===============================================
+# Backup directories
+backup_*/
+improvement_summary_*.txt
+
+# PowerShell scripts (remove this line if you want to track them)
+*.ps1
+fix_*.ps1
+verify_*.ps1
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+#===============================================
 # Python
+#===============================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -63,26 +107,32 @@ __pycache__/
 venv/
 .env
 
+#===============================================
 # Documentation
+#===============================================
 docs/_build/
 docs/api/
 *.doxygen
 
-# OS files
+#===============================================
+# OS Specific
+#===============================================
+# macOS
 .DS_Store
+
+# Windows
 Thumbs.db
 desktop.ini
 
-# Temporary files
-*.tmp
-*.temp
-*.swp
-*~
-
-# Geant4 specific
+#===============================================
+# Geant4 Specific
+#===============================================
 *.wrl
 *.heprep
 *.eps
 *.prim
 G4History.macro
 g4_*.wrl
+*.g4m
+# Comment out the next line if you want to track generated run macros
+# run*.mac
