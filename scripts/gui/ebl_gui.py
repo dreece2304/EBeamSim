@@ -1,12 +1,12 @@
 ﻿#!/usr/bin/env python3
 """
-Modern EBL Simulation GUI using Qt
-----------------------------------
-A professional-looking GUI for electron beam lithography simulations
-using PySide6 (Qt6) with modern styling and better performance.
+Enhanced EBL Simulation GUI with 2D Visualization
+------------------------------------------------
+An improved GUI for electron beam lithography simulations with support
+for 2D depth-radius visualization and better data analysis capabilities.
 
 Installation:
-pip install PySide6 matplotlib numpy
+pip install PySide6 matplotlib numpy pandas scipy
 """
 
 import sys
@@ -19,6 +19,7 @@ from pathlib import Path
 import csv
 import queue
 from collections import deque
+import json
 
 # Qt imports
 from PySide6.QtWidgets import (
@@ -26,10 +27,16 @@ from PySide6.QtWidgets import (
     QGridLayout, QTabWidget, QLabel, QLineEdit, QPushButton,
     QComboBox, QSpinBox, QDoubleSpinBox, QCheckBox, QTextEdit,
     QProgressBar, QStatusBar, QMenuBar, QFileDialog, QMessageBox,
-    QGroupBox, QSplitter, QTreeWidget, QTreeWidgetItem, QHeaderView
+    QGroupBox, QSplitter, QTreeWidget, QTreeWidgetItem, QHeaderView,
+    QSlider, QRadioButton, QButtonGroup
 )
 from PySide6.QtCore import Qt, QTimer, QThread, QObject, Signal, QSettings
 from PySide6.QtGui import QFont, QIcon, QAction, QPalette, QColor
+
+# Scientific computing
+import numpy as np
+import pandas as pd
+from scipy.interpolate import griddata
 
 # Matplotlib for Qt
 import matplotlib
@@ -37,13 +44,15 @@ matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+import matplotlib.cm as cm
 
 class SimulationWorker(QObject):
     """Worker thread for running simulations"""
-    output = Signal(str)  # Signal for output messages
-    progress = Signal(int)  # Signal for progress updates
-    finished = Signal(bool, str)  # Signal for completion (success, message)
+    output = Signal(str)
+    progress = Signal(int)
+    finished = Signal(bool, str)
 
     def __init__(self, executable_path, macro_path, working_dir):
         super().__init__()
@@ -91,7 +100,7 @@ class SimulationWorker(QObject):
             )
 
             line_count = 0
-            max_lines = 5000  # Reasonable limit
+            max_lines = 5000
 
             while True:
                 if self.should_stop:
@@ -109,10 +118,9 @@ class SimulationWorker(QObject):
                     elif line_count == max_lines:
                         self.output.emit("... (output truncated)")
 
-                    # Try to extract progress information
+                    # Extract progress information
                     if "Processing event" in line:
                         try:
-                            # Extract event number from "Processing event XXXX"
                             event_num = int(line.split()[-1])
                             self.progress.emit(event_num)
                         except:
@@ -136,8 +144,370 @@ class SimulationWorker(QObject):
         if self.process:
             self.process.terminate()
 
+class Enhanced2DPlotWidget(QWidget):
+    """Enhanced widget for 2D depth-radius visualization"""
+
+    def __init__(self):
+        super().__init__()
+        self.setup_ui()
+        self.current_data = None
+
+    def setup_ui(self):
+        layout = QVBoxLayout()
+
+        # Create matplotlib figure with subplots
+        self.figure = Figure(figsize=(12, 8), dpi=100)
+        self.canvas = FigureCanvas(self.figure)
+        self.toolbar = NavigationToolbar(self.canvas, self)
+
+        # Control panel
+        controls = QHBoxLayout()
+
+        # Plot type selection
+        plot_type_group = QGroupBox("Display Mode")
+        plot_type_layout = QHBoxLayout()
+        
+        self.radio_2d = QRadioButton("2D Heatmap")
+        self.radio_2d.setChecked(True)
+        self.radio_3d = QRadioButton("3D Surface")
+        self.radio_contour = QRadioButton("Contour Plot")
+        self.radio_cross = QRadioButton("Cross Sections")
+        
+        self.plot_type_group = QButtonGroup()
+        self.plot_type_group.addButton(self.radio_2d, 0)
+        self.plot_type_group.addButton(self.radio_3d, 1)
+        self.plot_type_group.addButton(self.radio_contour, 2)
+        self.plot_type_group.addButton(self.radio_cross, 3)
+        self.plot_type_group.buttonClicked.connect(self.update_plot)
+        
+        plot_type_layout.addWidget(self.radio_2d)
+        plot_type_layout.addWidget(self.radio_3d)
+        plot_type_layout.addWidget(self.radio_contour)
+        plot_type_layout.addWidget(self.radio_cross)
+        plot_type_group.setLayout(plot_type_layout)
+
+        # Colormap selection
+        self.colormap_combo = QComboBox()
+        self.colormap_combo.addItems(['viridis', 'plasma', 'inferno', 'magma', 'hot', 'jet', 'turbo'])
+        self.colormap_combo.currentTextChanged.connect(self.update_plot)
+
+        # Log scale option
+        self.log_scale_check = QCheckBox("Log Scale")
+        self.log_scale_check.setChecked(True)
+        self.log_scale_check.stateChanged.connect(self.update_plot)
+
+        # Depth slice slider (for cross sections)
+        self.depth_slider = QSlider(Qt.Horizontal)
+        self.depth_slider.setMinimum(0)
+        self.depth_slider.setMaximum(100)
+        self.depth_slider.setValue(50)
+        self.depth_slider.valueChanged.connect(self.update_cross_section)
+        self.depth_label = QLabel("Depth: 0 nm")
+
+        controls.addWidget(plot_type_group)
+        controls.addWidget(QLabel("Colormap:"))
+        controls.addWidget(self.colormap_combo)
+        controls.addWidget(self.log_scale_check)
+        controls.addStretch()
+        controls.addWidget(QLabel("Depth Slice:"))
+        controls.addWidget(self.depth_slider)
+        controls.addWidget(self.depth_label)
+
+        # File controls
+        file_controls = QHBoxLayout()
+        
+        self.load_2d_button = QPushButton("Load 2D Data")
+        self.load_2d_button.clicked.connect(self.load_2d_data)
+        
+        self.save_plot_button = QPushButton("Save Plot")
+        self.save_plot_button.clicked.connect(self.save_plot)
+        
+        self.export_button = QPushButton("Export Data")
+        self.export_button.clicked.connect(self.export_data)
+
+        file_controls.addWidget(self.load_2d_button)
+        file_controls.addWidget(self.save_plot_button)
+        file_controls.addWidget(self.export_button)
+        file_controls.addStretch()
+
+        layout.addWidget(self.toolbar)
+        layout.addLayout(controls)
+        layout.addLayout(file_controls)
+        layout.addWidget(self.canvas)
+
+        self.setLayout(layout)
+
+    def load_2d_data(self):
+        """Load 2D depth-radius data from CSV"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Load 2D Data", "", "CSV files (*.csv);;All files (*.*)"
+        )
+
+        if file_path:
+            try:
+                # Read the CSV file
+                df = pd.read_csv(file_path, index_col=0)
+                
+                # Extract depth and radius arrays
+                depths = df.index.values
+                radii = df.columns.astype(float).values
+                data = df.values
+                
+                # Store the data
+                self.current_data = {
+                    'depths': depths,
+                    'radii': radii,
+                    'energy': data,
+                    'filename': Path(file_path).stem
+                }
+                
+                # Update depth slider range
+                self.depth_slider.setMaximum(len(depths) - 1)
+                
+                # Plot the data
+                self.plot_2d_data()
+                
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to load 2D data: {str(e)}")
+
+    def plot_2d_data(self):
+        """Plot the 2D data based on selected mode"""
+        if not self.current_data:
+            return
+
+        self.figure.clear()
+        
+        plot_mode = self.plot_type_group.checkedId()
+        
+        if plot_mode == 0:  # 2D Heatmap
+            self.plot_heatmap()
+        elif plot_mode == 1:  # 3D Surface
+            self.plot_3d_surface()
+        elif plot_mode == 2:  # Contour
+            self.plot_contour()
+        elif plot_mode == 3:  # Cross sections
+            self.plot_cross_sections()
+
+        self.canvas.draw()
+
+    def plot_heatmap(self):
+        """Create 2D heatmap visualization"""
+        ax = self.figure.add_subplot(111)
+        
+        depths = self.current_data['depths']
+        radii = self.current_data['radii']
+        energy = self.current_data['energy']
+        
+        # Create meshgrid
+        R, D = np.meshgrid(radii, depths)
+        
+        # Apply log scale if selected
+        if self.log_scale_check.isChecked():
+            # Add small value to avoid log(0)
+            energy_plot = np.log10(energy + 1e-10)
+            label = 'Log10(Energy Deposition) [eV/nm²]'
+        else:
+            energy_plot = energy
+            label = 'Energy Deposition [eV/nm²]'
+        
+        # Create heatmap
+        cmap = self.colormap_combo.currentText()
+        im = ax.pcolormesh(R, D, energy_plot, cmap=cmap, shading='auto')
+        
+        # Add colorbar
+        cbar = self.figure.colorbar(im, ax=ax)
+        cbar.set_label(label)
+        
+        # Labels and title
+        ax.set_xlabel('Radius [nm]')
+        ax.set_ylabel('Depth [nm]')
+        ax.set_title(f'Energy Deposition Profile - {self.current_data["filename"]}')
+        
+        # Add resist boundary line if visible
+        resist_thickness = 30  # nm, default
+        if depths.min() < resist_thickness < depths.max():
+            ax.axhline(y=resist_thickness, color='white', linestyle='--', 
+                      linewidth=2, label='Resist/Substrate boundary')
+            ax.axhline(y=0, color='white', linestyle='-', 
+                      linewidth=2, label='Resist surface')
+            ax.legend()
+
+    def plot_3d_surface(self):
+        """Create 3D surface plot"""
+        from mpl_toolkits.mplot3d import Axes3D
+        
+        ax = self.figure.add_subplot(111, projection='3d')
+        
+        depths = self.current_data['depths']
+        radii = self.current_data['radii']
+        energy = self.current_data['energy']
+        
+        # Create meshgrid
+        R, D = np.meshgrid(radii, depths)
+        
+        # Apply log scale if selected
+        if self.log_scale_check.isChecked():
+            energy_plot = np.log10(energy + 1e-10)
+            label = 'Log10(Energy) [eV/nm²]'
+        else:
+            energy_plot = energy
+            label = 'Energy [eV/nm²]'
+        
+        # Create surface plot
+        cmap = self.colormap_combo.currentText()
+        surf = ax.plot_surface(R, D, energy_plot, cmap=cmap, 
+                              linewidth=0, antialiased=True, alpha=0.8)
+        
+        # Add colorbar
+        self.figure.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
+        
+        # Labels
+        ax.set_xlabel('Radius [nm]')
+        ax.set_ylabel('Depth [nm]')
+        ax.set_zlabel(label)
+        ax.set_title(f'3D Energy Distribution - {self.current_data["filename"]}')
+
+    def plot_contour(self):
+        """Create contour plot"""
+        ax = self.figure.add_subplot(111)
+        
+        depths = self.current_data['depths']
+        radii = self.current_data['radii']
+        energy = self.current_data['energy']
+        
+        # Create meshgrid
+        R, D = np.meshgrid(radii, depths)
+        
+        # Apply log scale if selected
+        if self.log_scale_check.isChecked():
+            energy_plot = np.log10(energy + 1e-10)
+            levels = np.logspace(-2, np.log10(energy.max()), 20)
+            label = 'Energy Deposition [eV/nm²]'
+        else:
+            energy_plot = energy
+            levels = 20
+            label = 'Energy Deposition [eV/nm²]'
+        
+        # Create contour plot
+        cmap = self.colormap_combo.currentText()
+        contour = ax.contour(R, D, energy_plot, levels=levels, cmap=cmap)
+        ax.clabel(contour, inline=True, fontsize=8)
+        
+        # Fill contours
+        contourf = ax.contourf(R, D, energy_plot, levels=levels, cmap=cmap, alpha=0.7)
+        
+        # Add colorbar
+        self.figure.colorbar(contourf, ax=ax, label=label)
+        
+        # Labels and title
+        ax.set_xlabel('Radius [nm]')
+        ax.set_ylabel('Depth [nm]')
+        ax.set_title(f'Energy Contours - {self.current_data["filename"]}')
+
+    def plot_cross_sections(self):
+        """Plot depth and radial cross sections"""
+        # Create two subplots
+        ax1 = self.figure.add_subplot(121)
+        ax2 = self.figure.add_subplot(122)
+        
+        depths = self.current_data['depths']
+        radii = self.current_data['radii']
+        energy = self.current_data['energy']
+        
+        # Get current depth index from slider
+        depth_idx = self.depth_slider.value()
+        current_depth = depths[depth_idx] if depth_idx < len(depths) else depths[0]
+        
+        # Update depth label
+        self.depth_label.setText(f"Depth: {current_depth:.1f} nm")
+        
+        # Plot radial cross section at selected depth
+        ax1.plot(radii, energy[depth_idx, :], 'b-', linewidth=2)
+        if self.log_scale_check.isChecked():
+            ax1.set_yscale('log')
+            ax1.set_xscale('log')
+        ax1.set_xlabel('Radius [nm]')
+        ax1.set_ylabel('Energy Deposition [eV/nm²]')
+        ax1.set_title(f'Radial Profile at Depth = {current_depth:.1f} nm')
+        ax1.grid(True, alpha=0.3)
+        
+        # Plot depth profile at r=0 and several radii
+        radii_indices = [0, len(radii)//4, len(radii)//2, 3*len(radii)//4]
+        for idx in radii_indices:
+            if idx < len(radii):
+                label = f'r = {radii[idx]:.1f} nm'
+                ax2.plot(depths, energy[:, idx], linewidth=2, label=label)
+        
+        if self.log_scale_check.isChecked():
+            ax2.set_yscale('log')
+        ax2.set_xlabel('Depth [nm]')
+        ax2.set_ylabel('Energy Deposition [eV/nm²]')
+        ax2.set_title('Depth Profiles at Various Radii')
+        ax2.grid(True, alpha=0.3)
+        ax2.legend()
+        
+        # Add resist boundaries
+        ax2.axhline(y=0, color='k', linestyle='-', alpha=0.5)
+        ax2.axhline(y=30, color='k', linestyle='--', alpha=0.5)
+        
+        self.figure.tight_layout()
+
+    def update_plot(self):
+        """Update plot when settings change"""
+        if self.current_data:
+            self.plot_2d_data()
+
+    def update_cross_section(self):
+        """Update cross section when slider moves"""
+        if self.current_data and self.plot_type_group.checkedId() == 3:
+            self.plot_2d_data()
+
+    def save_plot(self):
+        """Save current plot"""
+        if not self.current_data:
+            QMessageBox.warning(self, "Warning", "No data to save")
+            return
+            
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Plot", "",
+            "PNG files (*.png);;PDF files (*.pdf);;SVG files (*.svg)"
+        )
+
+        if file_path:
+            try:
+                self.figure.savefig(file_path, dpi=300, bbox_inches='tight')
+                QMessageBox.information(self, "Success", f"Plot saved to {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save plot: {str(e)}")
+
+    def export_data(self):
+        """Export processed data"""
+        if not self.current_data:
+            QMessageBox.warning(self, "Warning", "No data to export")
+            return
+            
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Export Data", "",
+            "NumPy files (*.npz);;MATLAB files (*.mat)"
+        )
+
+        if file_path:
+            try:
+                if file_path.endswith('.npz'):
+                    np.savez(file_path, 
+                            depths=self.current_data['depths'],
+                            radii=self.current_data['radii'],
+                            energy=self.current_data['energy'])
+                elif file_path.endswith('.mat'):
+                    from scipy.io import savemat
+                    savemat(file_path, self.current_data)
+                    
+                QMessageBox.information(self, "Success", f"Data exported to {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to export data: {str(e)}")
+
 class PlotWidget(QWidget):
-    """Custom widget for matplotlib plots"""
+    """Widget for 1D PSF plots"""
 
     def __init__(self):
         super().__init__()
@@ -158,8 +528,11 @@ class PlotWidget(QWidget):
         self.plot_type_combo.addItems(["Linear", "Log-Log", "Semi-Log"])
         self.plot_type_combo.currentTextChanged.connect(self.update_plot_type)
 
-        self.load_button = QPushButton("Load Data")
+        self.load_button = QPushButton("Load PSF Data")
         self.load_button.clicked.connect(self.load_data)
+
+        self.compare_button = QPushButton("Compare Multiple")
+        self.compare_button.clicked.connect(self.load_multiple)
 
         self.save_button = QPushButton("Save Plot")
         self.save_button.clicked.connect(self.save_plot)
@@ -168,6 +541,7 @@ class PlotWidget(QWidget):
         controls.addWidget(self.plot_type_combo)
         controls.addStretch()
         controls.addWidget(self.load_button)
+        controls.addWidget(self.compare_button)
         controls.addWidget(self.save_button)
 
         layout.addWidget(self.toolbar)
@@ -177,42 +551,74 @@ class PlotWidget(QWidget):
         self.setLayout(layout)
 
         # Store data for replotting
-        self.current_data = None
+        self.datasets = []
 
-    def plot_data(self, radii, energies, title="PSF Profile"):
+    def plot_data(self, radii, energies, title="PSF Profile", clear=True):
         """Plot the data with current settings"""
-        self.current_data = (radii, energies, title)
+        if clear:
+            self.datasets = [(radii, energies, title)]
+        else:
+            self.datasets.append((radii, energies, title))
 
         self.figure.clear()
         ax = self.figure.add_subplot(111)
 
         plot_type = self.plot_type_combo.currentText()
 
-        if plot_type == "Log-Log":
-            # Filter positive values
-            valid = [(r > 0 and e > 0) for r, e in zip(radii, energies)]
-            r_filt = [r for r, v in zip(radii, valid) if v]
-            e_filt = [e for e, v in zip(energies, valid) if v]
+        for radii, energies, label in self.datasets:
+            if plot_type == "Log-Log":
+                valid = [(r > 0 and e > 0) for r, e in zip(radii, energies)]
+                r_filt = [r for r, v in zip(radii, valid) if v]
+                e_filt = [e for e, v in zip(energies, valid) if v]
 
-            if r_filt and e_filt:
-                ax.loglog(r_filt, e_filt, 'b-', linewidth=2)
-        elif plot_type == "Semi-Log":
-            ax.semilogy(radii, energies, 'b-', linewidth=2)
-        else:  # Linear
-            ax.plot(radii, energies, 'b-', linewidth=2)
+                if r_filt and e_filt:
+                    ax.loglog(r_filt, e_filt, linewidth=2, label=label)
+            elif plot_type == "Semi-Log":
+                ax.semilogy(radii, energies, linewidth=2, label=label)
+            else:
+                ax.plot(radii, energies, linewidth=2, label=label)
 
         ax.set_xlabel('Radius (nm)')
         ax.set_ylabel('Energy Deposition (eV/nm²)')
-        ax.set_title(f'{title} - {plot_type} Scale')
+        ax.set_title(f'PSF Profile - {plot_type} Scale')
         ax.grid(True, alpha=0.3)
+        
+        if len(self.datasets) > 1:
+            ax.legend()
 
         self.figure.tight_layout()
         self.canvas.draw()
 
     def update_plot_type(self):
         """Update plot when type changes"""
-        if self.current_data:
-            self.plot_data(*self.current_data)
+        if self.datasets:
+            self.figure.clear()
+            ax = self.figure.add_subplot(111)
+            
+            plot_type = self.plot_type_combo.currentText()
+            
+            for radii, energies, label in self.datasets:
+                if plot_type == "Log-Log":
+                    valid = [(r > 0 and e > 0) for r, e in zip(radii, energies)]
+                    r_filt = [r for r, v in zip(radii, valid) if v]
+                    e_filt = [e for e, v in zip(energies, valid) if v]
+                    if r_filt and e_filt:
+                        ax.loglog(r_filt, e_filt, linewidth=2, label=label)
+                elif plot_type == "Semi-Log":
+                    ax.semilogy(radii, energies, linewidth=2, label=label)
+                else:
+                    ax.plot(radii, energies, linewidth=2, label=label)
+            
+            ax.set_xlabel('Radius (nm)')
+            ax.set_ylabel('Energy Deposition (eV/nm²)')
+            ax.set_title(f'PSF Profile - {plot_type} Scale')
+            ax.grid(True, alpha=0.3)
+            
+            if len(self.datasets) > 1:
+                ax.legend()
+            
+            self.figure.tight_layout()
+            self.canvas.draw()
 
     def load_data(self):
         """Load data from CSV file"""
@@ -243,6 +649,40 @@ class PlotWidget(QWidget):
 
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to load data: {str(e)}")
+
+    def load_multiple(self):
+        """Load multiple datasets for comparison"""
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self, "Load Multiple PSF Data", "", "CSV files (*.csv);;All files (*.*)"
+        )
+
+        if file_paths:
+            self.datasets = []
+            
+            for file_path in file_paths:
+                try:
+                    radii, energies = [], []
+
+                    with open(file_path, 'r') as f:
+                        reader = csv.reader(f)
+                        next(reader)  # Skip header
+
+                        for row in reader:
+                            if len(row) >= 2:
+                                try:
+                                    radii.append(float(row[0]))
+                                    energies.append(float(row[1]))
+                                except ValueError:
+                                    continue
+
+                    if radii and energies:
+                        self.plot_data(radii, energies, Path(file_path).stem, clear=False)
+
+                except Exception as e:
+                    print(f"Error loading {file_path}: {str(e)}")
+            
+            if not self.datasets:
+                QMessageBox.warning(self, "Warning", "No valid data found in files")
 
     def save_plot(self):
         """Save current plot"""
@@ -275,8 +715,8 @@ class EBLMainWindow(QMainWindow):
 
     def setup_ui(self):
         """Setup the user interface"""
-        self.setWindowTitle("EBL Simulation Control - Qt Edition")
-        self.setMinimumSize(1200, 800)
+        self.setWindowTitle("EBL Simulation Control - Enhanced Edition")
+        self.setMinimumSize(1400, 900)
 
         # Apply modern dark theme
         self.setStyleSheet("""
@@ -336,6 +776,17 @@ class EBLMainWindow(QMainWindow):
                 color: #ffffff;
                 font-family: 'Consolas', 'Monaco', monospace;
             }
+            QSlider::groove:horizontal {
+                background: #555555;
+                height: 8px;
+                border-radius: 4px;
+            }
+            QSlider::handle:horizontal {
+                background: #007acc;
+                width: 16px;
+                margin: -4px 0;
+                border-radius: 8px;
+            }
         """)
 
         # Create central widget and layout
@@ -350,7 +801,9 @@ class EBLMainWindow(QMainWindow):
         self.create_beam_tab()
         self.create_simulation_tab()
         self.create_output_tab()
-        self.create_visualization_tab()
+        self.create_1d_visualization_tab()
+        self.create_2d_visualization_tab()
+        self.create_analysis_tab()
 
         # Main layout
         layout = QVBoxLayout()
@@ -376,6 +829,14 @@ class EBLMainWindow(QMainWindow):
         save_macro_action.triggered.connect(self.save_macro)
         file_menu.addAction(save_macro_action)
 
+        load_config_action = QAction("Load Configuration", self)
+        load_config_action.triggered.connect(self.load_configuration)
+        file_menu.addAction(load_config_action)
+
+        save_config_action = QAction("Save Configuration", self)
+        save_config_action.triggered.connect(self.save_configuration)
+        file_menu.addAction(save_config_action)
+
         file_menu.addSeparator()
 
         exit_action = QAction("Exit", self)
@@ -392,6 +853,10 @@ class EBLMainWindow(QMainWindow):
         stop_action = QAction("Stop Simulation", self)
         stop_action.triggered.connect(self.stop_simulation)
         sim_menu.addAction(stop_action)
+
+        batch_action = QAction("Batch Run", self)
+        batch_action.triggered.connect(self.batch_run)
+        sim_menu.addAction(batch_action)
 
         # Help menu
         help_menu = menubar.addMenu("Help")
@@ -676,10 +1141,59 @@ class EBLMainWindow(QMainWindow):
         widget.setLayout(layout)
         self.tab_widget.addTab(widget, "Output Log")
 
-    def create_visualization_tab(self):
-        """Create visualization tab"""
+    def create_1d_visualization_tab(self):
+        """Create 1D PSF visualization tab"""
         self.plot_widget = PlotWidget()
-        self.tab_widget.addTab(self.plot_widget, "Visualization")
+        self.tab_widget.addTab(self.plot_widget, "1D PSF Visualization")
+
+    def create_2d_visualization_tab(self):
+        """Create 2D depth-radius visualization tab"""
+        self.plot_2d_widget = Enhanced2DPlotWidget()
+        self.tab_widget.addTab(self.plot_2d_widget, "2D Visualization")
+
+    def create_analysis_tab(self):
+        """Create analysis tab with summary statistics"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        # Summary statistics group
+        stats_group = QGroupBox("Simulation Summary")
+        stats_layout = QGridLayout()
+
+        self.summary_text = QTextEdit()
+        self.summary_text.setReadOnly(True)
+        self.summary_text.setMaximumHeight(200)
+        stats_layout.addWidget(self.summary_text, 0, 0, 1, 2)
+
+        self.load_summary_button = QPushButton("Load Summary")
+        self.load_summary_button.clicked.connect(self.load_summary)
+        stats_layout.addWidget(self.load_summary_button, 1, 0)
+
+        self.refresh_summary_button = QPushButton("Refresh")
+        self.refresh_summary_button.clicked.connect(self.refresh_summary)
+        stats_layout.addWidget(self.refresh_summary_button, 1, 1)
+
+        stats_group.setLayout(stats_layout)
+
+        # Batch analysis group
+        batch_group = QGroupBox("Batch Analysis")
+        batch_layout = QVBoxLayout()
+
+        batch_info = QLabel("Analyze multiple simulation results for parameter studies")
+        batch_layout.addWidget(batch_info)
+
+        batch_button = QPushButton("Load Batch Results")
+        batch_button.clicked.connect(self.analyze_batch)
+        batch_layout.addWidget(batch_button)
+
+        batch_group.setLayout(batch_layout)
+
+        layout.addWidget(stats_group)
+        layout.addWidget(batch_group)
+        layout.addStretch()
+
+        widget.setLayout(layout)
+        self.tab_widget.addTab(widget, "Analysis")
 
     def setup_defaults(self):
         """Setup default values"""
@@ -703,8 +1217,6 @@ class EBLMainWindow(QMainWindow):
             possible_paths = [
                 project_root / "out" / "build" / "x64-release" / "bin" / "ebl_sim.exe",
                 project_root / "out" / "build" / "x64-debug" / "bin" / "ebl_sim.exe",
-                project_root / "out" / "build" / "x64-release" / "ebl_sim.exe",
-                project_root / "out" / "build" / "x64-debug" / "ebl_sim.exe",
                 project_root / "build" / "bin" / "Release" / "ebl_sim.exe",
                 project_root / "build" / "bin" / "Debug" / "ebl_sim.exe",
             ]
@@ -825,7 +1337,6 @@ class EBLMainWindow(QMainWindow):
 
         # Check executable
         if not Path(self.executable_path).exists():
-            # First try to find the executable again
             self.setup_defaults()
             
             if not Path(self.executable_path).exists():
@@ -891,18 +1402,100 @@ class EBLMainWindow(QMainWindow):
             # Check for output files
             output_dir = Path(self.working_dir)
             psf_file = output_dir / "ebl_psf_data.csv"
+            psf_2d_file = output_dir / "ebl_2d_data.csv"
+            summary_file = output_dir / "simulation_summary.txt"
             
+            available_files = []
             if psf_file.exists():
+                available_files.append("1D PSF data")
+            if psf_2d_file.exists():
+                available_files.append("2D depth-radius data")
+            if summary_file.exists():
+                available_files.append("Summary statistics")
+            
+            if available_files:
                 reply = QMessageBox.question(
                     self, "Load Results",
-                    "PSF data generated. Would you like to load and visualize it?",
+                    f"The following output files were generated:\n- " + 
+                    "\n- ".join(available_files) + 
+                    "\n\nWould you like to load and visualize them?",
                     QMessageBox.Yes | QMessageBox.No
                 )
                 
                 if reply == QMessageBox.Yes:
-                    self.tab_widget.setCurrentIndex(4)  # Visualization tab
-                    # Auto-load the data
-                    QTimer.singleShot(500, lambda: self.plot_widget.load_data())
+                    # Load 1D PSF if available
+                    if psf_file.exists():
+                        self.tab_widget.setCurrentIndex(4)  # 1D visualization tab
+                        QTimer.singleShot(500, lambda: self.auto_load_1d(str(psf_file)))
+                    
+                    # Load 2D data if available
+                    if psf_2d_file.exists():
+                        QTimer.singleShot(1000, lambda: self.auto_load_2d(str(psf_2d_file)))
+                    
+                    # Load summary if available
+                    if summary_file.exists():
+                        QTimer.singleShot(1500, lambda: self.auto_load_summary(str(summary_file)))
+
+    def auto_load_1d(self, file_path):
+        """Auto-load 1D PSF data"""
+        try:
+            radii, energies = [], []
+            with open(file_path, 'r') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header
+                for row in reader:
+                    if len(row) >= 2:
+                        try:
+                            radii.append(float(row[0]))
+                            energies.append(float(row[1]))
+                        except ValueError:
+                            continue
+            
+            if radii and energies:
+                self.plot_widget.plot_data(radii, energies, "PSF - Latest Simulation")
+        except Exception as e:
+            print(f"Error auto-loading 1D data: {str(e)}")
+
+    def auto_load_2d(self, file_path):
+        """Auto-load 2D data"""
+        try:
+            self.tab_widget.setCurrentIndex(5)  # 2D visualization tab
+            # Read the CSV file
+            df = pd.read_csv(file_path, index_col=0)
+            
+            # Extract depth and radius arrays
+            depths = df.index.values
+            radii = df.columns.astype(float).values
+            data = df.values
+            
+            # Store the data in the 2D plot widget
+            self.plot_2d_widget.current_data = {
+                'depths': depths,
+                'radii': radii,
+                'energy': data,
+                'filename': Path(file_path).stem
+            }
+            
+            # Update depth slider range
+            self.plot_2d_widget.depth_slider.setMaximum(len(depths) - 1)
+            
+            # Plot the data
+            self.plot_2d_widget.plot_2d_data()
+            
+        except Exception as e:
+            print(f"Error auto-loading 2D data: {str(e)}")
+
+    def auto_load_summary(self, file_path):
+        """Auto-load simulation summary"""
+        try:
+            with open(file_path, 'r') as f:
+                summary_text = f.read()
+            
+            self.summary_text.setPlainText(summary_text)
+            self.tab_widget.setCurrentIndex(6)  # Analysis tab
+            
+        except Exception as e:
+            print(f"Error auto-loading summary: {str(e)}")
 
     def update_progress(self, event_num):
         """Update progress bar"""
@@ -966,18 +1559,165 @@ class EBLMainWindow(QMainWindow):
             self.working_dir = str(Path(file_path).parent)
             self.log_output(f"Selected executable: {file_path}")
 
+    def load_configuration(self):
+        """Load simulation configuration from JSON"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Load Configuration", "",
+            "JSON files (*.json);;All files (*.*)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'r') as f:
+                    config = json.load(f)
+                
+                # Load material settings
+                if 'material' in config:
+                    self.material_combo.setCurrentText(config['material'].get('preset', 'Custom'))
+                    self.composition_edit.setText(config['material'].get('composition', ''))
+                    self.thickness_spin.setValue(config['material'].get('thickness', 30.0))
+                    self.density_spin.setValue(config['material'].get('density', 1.35))
+                
+                # Load beam settings
+                if 'beam' in config:
+                    self.energy_spin.setValue(config['beam'].get('energy', 100.0))
+                    self.beam_size_spin.setValue(config['beam'].get('size', 2.0))
+                    self.pos_x_spin.setValue(config['beam'].get('pos_x', 0.0))
+                    self.pos_y_spin.setValue(config['beam'].get('pos_y', 0.0))
+                    self.pos_z_spin.setValue(config['beam'].get('pos_z', 100.0))
+                    self.dir_x_spin.setValue(config['beam'].get('dir_x', 0.0))
+                    self.dir_y_spin.setValue(config['beam'].get('dir_y', 0.0))
+                    self.dir_z_spin.setValue(config['beam'].get('dir_z', -1.0))
+                
+                # Load simulation settings
+                if 'simulation' in config:
+                    self.events_spin.setValue(config['simulation'].get('events', 10000))
+                    self.seed_spin.setValue(config['simulation'].get('seed', -1))
+                    self.verbose_spin.setValue(config['simulation'].get('verbose', 1))
+                    self.fluorescence_check.setChecked(config['simulation'].get('fluorescence', True))
+                    self.auger_check.setChecked(config['simulation'].get('auger', True))
+                    self.visualization_check.setChecked(config['simulation'].get('visualization', False))
+                
+                QMessageBox.information(self, "Success", "Configuration loaded successfully")
+                
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to load configuration: {str(e)}")
+
+    def save_configuration(self):
+        """Save current configuration to JSON"""
+        config = {
+            'material': {
+                'preset': self.material_combo.currentText(),
+                'composition': self.composition_edit.text(),
+                'thickness': self.thickness_spin.value(),
+                'density': self.density_spin.value()
+            },
+            'beam': {
+                'energy': self.energy_spin.value(),
+                'size': self.beam_size_spin.value(),
+                'pos_x': self.pos_x_spin.value(),
+                'pos_y': self.pos_y_spin.value(),
+                'pos_z': self.pos_z_spin.value(),
+                'dir_x': self.dir_x_spin.value(),
+                'dir_y': self.dir_y_spin.value(),
+                'dir_z': self.dir_z_spin.value()
+            },
+            'simulation': {
+                'events': self.events_spin.value(),
+                'seed': self.seed_spin.value(),
+                'verbose': self.verbose_spin.value(),
+                'fluorescence': self.fluorescence_check.isChecked(),
+                'auger': self.auger_check.isChecked(),
+                'visualization': self.visualization_check.isChecked()
+            }
+        }
+        
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Configuration",
+            f"ebl_config_{time.strftime('%Y%m%d_%H%M%S')}.json",
+            "JSON files (*.json);;All files (*.*)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'w') as f:
+                    json.dump(config, f, indent=2)
+                QMessageBox.information(self, "Success", f"Configuration saved to {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save configuration: {str(e)}")
+
+    def batch_run(self):
+        """Run batch simulations with parameter variations"""
+        QMessageBox.information(self, "Batch Run", 
+            "Batch simulation feature coming soon!\n\n"
+            "This will allow running multiple simulations with:\n"
+            "- Energy variations\n"
+            "- Material thickness variations\n"
+            "- Different resist compositions\n"
+            "- Automated result collection")
+
+    def load_summary(self):
+        """Load simulation summary file"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Load Summary", "",
+            "Text files (*.txt);;All files (*.*)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'r') as f:
+                    self.summary_text.setPlainText(f.read())
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to load summary: {str(e)}")
+
+    def refresh_summary(self):
+        """Refresh summary from default location"""
+        summary_path = Path(self.working_dir) / "simulation_summary.txt"
+        if summary_path.exists():
+            try:
+                with open(summary_path, 'r') as f:
+                    self.summary_text.setPlainText(f.read())
+            except Exception as e:
+                self.log_output(f"Error refreshing summary: {str(e)}")
+        else:
+            QMessageBox.information(self, "Info", "No summary file found in working directory")
+
+    def analyze_batch(self):
+        """Analyze multiple simulation results"""
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self, "Select PSF Data Files", "",
+            "CSV files (*.csv);;All files (*.*)"
+        )
+
+        if file_paths:
+            QMessageBox.information(self, "Batch Analysis",
+                f"Selected {len(file_paths)} files for analysis.\n\n"
+                "Batch analysis features coming soon:\n"
+                "- Parameter extraction from filenames\n"
+                "- Trend analysis\n"
+                "- Comparative plots\n"
+                "- Statistical analysis")
+
     def show_about(self):
         """Show about dialog"""
         QMessageBox.about(self, "About EBL Simulation GUI",
-                          """<h3>EBL Simulation GUI v2.0 (Qt Edition)</h3>
-                          <p>A modern, professional GUI for Geant4-based electron beam lithography simulations.</p>
-                          <p><b>Key Features:</b></p>
+                          """<h3>EBL Simulation GUI v3.0 (Enhanced Edition)</h3>
+                          <p>A comprehensive GUI for Geant4-based electron beam lithography simulations.</p>
+                          <p><b>New Features in v3.0:</b></p>
+                          <ul>
+                          <li>2D depth-radius visualization with multiple display modes</li>
+                          <li>Enhanced data analysis capabilities</li>
+                          <li>Configuration save/load functionality</li>
+                          <li>Multi-dataset comparison tools</li>
+                          <li>Improved performance monitoring</li>
+                          <li>Region-based energy tracking</li>
+                          </ul>
+                          <p><b>Key Capabilities:</b></p>
                           <ul>
                           <li>XPS-based material compositions</li>
-                          <li>Modern Qt interface with dark theme</li>
                           <li>Real-time simulation monitoring</li>
-                          <li>Integrated data visualization</li>
-                          <li>Improved performance and stability</li>
+                          <li>Comprehensive data visualization</li>
+                          <li>Export to multiple formats</li>
                           </ul>
                           <p>Based on experimental data from TMA + butyne-1,4-diol MLD process.</p>
                           """)
@@ -1022,7 +1762,7 @@ def main():
 
     # Set application properties
     app.setApplicationName("EBL Simulation GUI")
-    app.setApplicationVersion("2.0")
+    app.setApplicationVersion("3.0")
     app.setOrganizationName("EBL Research")
 
     # Create and show main window
