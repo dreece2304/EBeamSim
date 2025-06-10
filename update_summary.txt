@@ -1,0 +1,33 @@
+﻿EBL Simulation Update Summary
+============================
+Date: 2025-06-10 05:27:10
+
+Files Updated:
+1. SteppingAction.cc - Now captures ALL energy deposits (resist, substrate, backscatter)
+2. EventAction.hh/cc - Added 2D depth-radius tracking and region-based energy accounting
+3. RunAction.hh/cc - Added 2D data output functionality
+4. GUI - Added 2D visualization capability (requires manual integration)
+
+New Features:
+- Complete energy scoring throughout all materials
+- 2D depth-radius energy deposition matrix
+- Energy tracking by region (resist, substrate, above)
+- Enhanced debug output for validation
+- 2D heatmap visualization in GUI
+
+Output Files:
+- ebl_psf_data.csv - Standard PSF radial profile
+- ebl_2d_data.csv - 2D depth-radius energy map
+- beamer_psf.dat - BEAMER-compatible PSF
+- simulation_summary.txt - Enhanced with region statistics
+
+Manual Steps Required:
+1. Update RunAction.cc with the 2D save functions
+2. Add Plot2DWidget to the GUI visualization tab
+3. Rebuild the project
+4. Install Python requirements: pip install -r scripts/gui/requirements.txt
+
+Notes:
+- Depth range: -50μm to +150nm (covers substrate and above resist)
+- 100 depth bins, 250 radial bins (logarithmic)
+- All energy deposits are now captured for accurate PSF

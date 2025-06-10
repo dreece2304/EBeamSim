@@ -1,7 +1,9 @@
-﻿#include "RunAction.hh"
+﻿// RunAction.cc - Sequential Mode (No Multithreading)
+#include "RunAction.hh"
 #include "PrimaryGeneratorAction.hh"
 #include "DetectorConstruction.hh"
 #include "G4Run.hh"
+#include "G4RunManager.hh"
 #include "G4AccumulableManager.hh"
 #include "G4UnitsTable.hh"
 #include "G4SystemOfUnits.hh"
@@ -17,28 +19,15 @@ RunAction::RunAction(DetectorConstruction* detConstruction,
     fDetConstruction(detConstruction),
     fPrimaryGenerator(primaryGenerator),
     fTotalEnergyDeposit("TotalEnergyDeposit", 0.0),
-    fResistEnergyTotal("ResistEnergy", 0.0),
-    fSubstrateEnergyTotal("SubstrateEnergy", 0.0),
-    fAboveResistEnergyTotal("AboveResistEnergy", 0.0),
     fNumEvents(0)
 {
     // Initialize vectors for scoring
     const G4int numBins = EBL::PSF::NUM_RADIAL_BINS;
     fRadialEnergyProfile.resize(numBins, 0.0);
 
-    // Initialize 2D profile
-    const G4int numDepthBins = 100;
-    f2DEnergyProfile.resize(numDepthBins);
-    for (auto& depthBin : f2DEnergyProfile) {
-        depthBin.resize(numBins, 0.0);
-    }
-
-    // Register accumulables
+    // Register accumulable with G4AccumulableManager
     G4AccumulableManager* accumulableManager = G4AccumulableManager::Instance();
-    accumulableManager->Register(fTotalEnergyDeposit);
-    accumulableManager->Register(fResistEnergyTotal);
-    accumulableManager->Register(fSubstrateEnergyTotal);
-    accumulableManager->Register(fAboveResistEnergyTotal);
+    accumulableManager->RegisterAccumulable(fTotalEnergyDeposit);
 }
 
 RunAction::~RunAction()
@@ -116,11 +105,6 @@ void RunAction::BeginOfRunAction(const G4Run* run)
     const G4int numBins = EBL::PSF::NUM_RADIAL_BINS;
     fRadialEnergyProfile.assign(numBins, 0.0);
 
-    // Reset 2D profile
-    for (auto& depthBin : f2DEnergyProfile) {
-        std::fill(depthBin.begin(), depthBin.end(), 0.0);
-    }
-
     // Reset event counter
     fNumEvents = 0;
 }
@@ -130,9 +114,7 @@ void RunAction::EndOfRunAction(const G4Run* run)
     G4int nofEvents = run->GetNumberOfEvent();
     if (nofEvents == 0) return;
 
-    // Merge accumulables
-    G4AccumulableManager* accumulableManager = G4AccumulableManager::Instance();
-    accumulableManager->Merge();
+    // In sequential mode, no merging needed
 
     // Save results
     SaveResults();
@@ -141,14 +123,8 @@ void RunAction::EndOfRunAction(const G4Run* run)
     G4cout << "\n--------------------End of Run------------------------------\n"
         << " The run consists of " << nofEvents << " events" << G4endl;
 
-    G4cout << " Total energy deposited: "
+    G4cout << " Total energy deposited in resist: "
         << G4BestUnit(fTotalEnergyDeposit.GetValue(), "Energy") << G4endl;
-    G4cout << " Energy in resist: "
-        << G4BestUnit(fResistEnergyTotal.GetValue(), "Energy") << G4endl;
-    G4cout << " Energy in substrate: "
-        << G4BestUnit(fSubstrateEnergyTotal.GetValue(), "Energy") << G4endl;
-    G4cout << " Energy above resist: "
-        << G4BestUnit(fAboveResistEnergyTotal.GetValue(), "Energy") << G4endl;
 }
 
 void RunAction::AddRadialEnergyDeposit(const std::vector<G4double>& energyDeposit)
@@ -172,29 +148,6 @@ void RunAction::AddRadialEnergyDeposit(const std::vector<G4double>& energyDeposi
     fNumEvents++;
 }
 
-void RunAction::Add2DEnergyDeposit(const std::vector<std::vector<G4double>>& energy2D)
-{
-    // Initialize if needed
-    if (f2DEnergyProfile.empty()) {
-        f2DEnergyProfile = energy2D;
-    }
-    else {
-        // Accumulate
-        for (size_t d = 0; d < energy2D.size() && d < f2DEnergyProfile.size(); d++) {
-            for (size_t r = 0; r < energy2D[d].size() && r < f2DEnergyProfile[d].size(); r++) {
-                f2DEnergyProfile[d][r] += energy2D[d][r];
-            }
-        }
-    }
-}
-
-void RunAction::AddRegionEnergy(G4double resist, G4double substrate, G4double above)
-{
-    fResistEnergyTotal += resist;
-    fSubstrateEnergyTotal += substrate;
-    fAboveResistEnergyTotal += above;
-}
-
 void RunAction::AddEnergyDeposit(G4double edep, G4double x, G4double y, G4double z)
 {
     // This method is not used when EventAction handles binning
@@ -207,9 +160,6 @@ void RunAction::SaveResults()
     G4cout << "=== Saving Results ===" << G4endl;
     G4cout << "Number of events processed: " << fNumEvents << G4endl;
     G4cout << "Total energy deposited: " << G4BestUnit(fTotalEnergyDeposit.GetValue(), "Energy") << G4endl;
-    G4cout << "Energy in resist: " << G4BestUnit(fResistEnergyTotal.GetValue(), "Energy") << G4endl;
-    G4cout << "Energy in substrate: " << G4BestUnit(fSubstrateEnergyTotal.GetValue(), "Energy") << G4endl;
-    G4cout << "Energy above resist: " << G4BestUnit(fAboveResistEnergyTotal.GetValue(), "Energy") << G4endl;
 
     // Ensure output directory exists
     std::string outputDir = EBL::Output::DEFAULT_DIRECTORY;
@@ -223,10 +173,13 @@ void RunAction::SaveResults()
         }
     }
 
-    // Save all formats
+    // Save standard CSV format
     SaveCSVFormat(outputDir);
+
+    // Save BEAMER format
     SaveBEAMERFormat(outputDir);
-    Save2DFormat(outputDir);
+
+    // Save summary
     SaveSummary(outputDir);
 }
 
@@ -399,55 +352,6 @@ void RunAction::SaveBEAMERFormat(const std::string& outputDir)
     G4cout << "  Backscatter range (eta): " << eta / micrometer << " um" << G4endl;
 }
 
-void RunAction::Save2DFormat(const std::string& outputDir)
-{
-    std::string filename = outputDir.empty() ? "ebl_2d_data.csv" : outputDir + "/ebl_2d_data.csv";
-    G4cout << "Saving 2D depth-radius data to: " << filename << G4endl;
-
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-        G4cerr << "Error: Could not open 2D output file: " << filename << G4endl;
-        return;
-    }
-
-    // Write header with radius bins
-    file << "Depth(nm)";
-    for (G4int r = 0; r < EBL::PSF::NUM_RADIAL_BINS; r++) {
-        G4double radius = GetBinRadius(r);
-        file << "," << radius / nanometer;
-    }
-    file << std::endl;
-
-    // Define depth range
-    const G4double minDepth = -50.0 * micrometer;
-    const G4double maxDepth = 150.0 * nanometer;
-    const G4double depthRange = maxDepth - minDepth;
-    const G4int numDepthBins = 100;
-
-    // Write data rows
-    for (G4int d = 0; d < numDepthBins; d++) {
-        G4double depth = minDepth + (d + 0.5) * depthRange / numDepthBins;
-        file << depth / nanometer;
-
-        for (G4int r = 0; r < EBL::PSF::NUM_RADIAL_BINS; r++) {
-            G4double rInner, rOuter;
-            GetBinBoundaries(r, rInner, rOuter);
-            G4double area = CLHEP::pi * (rOuter * rOuter - rInner * rInner);
-
-            G4double energyDensity = 0.0;
-            if (area > 0 && fNumEvents > 0 && d < static_cast<G4int>(f2DEnergyProfile.size())) {
-                energyDensity = f2DEnergyProfile[d][r] / (area * fNumEvents);
-            }
-
-            file << "," << energyDensity / (eV / (nanometer * nanometer));
-        }
-        file << std::endl;
-    }
-
-    file.close();
-    G4cout << "2D data saved successfully" << G4endl;
-}
-
 void RunAction::SaveSummary(const std::string& outputDir)
 {
     std::string summaryPath = outputDir.empty() ? "simulation_summary.txt" : outputDir + "/simulation_summary.txt";
@@ -457,13 +361,6 @@ void RunAction::SaveSummary(const std::string& outputDir)
     summaryFile << "=====================" << std::endl;
     summaryFile << "Events simulated: " << fNumEvents << std::endl;
     summaryFile << "Total energy deposited: " << G4BestUnit(fTotalEnergyDeposit.GetValue(), "Energy") << std::endl;
-    summaryFile << "\nEnergy by region:" << std::endl;
-    summaryFile << "  Resist: " << G4BestUnit(fResistEnergyTotal.GetValue(), "Energy")
-        << " (" << (fResistEnergyTotal.GetValue() / fTotalEnergyDeposit.GetValue() * 100) << "%)" << std::endl;
-    summaryFile << "  Substrate: " << G4BestUnit(fSubstrateEnergyTotal.GetValue(), "Energy")
-        << " (" << (fSubstrateEnergyTotal.GetValue() / fTotalEnergyDeposit.GetValue() * 100) << "%)" << std::endl;
-    summaryFile << "  Above resist: " << G4BestUnit(fAboveResistEnergyTotal.GetValue(), "Energy")
-        << " (" << (fAboveResistEnergyTotal.GetValue() / fTotalEnergyDeposit.GetValue() * 100) << "%)" << std::endl;
 
     // Find energy distribution statistics
     G4double e50 = 0, e90 = 0, e99 = 0;  // Radii containing 50%, 90%, 99% of energy

@@ -1,6 +1,6 @@
 # Standard run macro for batch mode PSF generation
 # Usage: ./ebl_sim run.mac
-# This will generate PSF data files for the GUI to visualize
+# This will generate PSF data files in the project's data/output directory
 
 # Verbose settings
 /run/verbose 1
@@ -31,7 +31,7 @@
 # 100k events gives good statistics for PSF
 /run/beamOn 100000
 
-# Output files will be:
-# - ebl_psf_data_30nm.csv (for general analysis)
+# Output files will be saved in the current working directory:
+# - ebl_psf_data.csv (for general analysis)
 # - beamer_psf.dat (for BEAMER software)
 # - simulation_summary.txt

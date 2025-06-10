@@ -15,19 +15,10 @@ EventAction::EventAction(RunAction* runAction, DetectorConstruction* detConstruc
   fRunAction(runAction),
   fDetConstruction(detConstruction),
   fEnergyDeposit(0.),
-  fTotalTrackLength(0.),
-  fResistEnergy(0.),
-  fSubstrateEnergy(0.),
-  fAboveResistEnergy(0.)
+  fTotalTrackLength(0.)
 {
     // Initialize the radial bins for energy deposition
     fRadialEnergyDeposit.resize(EBL::PSF::NUM_RADIAL_BINS, 0.0);
-    
-    // Initialize 2D array for depth-radius analysis
-    f2DEnergyDeposit.resize(NUM_DEPTH_BINS);
-    for (auto& depthBin : f2DEnergyDeposit) {
-        depthBin.resize(EBL::PSF::NUM_RADIAL_BINS, 0.0);
-    }
 }
 
 EventAction::~EventAction()
@@ -37,17 +28,9 @@ void EventAction::BeginOfEventAction(const G4Event* event)
 {
     fEnergyDeposit = 0.;
     fTotalTrackLength = 0.;
-    fResistEnergy = 0.;
-    fSubstrateEnergy = 0.;
-    fAboveResistEnergy = 0.;
 
     // Reset radial energy bins
     std::fill(fRadialEnergyDeposit.begin(), fRadialEnergyDeposit.end(), 0.0);
-    
-    // Reset 2D bins
-    for (auto& depthBin : f2DEnergyDeposit) {
-        std::fill(depthBin.begin(), depthBin.end(), 0.0);
-    }
 
     // Print progress for first few events and every 10000 events
     G4int eventID = event->GetEventID();
@@ -73,17 +56,12 @@ void EventAction::EndOfEventAction(const G4Event* event)
         if (eventID < 10 || (eventID < 1000 && eventID % 100 == 0)) {
             G4cout << "Event " << eventID << " deposited "
                    << G4BestUnit(totalEventEnergy, "Energy")
-                   << " in " << nonZeroBins << " radial bins" << G4endl;
-            G4cout << "  Resist: " << G4BestUnit(fResistEnergy, "Energy")
-                   << ", Substrate: " << G4BestUnit(fSubstrateEnergy, "Energy")
-                   << ", Above: " << G4BestUnit(fAboveResistEnergy, "Energy") << G4endl;
+                   << " in " << nonZeroBins << " bins" << G4endl;
         }
     }
 
-    // Pass accumulated energy data to run action
+    // Pass accumulated energy and track data to run action
     fRunAction->AddRadialEnergyDeposit(fRadialEnergyDeposit);
-    fRunAction->Add2DEnergyDeposit(f2DEnergyDeposit);
-    fRunAction->AddRegionEnergy(fResistEnergy, fSubstrateEnergy, fAboveResistEnergy);
 }
 
 // Helper function for logarithmic binning
@@ -114,23 +92,6 @@ G4int EventAction::GetLogBin(G4double radius) const
     return bin;
 }
 
-G4int EventAction::GetDepthBin(G4double z) const
-{
-    // Define depth range: -50um to +150nm (covers substrate and above resist)
-    const G4double minDepth = -50.0 * micrometer;
-    const G4double maxDepth = 150.0 * nanometer;
-    const G4double depthRange = maxDepth - minDepth;
-    
-    if (z < minDepth) return 0;
-    if (z > maxDepth) return NUM_DEPTH_BINS - 1;
-    
-    G4int bin = static_cast<G4int>((z - minDepth) / depthRange * NUM_DEPTH_BINS);
-    if (bin < 0) bin = 0;
-    if (bin >= NUM_DEPTH_BINS) bin = NUM_DEPTH_BINS - 1;
-    
-    return bin;
-}
-
 void EventAction::AddEnergyDeposit(G4double edep, G4double x, G4double y, G4double z)
 {
     // Skip if no energy deposited
@@ -142,39 +103,29 @@ void EventAction::AddEnergyDeposit(G4double edep, G4double x, G4double y, G4doub
     // Calculate radial distance from beam axis (beam enters along z-axis)
     G4double r = std::sqrt(x*x + y*y);
 
-    // Get logarithmic bin number for radius
-    G4int radialBin = GetLogBin(r);
-    
-    // Get depth bin
-    G4int depthBin = GetDepthBin(z);
+    // Get logarithmic bin number
+    G4int bin = GetLogBin(r);
 
-    // Add energy to appropriate bins
-    if (radialBin >= 0 && radialBin < static_cast<G4int>(fRadialEnergyDeposit.size())) {
-        fRadialEnergyDeposit[radialBin] += edep;
-        
-        // Add to 2D histogram
-        if (depthBin >= 0 && depthBin < NUM_DEPTH_BINS) {
-            f2DEnergyDeposit[depthBin][radialBin] += edep;
+    // Add energy to appropriate radial bin
+    if (bin >= 0 && bin < static_cast<G4int>(fRadialEnergyDeposit.size())) {
+        fRadialEnergyDeposit[bin] += edep;
+
+        // Enhanced debug output for first few deposits
+        static G4int debugCount = 0;
+        if (debugCount < 20) {  // Show more debug info
+            G4cout << "Energy deposit #" << debugCount << ": "
+                   << G4BestUnit(edep, "Energy") << " at r=" << G4BestUnit(r, "Length")
+                   << " z=" << G4BestUnit(z, "Length")
+                   << " (log bin " << bin << ")" << G4endl;
+            debugCount++;
         }
-    }
-    
-    // Track energy by region
-    G4double resistThickness = fDetConstruction->GetActualResistThickness();
-    if (z >= 0 && z <= resistThickness) {
-        fResistEnergy += edep;
-    } else if (z < 0) {
-        fSubstrateEnergy += edep;
-    } else {
-        fAboveResistEnergy += edep;
-    }
 
-    // Enhanced debug output for first few deposits
-    static G4int debugCount = 0;
-    if (debugCount < 50) {
-        G4cout << "Energy deposit #" << debugCount << ": "
-               << G4BestUnit(edep, "Energy") << " at r=" << G4BestUnit(r, "Length")
-               << " z=" << G4BestUnit(z, "Length")
-               << " (radial bin " << radialBin << ", depth bin " << depthBin << ")" << G4endl;
-        debugCount++;
+        // Special logging for very close deposits (important for PSF peak)
+        static G4int closeDepositCount = 0;
+        if (r < 10*nanometer && closeDepositCount < 10) {
+            G4cout << "Close deposit: " << G4BestUnit(edep, "Energy")
+                   << " at r=" << r/nanometer << " nm (bin " << bin << ")" << G4endl;
+            closeDepositCount++;
+        }
     }
 }

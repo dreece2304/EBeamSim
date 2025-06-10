@@ -1,4 +1,4 @@
-﻿// RunAction.hh
+// RunAction.hh - Sequential Mode (No Multithreading)
 #ifndef RunAction_h
 #define RunAction_h 1
 
@@ -23,8 +23,6 @@ public:
     // Methods to accumulate energy deposition data
     void AddEnergyDeposit(G4double edep, G4double x, G4double y, G4double z);
     void AddRadialEnergyDeposit(const std::vector<G4double>& energyDeposit);
-    void Add2DEnergyDeposit(const std::vector<std::vector<G4double>>& energy2D);
-    void AddRegionEnergy(G4double resist, G4double substrate, G4double above);
 
     // Access methods for analysis
     std::vector<G4double> GetRadialEnergyProfile() const { return fRadialEnergyProfile; }
@@ -35,13 +33,7 @@ private:
 
     // For energy deposition analysis
     std::vector<G4double> fRadialEnergyProfile;
-    std::vector<std::vector<G4double>> f2DEnergyProfile;
-    
     G4Accumulable<G4double> fTotalEnergyDeposit;
-    G4Accumulable<G4double> fResistEnergyTotal;
-    G4Accumulable<G4double> fSubstrateEnergyTotal;
-    G4Accumulable<G4double> fAboveResistEnergyTotal;
-    
     G4int fNumEvents;
 
     // Helper functions for logarithmic binning
@@ -52,7 +44,6 @@ private:
     void SaveResults();
     void SaveCSVFormat(const std::string& outputDir);
     void SaveBEAMERFormat(const std::string& outputDir);
-    void Save2DFormat(const std::string& outputDir);
     void SaveSummary(const std::string& outputDir);
 };
 
