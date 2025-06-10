@@ -1,0 +1,666 @@
+[23:04:00] Simulation started...
+[23:04:01] **************************************************************
+[23:04:01] Geant4 version Name: geant4-11-03-patch-02 [MT]   (25-April-2025)
+[23:04:01] << in Multi-threaded mode >>
+[23:04:01] Copyright : Geant4 Collaboration
+[23:04:01] References : NIM A 506 (2003), 250-303
+[23:04:01] : IEEE-TNS 53 (2006), 270-278
+[23:04:01] : NIM A 835 (2016), 186-225
+[23:04:01] WWW : http://geant4.org/
+[23:04:01] **************************************************************
+[23:04:01] ====> Running with 8 threads (auto-detected)
+[23:04:01] SetResistComposition received: 'Al:1,C:5,H:4,O:2'
+[23:04:01] Found 4 element specifications
+[23:04:01] Processing: 'Al' -> 'Al'
+[23:04:01] Successfully added element: Al count: 1
+[23:04:01] Processing: 'C' -> 'C'
+[23:04:01] Successfully added element: C count: 5
+[23:04:01] Processing: 'H' -> 'H'
+[23:04:01] Successfully added element: H count: 4
+[23:04:01] Processing: 'O' -> 'O'
+[23:04:01] Successfully added element: O count: 2
+[23:04:01] Final resist composition set with 4 elements
+[23:04:01] EM Parameters configured for EBL:
+[23:04:01] Min energy: 10 eV
+[23:04:01] Max energy: 1000 MeV
+[23:04:01] Fluorescence: 1
+[23:04:01] Auger: 1
+[23:04:01] MSC range factor: 0.02
+[23:04:01] Number of bins per decade: 20
+[23:04:01] Accumulable registered as "TotalEnergyDeposit"
+[23:04:01] Checking overlaps for volume Substrate:0 (G4Box) ... OK!
+[23:04:01] Creating resist material with 4 elements
+[23:04:01] Total atom count: 12
+[23:04:01] Added Al with fraction 0.0833333
+[23:04:01] Added C with fraction 0.416667
+[23:04:01] Added H with fraction 0.333333
+[23:04:01] Added O with fraction 0.166667
+[23:04:01] Created resist material:
+[23:04:01] Name: Resist_-1
+[23:04:01] Density: 1.35 g/cm3
+[23:04:01] Number of elements: 4
+[23:04:01] Composition: Al:1 C:5 H:4 O:2
+[23:04:01] Checking overlaps for volume Resist:0 (G4Box) ... OK!
+[23:04:01] === Detector Construction ===
+[23:04:01] World size: 400 um
+[23:04:01] Substrate: 200 um  thick Si
+[23:04:01] Bottom at z=-200 um
+[23:04:01] Top at z=0 fm  (reference)
+[23:04:01] Resist: 30 nm  thick
+[23:04:01] Bottom at z=0 fm
+[23:04:01] Top at z=30 nm
+[23:04:01] Recommended beam start: z=130 nm
+[23:04:01] ===========================
+[23:04:01] Set production cuts for resist region: 1 Ang
+[23:04:01] PhysicsList::SetCuts() - Production thresholds:
+[23:04:01] Gamma:    1 Ang
+[23:04:01] Electron: 1 Ang
+[23:04:01] Positron: 1 Ang
+[23:04:01] Special cuts for resist region: 1 Ang
+[23:04:01] Lowest electron tracking energy: 10 eV
+[23:04:01] =======================================================================
+[23:04:01] ======                 Electromagnetic Physics Parameters      ========
+[23:04:01] =======================================================================
+[23:04:01] LPM effect enabled                                 1
+[23:04:01] Enable creation and use of sampling tables         0
+[23:04:01] Apply cuts on all EM processes                     1
+[23:04:01] Use combined TransportationWithMsc                 Disabled
+[23:04:01] Use general process                                0
+[23:04:01] Enable linear polarisation for gamma               0
+[23:04:01] Enable photoeffect sampling below K-shell          1
+[23:04:01] Enable sampling of quantum entanglement            0
+[23:04:01] X-section factor for integral approach             0.8
+[23:04:01] Min kinetic energy for tables                      10 eV
+[23:04:01] Max kinetic energy for tables                      1 GeV
+[23:04:01] Number of bins per decade of a table               20
+[23:04:01] Verbose level                                      1
+[23:04:01] Verbose level for worker thread                    0
+[23:04:01] Bremsstrahlung energy threshold above which
+[23:04:01] primary e+- is added to the list of secondary    1 MeV
+[23:04:01] Bremsstrahlung energy threshold above which primary
+[23:04:01] muon/hadron is added to the list of secondary    100 TeV
+[23:04:01] Positron annihilation at rest model                AllisonPositronium
+[23:04:01] Enable 3 gamma annihilation on fly                 0
+[23:04:01] Lowest triplet kinetic energy                      1 MeV
+[23:04:01] Enable sampling of gamma linear polarisation       0
+[23:04:01] 5D gamma conversion model type                     0
+[23:04:01] 5D gamma conversion model on isolated ion          0
+[23:04:01] Use Ricardo-Gerardo pair production model          0
+[23:04:01] Livermore data directory                           epics_2017
+[23:04:01] =======================================================================
+[23:04:01] ======                 Ionisation Parameters                   ========
+[23:04:01] =======================================================================
+[23:04:01] Step function for e+-                              (0.1, 1e-07 mm)
+[23:04:01] Step function for muons/hadrons                    (0.1, 0.05 mm)
+[23:04:01] Step function for light ions                       (0.1, 0.02 mm)
+[23:04:01] Step function for general ions                     (0.1, 0.001 mm)
+[23:04:01] Lowest e+e- kinetic energy                         10 eV
+[23:04:01] Lowest muon/hadron kinetic energy                  1 keV
+[23:04:01] Use ICRU90 data                                    1
+[23:04:01] Fluctuations of dE/dx are enabled                  1
+[23:04:01] Type of fluctuation model for leptons and hadrons  Urban
+[23:04:01] Use built-in Birks satuaration                     0
+[23:04:01] Build CSDA range enabled                           1
+[23:04:01] Use cut as a final range enabled                   0
+[23:04:01] Enable angular generator interface                 1
+[23:04:01] Max kinetic energy for CSDA tables                 1 GeV
+[23:04:01] Max kinetic energy for NIEL computation            1 MeV
+[23:04:01] Linear loss limit                                  0.01
+[23:04:01] Read data from file for e+e- pair production by mu 0
+[23:04:01] =======================================================================
+[23:04:01] ======                 Multiple Scattering Parameters          ========
+[23:04:01] =======================================================================
+[23:04:01] Type of msc step limit algorithm for e+-           3
+[23:04:01] Type of msc step limit algorithm for muons/hadrons 0
+[23:04:01] Msc lateral displacement for e+- enabled           1
+[23:04:01] Msc lateral displacement for muons and hadrons     1
+[23:04:01] Urban msc model lateral displacement alg96         1
+[23:04:01] Range factor for msc step limit for e+-            0.02
+[23:04:01] Range factor for msc step limit for muons/hadrons  0.2
+[23:04:01] Geometry factor for msc step limitation of e+-     2.5
+[23:04:01] Safety factor for msc step limit for e+-           0.6
+[23:04:01] Skin parameter for msc step limitation of e+-      3
+[23:04:01] Lambda limit for msc step limit for e+-            1 mm
+[23:04:01] Use Mott correction for e- scattering              1
+[23:04:01] Factor used for dynamic computation of angular
+[23:04:01] limit between single and multiple scattering     1
+[23:04:01] Fixed angular limit between single
+[23:04:01] and multiple scattering                          3.1416 rad
+[23:04:01] Upper energy limit for e+- multiple scattering     100 MeV
+[23:04:01] Type of electron single scattering model           0
+[23:04:01] Type of nuclear form-factor                        1
+[23:04:01] Screening factor                                   1
+[23:04:01] =======================================================================
+[23:04:01] ======                 Atomic Deexcitation Parameters          ========
+[23:04:01] =======================================================================
+[23:04:01] Fluorescence enabled                               1
+[23:04:01] Directory in G4LEDATA for fluorescence data files  fluor
+[23:04:01] Auger electron cascade enabled                     1
+[23:04:01] PIXE atomic de-excitation enabled                  1
+[23:04:01] De-excitation module ignores cuts                  0
+[23:04:01] Type of PIXE cross section for hadrons             Empirical
+[23:04:01] Type of PIXE cross section for e+-                 Livermore
+[23:04:01] =======================================================================
+[23:04:01] ### ===  Deexcitation model UAtomDeexcitation is activated for 2 regions:
+[23:04:01] DefaultRegionForTheWorld  1  1  1
+[23:04:01] ResistRegion  1  1  1
+[23:04:02] ### === G4UAtomicDeexcitation::InitialiseForNewRun()
+[23:04:02] ### ===  Auger flag: 1
+[23:04:02] ### ===  Ignore cuts flag:   0
+[23:04:02] ### ===  PIXE model for hadrons: Empirical
+[23:04:02] ### ===  PIXE model for e+-:     Livermore
+[23:04:02] phot:  for gamma applyCuts:1  SubType=12 BuildTable=0
+[23:04:02] LambdaPrime table from 200 keV to 1 GeV in 74 bins
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] LivermorePhElectric : Emin=    0 eV  Emax=    1 GeV  SauterGavrila Fluo
+[23:04:02] compt:  for gamma applyCuts:1  SubType=13 BuildTable=1
+[23:04:02] Lambda table from 10 eV  to 1 MeV, 20 bins/decade, spline: 1
+[23:04:02] LambdaPrime table from 1 MeV to 1 GeV in 60 bins
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] KleinNishina : Emin=    0 eV  Emax=  100 eV  Fluo
+[23:04:02] LivermoreCompton : Emin=  100 eV  Emax=    1 GeV Fluo
+[23:04:02] conv:  for gamma applyCuts:1  SubType=14 BuildTable=1
+[23:04:02] Lambda table from 1.022 MeV to 1 GeV, 27 bins/decade, spline: 1
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] Livermore5DConversion : Emin=    0 eV  Emax=    1 GeV  ModifiedTsai
+[23:04:02] Rayl:  for gamma applyCuts:1  SubType=11 BuildTable=1
+[23:04:02] Lambda table from 10 eV  to 150 keV, 20 bins/decade, spline: 0
+[23:04:02] LambdaPrime table from 150 keV to 1 GeV in 76 bins
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] LivermoreRayleigh : Emin=    0 eV  Emax=    1 GeV  CullenGenerator
+[23:04:02] msc:  for e-  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] GoudsmitSaunderson : Emin=    0 eV  Emax=  100 MeV Nbins=120 100 eV  - 100 MeV
+[23:04:02] StepLim=DistanceToBoundary Rfact=0.02 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] WentzelVIUni : Emin=  100 MeV Emax=    1 GeV Nbins=20 100 MeV -   1 GeV
+[23:04:02] StepLim=DistanceToBoundary Rfact=0.02 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] eIoni:  for e-  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 1e-07 mm), integ: 3, fluct: 1, linLossLim= 0.01
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] LowEnergyIoni : Emin=    0 eV  Emax=  100 keV  deltaVI
+[23:04:02] MollerBhabha : Emin=  100 keV Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] eBrem:  for e-  XStype:4  SubType=3
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] LPM flag: 1 for E > 1 GeV,  VertexHighEnergyTh(GeV)= 0.001
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eBremSB : Emin=    0 eV  Emax=    1 GeV  AngularGen2BS
+[23:04:02] ePairProd:  for e-  XStype:1  SubType=4
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 0
+[23:04:02] Sampling table 5x1001; from 0.1 GeV to 0.001 TeV
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] ePairProd : Emin=    0 eV  Emax=    1 GeV  ModifiedMephi
+[23:04:02] CoulombScat:  for e- XStype:1 applyCuts:1  SubType=1 BuildTable=1
+[23:04:02] Lambda table from 100 MeV to 1 GeV, 20 bins/decade, spline: 0
+[23:04:02] ThetaMin(p) < Theta(degree) < 180, pLimit(GeV^1)= 0.139531
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eCoulombScattering : Emin=  100 MeV Emax=    1 GeV
+[23:04:02] msc:  for e+  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] GoudsmitSaunderson : Emin=    0 eV  Emax=  100 MeV Nbins=120 100 eV  - 100 MeV
+[23:04:02] StepLim=DistanceToBoundary Rfact=0.02 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] WentzelVIUni : Emin=  100 MeV Emax=    1 GeV Nbins=20 100 MeV -   1 GeV
+[23:04:02] StepLim=DistanceToBoundary Rfact=0.02 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] eIoni:  for e+  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 1e-07 mm), integ: 3, fluct: 1, linLossLim= 0.01
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] MollerBhabha : Emin=    0 eV  Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] eBrem:  for e+  XStype:4  SubType=3
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] LPM flag: 1 for E > 1 GeV,  VertexHighEnergyTh(GeV)= 0.001
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eBremSB : Emin=    0 eV  Emax=    1 GeV  AngularGen2BS
+[23:04:02] ePairProd:  for e+  XStype:1  SubType=4
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 0
+[23:04:02] Sampling table 5x1001; from 0.1 GeV to 0.001 TeV
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] ePairProd : Emin=    0 eV  Emax=    1 GeV  ModifiedMephi
+[23:04:02] annihil:  for e+ XStype:2 applyCuts:1  SubType=5 AtRestModel:Allison BuildTable=0
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eplus2gg : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] CoulombScat:  for e+ XStype:1 applyCuts:1  SubType=1 BuildTable=1
+[23:04:02] Lambda table from 100 MeV to 1 GeV, 20 bins/decade, spline: 0
+[23:04:02] ThetaMin(p) < Theta(degree) < 180, pLimit(GeV^1)= 0.139531
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eCoulombScattering : Emin=  100 MeV Emax=    1 GeV
+[23:04:02] msc:  for proton  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] WentzelVIUni : Emin=    0 eV  Emax=    1 GeV Nbins=140 100 eV  -   1 GeV
+[23:04:02] StepLim=Minimal Rfact=0.2 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] hIoni:  for proton  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 0.05 mm), integ: 3, fluct: 1, linLossLim= 0.01
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] Bragg : Emin=    0 eV  Emax=    2 MeV  deltaVI
+[23:04:02] BetheBloch : Emin=    2 MeV Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] CoulombScat:  for proton XStype:1 applyCuts:1  SubType=1 BuildTable=1
+[23:04:02] Lambda table from threshold  to 1 GeV, 20 bins/decade, spline: 0
+[23:04:02] ThetaMin(p) < Theta(degree) < 180, pLimit(GeV^1)= 0.139531
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eCoulombScattering : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] nuclearStopping:  for proton applyCuts:1  SubType=8 BuildTable=0
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] ICRU49NucStopping : Emin=    0 eV  Emax=    1 MeV
+[23:04:02] msc:  for GenericIon  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] UrbanMsc : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] StepLim=Minimal Rfact=0.2 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] ionIoni:  for GenericIon  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 0.001 mm), integ: 3, fluct: 1, linLossLim= 0.02
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] LindhardSorensen : Emin=    0 eV  Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] nuclearStopping:  for GenericIon applyCuts:1  SubType=8 BuildTable=0
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] ICRU49NucStopping : Emin=    0 eV  Emax=    1 MeV
+[23:04:02] msc:  for alpha  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] UrbanMsc : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] StepLim=Minimal Rfact=0.2 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] ionIoni:  for alpha  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 0.02 mm), integ: 3, fluct: 1, linLossLim= 0.02
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] BraggIon : Emin=    0 eV  Emax=7.9452 MeV  deltaVI
+[23:04:02] BetheBloch : Emin=7.9452 MeV Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] nuclearStopping:  for alpha applyCuts:1  SubType=8 BuildTable=0
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] ICRU49NucStopping : Emin=    0 eV  Emax=    1 MeV
+[23:04:02] msc:  for anti_proton  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] WentzelVIUni : Emin=    0 eV  Emax=    1 GeV Nbins=140 100 eV  -   1 GeV
+[23:04:02] StepLim=Minimal Rfact=0.2 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] hIoni:  for anti_proton  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 0.05 mm), integ: 3, fluct: 1, linLossLim= 0.01
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] ICRU73QO : Emin=    0 eV  Emax=    2 MeV  deltaVI
+[23:04:02] BetheBloch : Emin=    2 MeV Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] CoulombScat:  for anti_proton XStype:1 applyCuts:1  SubType=1 BuildTable=1
+[23:04:02] Lambda table from threshold  to 1 GeV, 20 bins/decade, spline: 0
+[23:04:02] ThetaMin(p) < Theta(degree) < 180, pLimit(GeV^1)= 0.139531
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eCoulombScattering : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] msc:  for kaon+  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] WentzelVIUni : Emin=    0 eV  Emax=    1 GeV Nbins=140 100 eV  -   1 GeV
+[23:04:02] StepLim=Minimal Rfact=0.2 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] hIoni:  for kaon+  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 0.05 mm), integ: 3, fluct: 1, linLossLim= 0.01
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] Bragg : Emin=    0 eV  Emax=1.05231 MeV  deltaVI
+[23:04:02] BetheBloch : Emin=1.05231 MeV Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] CoulombScat:  for kaon+ XStype:1 applyCuts:1  SubType=1 BuildTable=1
+[23:04:02] Lambda table from threshold  to 1 GeV, 20 bins/decade, spline: 0
+[23:04:02] ThetaMin(p) < Theta(degree) < 180, pLimit(GeV^1)= 0.139531
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eCoulombScattering : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] msc:  for kaon-  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] WentzelVIUni : Emin=    0 eV  Emax=    1 GeV Nbins=140 100 eV  -   1 GeV
+[23:04:02] StepLim=Minimal Rfact=0.2 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] hIoni:  for kaon-  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 0.05 mm), integ: 3, fluct: 1, linLossLim= 0.01
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] ICRU73QO : Emin=    0 eV  Emax=1.05231 MeV  deltaVI
+[23:04:02] BetheBloch : Emin=1.05231 MeV Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] CoulombScat:  for kaon- XStype:1 applyCuts:1  SubType=1 BuildTable=1
+[23:04:02] Used Lambda table of kaon+
+[23:04:02] ThetaMin(p) < Theta(degree) < 180, pLimit(GeV^1)= 0.139531
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eCoulombScattering : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] msc:  for mu+  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] WentzelVIUni : Emin=    0 eV  Emax=    1 GeV Nbins=140 100 eV  -   1 GeV
+[23:04:02] StepLim=Minimal Rfact=0.2 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] muIoni:  for mu+  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 0.05 mm), integ: 3, fluct: 1, linLossLim= 0.01
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] Bragg : Emin=    0 eV  Emax=  200 keV  deltaVI
+[23:04:02] MuBetheBloch : Emin=  200 keV Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] CoulombScat:  for mu+ XStype:1 applyCuts:1  SubType=1 BuildTable=1
+[23:04:02] Lambda table from threshold  to 1 GeV, 20 bins/decade, spline: 0
+[23:04:02] ThetaMin(p) < Theta(degree) < 180, pLimit(GeV^1)= 0.139531
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eCoulombScattering : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] msc:  for mu-  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] WentzelVIUni : Emin=    0 eV  Emax=    1 GeV Nbins=140 100 eV  -   1 GeV
+[23:04:02] StepLim=Minimal Rfact=0.2 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] muIoni:  for mu-  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 0.05 mm), integ: 3, fluct: 1, linLossLim= 0.01
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] ICRU73QO : Emin=    0 eV  Emax=  200 keV  deltaVI
+[23:04:02] MuBetheBloch : Emin=  200 keV Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] CoulombScat:  for mu- XStype:1 applyCuts:1  SubType=1 BuildTable=1
+[23:04:02] Used Lambda table of mu+
+[23:04:02] ThetaMin(p) < Theta(degree) < 180, pLimit(GeV^1)= 0.139531
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eCoulombScattering : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] msc:  for pi+  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] WentzelVIUni : Emin=    0 eV  Emax=    1 GeV Nbins=140 100 eV  -   1 GeV
+[23:04:02] StepLim=Minimal Rfact=0.2 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] hIoni:  for pi+  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 0.05 mm), integ: 3, fluct: 1, linLossLim= 0.01
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] Bragg : Emin=    0 eV  Emax=297.505 keV  deltaVI
+[23:04:02] BetheBloch : Emin=297.505 keV Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] CoulombScat:  for pi+ XStype:1 applyCuts:1  SubType=1 BuildTable=1
+[23:04:02] Lambda table from threshold  to 1 GeV, 20 bins/decade, spline: 0
+[23:04:02] ThetaMin(p) < Theta(degree) < 180, pLimit(GeV^1)= 0.139531
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eCoulombScattering : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] msc:  for pi-  SubType= 10
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] WentzelVIUni : Emin=    0 eV  Emax=    1 GeV Nbins=140 100 eV  -   1 GeV
+[23:04:02] StepLim=Minimal Rfact=0.2 Gfact=2.5 Sfact=0.6 DispFlag:1 Skin=3 Llim=1 mm
+[23:04:02] hIoni:  for pi-  XStype:3  SubType=2
+[23:04:02] dE/dx and range tables from 10 eV  to 1 GeV in 160 bins
+[23:04:02] Lambda tables from threshold to 1 GeV, 20 bins/decade, spline: 1
+[23:04:02] StepFunction=(0.1, 0.05 mm), integ: 3, fluct: 1, linLossLim= 0.01
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] ICRU73QO : Emin=    0 eV  Emax=297.505 keV  deltaVI
+[23:04:02] BetheBloch : Emin=297.505 keV Emax=    1 GeV  deltaVI
+[23:04:02] CSDA range table up to 1 GeV in 160 bins
+[23:04:02] CoulombScat:  for pi- XStype:1 applyCuts:1  SubType=1 BuildTable=1
+[23:04:02] Used Lambda table of pi+
+[23:04:02] ThetaMin(p) < Theta(degree) < 180, pLimit(GeV^1)= 0.139531
+[23:04:02] ===== EM models for the G4Region  DefaultRegionForTheWorld ======
+[23:04:02] eCoulombScattering : Emin=    0 eV  Emax=    1 GeV
+[23:04:02] G4WT1 > PrimaryGeneratorAction initialized with:
+[23:04:02] G4WT1 >   Beam energy: 100 keV
+[23:04:02] G4WT1 >   Beam size (FWHM): 2 nm
+[23:04:02] G4WT1 >   Default position: (0, 0, 100) nm
+[23:04:02] G4WT0 > PrimaryGeneratorAction initialized with:
+[23:04:02] G4WT1 > Accumulable registered as "TotalEnergyDeposit"
+[23:04:02] G4WT0 >   Beam energy: 100 keV
+[23:04:02] G4WT1 > >>> Worker thread 1 initialized
+[23:04:02] G4WT0 >   Beam size (FWHM): 2 nm
+[23:04:02] G4WT0 >   Default position: (0, 0, 100) nm
+[23:04:02] G4WT0 > Accumulable registered as "TotalEnergyDeposit"
+[23:04:02] G4WT0 > >>> Worker thread 0 initialized
+[23:04:02] G4WT3 > PrimaryGeneratorAction initialized with:
+[23:04:02] G4WT3 >   Beam energy: 100 keV
+[23:04:02] G4WT3 >   Beam size (FWHM): 2 nm
+[23:04:02] G4WT3 >   Default position: (0, 0, 100) nm
+[23:04:02] G4WT3 > Accumulable registered as "TotalEnergyDeposit"
+[23:04:02] G4WT3 > >>> Worker thread 3 initialized
+[23:04:02] G4WT5 > PrimaryGeneratorAction initialized with:
+[23:04:02] G4WT5 >   Beam energy: 100 keV
+[23:04:02] G4WT5 >   Beam size (FWHM): 2 nm
+[23:04:02] G4WT5 >   Default position: (0, 0, 100) nm
+[23:04:02] G4WT5 > Accumulable registered as "TotalEnergyDeposit"
+[23:04:02] G4WT5 > >>> Worker thread 5 initialized
+[23:04:02] G4WT6 > PrimaryGeneratorAction initialized with:
+[23:04:02] G4WT6 >   Beam energy: 100 keV
+[23:04:02] G4WT6 >   Beam size (FWHM): 2 nm
+[23:04:02] G4WT6 >   Default position: (0, 0, 100) nm
+[23:04:02] G4WT6 > Accumulable registered as "TotalEnergyDeposit"
+[23:04:02] G4WT6 > >>> Worker thread 6 initialized
+[23:04:02] G4WT4 > PrimaryGeneratorAction initialized with:
+[23:04:02] G4WT4 >   Beam energy: 100 keV
+[23:04:02] G4WT4 >   Beam size (FWHM): 2 nm
+[23:04:02] G4WT4 >   Default position: (0, 0, 100) nm
+[23:04:02] G4WT4 > Accumulable registered as "TotalEnergyDeposit"
+[23:04:02] G4WT4 > >>> Worker thread 4 initialized
+[23:04:02] G4WT2 > PrimaryGeneratorAction initialized with:
+[23:04:02] G4WT2 >   Beam energy: 100 keV
+[23:04:02] G4WT2 >   Beam size (FWHM): 2 nm
+[23:04:02] G4WT2 >   Default position: (0, 0, 100) nm
+[23:04:02] G4WT2 > Accumulable registered as "TotalEnergyDeposit"
+[23:04:02] G4WT2 > >>> Worker thread 2 initialized
+[23:04:02] G4WT7 > PrimaryGeneratorAction initialized with:
+[23:04:02] G4WT7 >   Beam energy: 100 keV
+[23:04:02] G4WT7 >   Beam size (FWHM): 2 nm
+[23:04:02] G4WT7 >   Default position: (0, 0, 100) nm
+[23:04:02] G4WT7 > Accumulable registered as "TotalEnergyDeposit"
+[23:04:02] G4WT7 > >>> Worker thread 7 initialized
+[23:04:03] ### ===  Deexcitation model UAtomDeexcitation is activated for 2 regions:
+[23:04:03] DefaultRegionForTheWorld  1  1  1
+[23:04:03] ResistRegion  1  1  1
+[23:04:03] ### === G4UAtomicDeexcitation::InitialiseForNewRun()
+[23:04:03] ### ===  Auger flag: 1
+[23:04:03] ### ===  Ignore cuts flag:   0
+[23:04:03] ### ===  PIXE model for hadrons: Empirical
+[23:04:03] ### ===  PIXE model for e+-:     Livermore
+[23:04:03] Setting resist composition to: Al:1,C:5,H:4,O:2
+[23:04:03] SetResistComposition received: 'Al:1,C:5,H:4,O:2'
+[23:04:03] Found 4 element specifications
+[23:04:03] Processing: 'Al' -> 'Al'
+[23:04:03] Successfully added element: Al count: 1
+[23:04:03] Processing: 'C' -> 'C'
+[23:04:03] Successfully added element: C count: 5
+[23:04:03] Processing: 'H' -> 'H'
+[23:04:03] Successfully added element: H count: 4
+[23:04:03] Processing: 'O' -> 'O'
+[23:04:03] Successfully added element: O count: 2
+[23:04:03] Final resist composition set with 4 elements
+[23:04:03] Resist thickness set to 30 nm
+[23:04:03] Resist density set to 1.35 g/cm3
+[23:04:03] Detector geometry updated.
+[23:04:03] ### ===  Deexcitation model UAtomDeexcitation is activated for 2 regions:
+[23:04:03] DefaultRegionForTheWorld  1  1  1
+[23:04:03] ResistRegion  1  1  1
+[23:04:03] ### === G4UAtomicDeexcitation::InitialiseForNewRun()
+[23:04:03] ### ===  Auger flag: 1
+[23:04:03] ### ===  Ignore cuts flag:   0
+[23:04:03] ### ===  PIXE model for hadrons: Empirical
+[23:04:03] ### ===  PIXE model for e+-:     Livermore
+[23:04:04] ========= Table of registered couples ============================
+[23:04:04] Index : 0     used in the geometry : Yes
+[23:04:04] Material : G4_Galactic
+[23:04:04] Range cuts        :  gamma  1 Ang    e-  1 Ang    e+  1 Ang proton 1 mm
+[23:04:04] Energy thresholds :  gamma  990 eV     e-  990 eV     e+  990 eV  proton 100 keV
+[23:04:04] Region(s) which use this couple :
+[23:04:04] DefaultRegionForTheWorld
+[23:04:04] Index : 1     used in the geometry : Yes
+[23:04:04] Material : G4_Si
+[23:04:04] Range cuts        :  gamma  1 Ang    e-  1 Ang    e+  1 Ang proton 1 mm
+[23:04:04] Energy thresholds :  gamma  990 eV     e-  990 eV     e+  990 eV  proton 100 keV
+[23:04:04] Region(s) which use this couple :
+[23:04:04] DefaultRegionForTheWorld
+[23:04:04] Index : 2     used in the geometry : No
+[23:04:04] Material : Resist_-1
+[23:04:04] Range cuts        :  gamma  1 Ang    e-  1 Ang    e+  1 Ang proton 0 fm
+[23:04:04] Energy thresholds :  gamma  990 eV     e-  990 eV     e+  990 eV  proton 0 eV
+[23:04:04] Index : 3     used in the geometry : Yes
+[23:04:04] Material : Resist_-1
+[23:04:04] Range cuts        :  gamma  1 Ang    e-  1 Ang    e+  1 Ang proton 1 Ang
+[23:04:04] Energy thresholds :  gamma  990 eV     e-  990 eV     e+  990 eV  proton 10 meV
+[23:04:04] Region(s) which use this couple :
+[23:04:04] ResistRegion
+[23:04:04] ==================================================================
+[23:04:04] ### Run 0 starts.
+[23:04:04] ### Run 0 start.
+[23:04:04] ### Using logarithmic binning: 250 bins from 50000 fm  to 100 um
+[23:04:04] G4WT5 > Beam diameter (FWHM) set to 2 nm
+[23:04:04] G4WT6 > Beam diameter (FWHM) set to 2 nm
+[23:04:04] G4WT7 > Beam diameter (FWHM) set to 2 nm
+[23:04:04] G4WT1 > Beam diameter (FWHM) set to 2 nm
+[23:04:04] G4WT2 > Beam diameter (FWHM) set to 2 nm
+[23:04:04] G4WT0 > Beam diameter (FWHM) set to 2 nm
+[23:04:04] G4WT3 > Beam diameter (FWHM) set to 2 nm
+[23:04:04] G4WT4 > Beam diameter (FWHM) set to 2 nm
+[23:04:04] G4WT0 > ### Run 0 starts on worker thread 0.
+[23:04:04] G4WT3 > ### Run 0 starts on worker thread 3.
+[23:04:04] G4WT5 > ### Run 0 starts on worker thread 5.
+[23:04:04] G4WT6 > ### Run 0 starts on worker thread 6.
+[23:04:04] G4WT3 > Event 3: e- at (-0.279588, -0.614696, 130) nm, E=100 keV
+[23:04:04] G4WT7 > ### Run 0 starts on worker thread 7.
+[23:04:04] G4WT2 > ### Run 0 starts on worker thread 2.
+[23:04:04] G4WT1 > ### Run 0 starts on worker thread 1.
+[23:04:04] G4WT6 > Processing event 9
+[23:04:04] G4WT4 > ### Run 0 starts on worker thread 4.
+[23:04:04] G4WT5 > Processing event 6
+[23:04:04] G4WT3 > Processing event 3
+[23:04:04] G4WT0 > Event 0: e- at (0.322809, -0.49655, 130) nm, E=100 keV
+[23:04:04] G4WT0 > Processing event 0
+[23:04:04] G4WT5 > Energy deposit #0: 27.8183 eV  at r=7.57047 Ang z=0 fm  (log bin 46)
+[23:04:04] G4WT2 > Energy deposit #0: 21.1077 eV  at r=3.49077 Ang z=0 fm  (log bin 33)
+[23:04:04] G4WT1 > Energy deposit #0: 30.7135 eV  at r=2.99982 nm  z=0 fm  (log bin 70)
+[23:04:04] G4WT2 > Close deposit: 21.1077 eV  at r=0.349077 nm (bin 33)
+[23:04:04] G4WT5 > Close deposit: 27.8183 eV  at r=0.757047 nm (bin 46)
+[23:04:04] G4WT0 > Energy deposit #0: 29.4728 eV  at r=1.31698 nm  z=0 fm  (log bin 56)
+[23:04:04] G4WT1 > Close deposit: 30.7135 eV  at r=2.99982 nm (bin 70)
+[23:04:04] G4WT0 > Close deposit: 29.4728 eV  at r=1.31698 nm (bin 56)
+[23:04:04] G4WT1 > Energy deposit #4: 470.502 meV at r=15.6468 um  z=30 nm  (log bin 217)
+[23:04:04] G4WT5 > Event 6 deposited 27.8183 eV  in 1 bins
+[23:04:04] G4WT1 > Energy deposit #5: 196.384 eV  at r=16.6004 um  z=30 nm  (log bin 218)
+[23:04:04] G4WT5 > Processing event 7
+[23:04:04] G4WT4 > Energy deposit #6: 6.72341 eV  at r=2.5736 nm  z=0 fm  (log bin 67)
+[23:04:04] G4WT4 > Close deposit: 6.72341 eV  at r=2.5736 nm (bin 67)
+[23:04:04] G4WT3 > Event 4: e- at (-1.55198, 0.388514, 130) nm, E=100 keV
+[23:04:04] G4WT3 > Processing event 4
+[23:04:04] G4WT3 > Energy deposit #7: 16.7745 eV  at r=1.88594 nm  z=0 fm  (log bin 62)
+[23:04:04] G4WT3 > Close deposit: 16.7745 eV  at r=1.88594 nm (bin 62)
+[23:04:04] G4WT0 > Event 0 deposited 29.4728 eV  in 1 bins
+[23:04:04] G4WT0 > Event 1: e- at (0.186331, 0.000446366, 130) nm, E=100 keV
+[23:04:04] G4WT0 > Processing event 1
+[23:04:04] G4WT5 > Processing event 8
+[23:04:04] G4WT7 > Energy deposit #8: 7.82261 eV  at r=1.38658 nm  z=15.5759 nm  (log bin 57)
+[23:04:04] G4WT7 > Close deposit: 7.82261 eV  at r=1.38658 nm (bin 57)
+[23:04:04] G4WT7 > Energy deposit #9: 8.45223 eV  at r=1.9042 nm  z=0 fm  (log bin 62)
+[23:04:04] G4WT7 > Close deposit: 8.45223 eV  at r=1.9042 nm (bin 62)
+[23:04:04] G4WT3 > Event 4 deposited 16.7745 eV  in 1 bins
+[23:04:04] G4WT3 > Processing event 5
+[23:04:04] G4WT0 > Event 2: e- at (-0.225803, 0.115835, 130) nm, E=100 keV
+[23:04:04] G4WT0 > Processing event 2
+[23:04:04] G4WT6 > Energy deposit #10: 10.2578 eV  at r=2.30064 nm  z=0 fm  (log bin 65)
+[23:04:04] G4WT6 > Close deposit: 10.2578 eV  at r=2.30064 nm (bin 65)
+[23:04:04] G4WT2 > Event 20: e- at (0.500255, -0.602489, 130) nm, E=100 keV
+[23:04:04] G4WT2 > Energy deposit #11: 17.3465 eV  at r=1.05305 nm  z=0 fm  (log bin 52)
+[23:04:04] G4WT2 > Close deposit: 17.3465 eV  at r=1.05305 nm (bin 52)
+[23:04:04] G4WT7 > Energy deposit #12: 7.75073 eV  at r=3.16496 nm  z=0 fm  (log bin 71)
+[23:04:04] G4WT1 > Energy deposit #13: 13.3274 eV  at r=1.15807 nm  z=0 fm  (log bin 53)
+[23:04:04] G4WT3 > Energy deposit #14: 4.57758 eV  at r=8.77866 Ang z=0 fm  (log bin 49)
+[23:04:04] G4WT3 > Energy deposit #15: 12.4552 eV  at r=1.38987 nm  z=0 fm  (log bin 57)
+[23:04:04] G4WT5 > Energy deposit #16: 18.5539 eV  at r=5.176 Ang z=0 fm  (log bin 40)
+[23:04:04] G4WT7 > Energy deposit #17: 26.3494 eV  at r=1.74588 nm  z=10.356 nm  (log bin 60)
+[23:04:04] G4WT7 > Energy deposit #18: 5.62011 eV  at r=1.45004 nm  z=0 fm  (log bin 57)
+[23:04:04] G4WT3 > Energy deposit #19: 5.5832 eV  at r=1.00882 nm  z=0 fm  (log bin 51)
+[23:04:04] G4WT6 > Event 40: e- at (-0.0789948, 0.815954, 130) nm, E=100 keV
+[23:04:04] G4WT5 > Event 60: e- at (0.538817, -0.870799, 130) nm, E=100 keV
+[23:04:04] G4WT2 > Event 80: e- at (-1.09372, -1.21066, 130) nm, E=100 keV
+[23:04:04] G4WT0 > Thread-local run terminated.
+[23:04:04] G4WT5 > Thread-local run terminated.
+[23:04:04] G4WT0 > Run Summary
+[23:04:04] G4WT5 > Run Summary
+[23:04:04] G4WT0 >   Number of events processed : 12
+[23:04:04] G4WT5 >   Number of events processed : 12
+[23:04:04] G4WT5 >   User=0.000000s Real=0.004965s Sys=0.000000s [Cpu=0.0%]
+[23:04:04] G4WT0 >   User=0.000000s Real=0.004968s Sys=0.000000s [Cpu=0.0%]
+[23:04:04] G4WT2 > Thread-local run terminated.
+[23:04:04] G4WT2 > Run Summary
+[23:04:04] G4WT2 >   Number of events processed : 12
+[23:04:04] G4WT2 >   User=0.000000s Real=0.004968s Sys=0.000000s [Cpu=0.0%]
+[23:04:04] G4WT6 > Thread-local run terminated.
+[23:04:04] G4WT6 > Run Summary
+[23:04:04] G4WT6 >   Number of events processed : 12
+[23:04:04] G4WT6 >   User=0.000000s Real=0.005523s Sys=0.000000s [Cpu=0.0%]
+[23:04:04] G4WT4 > Thread-local run terminated.
+[23:04:04] G4WT4 > Run Summary
+[23:04:04] G4WT4 >   Number of events processed : 10
+[23:04:04] G4WT4 >   User=0.000000s Real=0.005539s Sys=0.000000s [Cpu=0.0%]
+[23:04:04] G4WT7 > Thread-local run terminated.
+[23:04:04] G4WT7 > Run Summary
+[23:04:04] G4WT7 >   Number of events processed : 15
+[23:04:04] G4WT7 >   User=0.000000s Real=0.005637s Sys=0.000000s [Cpu=0.0%]
+[23:04:04] G4WT3 > Thread-local run terminated.
+[23:04:04] G4WT3 > Run Summary
+[23:04:04] G4WT3 >   Number of events processed : 15
+[23:04:04] G4WT3 >   User=0.000000s Real=0.005868s Sys=0.000000s [Cpu=0.0%]
+[23:04:04] G4WT1 > Thread-local run terminated.
+[23:04:04] G4WT1 > Run Summary
+[23:04:04] G4WT1 >   Number of events processed : 12
+[23:04:04] G4WT1 >   User=0.000000s Real=0.006789s Sys=0.000000s [Cpu=0.0%]
+[23:04:04] Run terminated.
+[23:04:04] Run Summary
+[23:04:04] Number of events processed : 100
+[23:04:04] User=2.453000s Real=0.323969s Sys=0.015000s [Cpu=761.8%]
+[23:04:04] === Saving Results ===
+[23:04:04] Number of events processed: 0
+[23:04:04] Total energy deposited: 0 eV
+[23:04:04] Saving PSF data to: ebl_psf_data.csv
+[23:04:04] PSF data saved successfully
+[23:04:04] Valid bins with energy: 0 / 250
+[23:04:04] Total energy in profile: 0 eV
+[23:04:04] Saving BEAMER format to: beamer_psf.dat
+[23:04:04] BEAMER format saved successfully
+[23:04:04] PSF Parameters for BEAMER:
+[23:04:04] Forward scatter fraction (alpha): 0
+[23:04:04] Backscatter fraction (beta): 1
+[23:04:04] Backscatter range (eta): 0 um
+[23:04:04] Summary saved to: simulation_summary.txt
+[23:04:04] --------------------End of Run------------------------------
+[23:04:04] The run consists of 100 events
+[23:04:04] Total energy deposited in resist: 0 eV
+[23:04:04] G4WT4 > ================== Deleting memory pools ===================
+[23:04:04] G4WT4 > Number of memory pools allocated: 9; of which, static: 0
+[23:04:04] G4WT4 > Dynamic pools deleted: 9 / Total memory freed: 0.023 MB
+[23:04:04] G4WT4 > ============================================================
+[23:04:04] G4WT7 > ================== Deleting memory pools ===================
+[23:04:04] G4WT7 > Number of memory pools allocated: 9; of which, static: 0
+[23:04:04] G4WT7 > Dynamic pools deleted: 9 / Total memory freed: 0.021 MB
+[23:04:04] G4WT7 > ============================================================
+[23:04:04] G4WT1 > ================== Deleting memory pools ===================
+[23:04:04] G4WT1 > Number of memory pools allocated: 9; of which, static: 0
+[23:04:04] G4WT1 > Dynamic pools deleted: 9 / Total memory freed: 0.021 MB
+[23:04:04] G4WT1 > ============================================================
+[23:04:04] G4WT3 > ================== Deleting memory pools ===================
+[23:04:04] G4WT3 > Number of memory pools allocated: 9; of which, static: 0
+[23:04:04] G4WT3 > Dynamic pools deleted: 9 / Total memory freed: 0.022 MB
+[23:04:04] G4WT3 > ============================================================
+[23:04:04] G4WT6 > ================== Deleting memory pools ===================
+[23:04:04] G4WT6 > Number of memory pools allocated: 9; of which, static: 0
+[23:04:04] G4WT6 > Dynamic pools deleted: 9 / Total memory freed: 0.023 MB
+[23:04:04] G4WT6 > ============================================================
+[23:04:04] G4WT2 > ================== Deleting memory pools ===================
+[23:04:04] G4WT2 > Number of memory pools allocated: 9; of which, static: 0
+[23:04:04] G4WT2 > Dynamic pools deleted: 9 / Total memory freed: 0.023 MB
+[23:04:04] G4WT2 > ============================================================
+[23:04:04] G4WT5 > ================== Deleting memory pools ===================
+[23:04:04] G4WT5 > Number of memory pools allocated: 9; of which, static: 0
+[23:04:04] G4WT5 > Dynamic pools deleted: 9 / Total memory freed: 0.021 MB
+[23:04:04] G4WT5 > ============================================================
+[23:04:04] G4WT0 > ================== Deleting memory pools ===================
+[23:04:04] G4WT0 > Number of memory pools allocated: 9; of which, static: 0
+[23:04:04] G4WT0 > Dynamic pools deleted: 9 / Total memory freed: 0.021 MB
+[23:04:04] G4WT0 > ============================================================
+[23:04:04] ================== Deleting memory pools ===================
+[23:04:04] Number of memory pools allocated: 3; of which, static: 0
+[23:04:04] Dynamic pools deleted: 3 / Total memory freed: 0.0048 MB
+[23:04:04] ============================================================
+[23:04:04] Simulation completed successfully
