@@ -57,6 +57,27 @@ class SimulationWorker(QObject):
         """Run the simulation in this thread"""
         try:
             args = [self.executable_path, self.macro_path]
+            
+            # Set up environment variables for Geant4
+            env = os.environ.copy()
+            g4_path = r"C:\Users\dreec\Geant4Projects\program_files"
+            
+            # Add Geant4 data paths
+            env['G4ABLADATA'] = f"{g4_path}\\share\\Geant4\\data\\G4ABLA3.3"
+            env['G4CHANNELINGDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4CHANNELING1.0"
+            env['G4LEDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4EMLOW8.6.1"
+            env['G4ENSDFSTATEDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4ENSDFSTATE3.0"
+            env['G4INCLDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4INCL1.2"
+            env['G4NEUTRONHPDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4NDL4.7.1"
+            env['G4PARTICLEXSDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4PARTICLEXS4.1"
+            env['G4PIIDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4PII1.3"
+            env['G4RADIOACTIVEDATA'] = f"{g4_path}\\share\\Geant4\\data\\RadioactiveDecay6.1.2"
+            env['G4REALSURFACEDATA'] = f"{g4_path}\\share\\Geant4\\data\\RealSurface2.2"
+            env['G4SAIDXSDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4SAIDDATA2.0"
+            env['G4LEVELGAMMADATA'] = f"{g4_path}\\share\\Geant4\\data\\PhotonEvaporation6.1"
+            
+            # Add to PATH
+            env['PATH'] = f"{g4_path}\\bin;" + env.get('PATH', '')
 
             self.process = subprocess.Popen(
                 args,
@@ -65,6 +86,7 @@ class SimulationWorker(QObject):
                 universal_newlines=True,
                 bufsize=0,
                 cwd=self.working_dir,
+                env=env,
                 creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
             )
 
@@ -88,9 +110,10 @@ class SimulationWorker(QObject):
                         self.output.emit("... (output truncated)")
 
                     # Try to extract progress information
-                    if "Event #" in line:
+                    if "Processing event" in line:
                         try:
-                            event_num = int(line.split("Event #")[1].split()[0])
+                            # Extract event number from "Processing event XXXX"
+                            event_num = int(line.split()[-1])
                             self.progress.emit(event_num)
                         except:
                             pass
@@ -179,7 +202,7 @@ class PlotWidget(QWidget):
             ax.plot(radii, energies, 'b-', linewidth=2)
 
         ax.set_xlabel('Radius (nm)')
-        ax.set_ylabel('Energy Deposition (eV/nmÂ²)')
+        ax.set_ylabel('Energy Deposition (eV/nm²)')
         ax.set_title(f'{title} - {plot_type} Scale')
         ax.grid(True, alpha=0.3)
 
@@ -253,7 +276,7 @@ class EBLMainWindow(QMainWindow):
     def setup_ui(self):
         """Setup the user interface"""
         self.setWindowTitle("EBL Simulation Control - Qt Edition")
-        self.setMinimumSize(1000, 700)
+        self.setMinimumSize(1200, 800)
 
         # Apply modern dark theme
         self.setStyleSheet("""
@@ -424,11 +447,11 @@ class EBLMainWindow(QMainWindow):
         material_layout.addWidget(QLabel("Thickness (nm):"), 2, 0)
         self.thickness_spin = QDoubleSpinBox()
         self.thickness_spin.setRange(1.0, 10000.0)
-        self.thickness_spin.setValue(40.0)
+        self.thickness_spin.setValue(30.0)
         self.thickness_spin.setDecimals(1)
         material_layout.addWidget(self.thickness_spin, 2, 1)
 
-        material_layout.addWidget(QLabel("Density (g/cmÂ³):"), 3, 0)
+        material_layout.addWidget(QLabel("Density (g/cm³):"), 3, 0)
         self.density_spin = QDoubleSpinBox()
         self.density_spin.setRange(0.1, 10.0)
         self.density_spin.setValue(1.35)
@@ -443,9 +466,9 @@ class EBLMainWindow(QMainWindow):
 
         info_text = QLabel("""
 <b>Current defaults based on XPS analysis:</b><br>
-â€¢ Pristine Alucone: Al:1,C:5,H:4,O:2 (1.35 g/cmÂ³)<br>
-â€¢ Exposed Alucone: Al:1,C:5,H:4,O:3 (1.40 g/cmÂ³)<br>
-â€¢ From TMA + butyne-1,4-diol MLD process
+• Pristine Alucone: Al:1,C:5,H:4,O:2 (1.35 g/cm³)<br>
+• Exposed Alucone: Al:1,C:5,H:4,O:3 (1.40 g/cm³)<br>
+• From TMA + butyne-1,4-diol MLD process
         """)
         info_text.setWordWrap(True)
         info_layout.addWidget(info_text)
@@ -471,14 +494,14 @@ class EBLMainWindow(QMainWindow):
         beam_layout.addWidget(QLabel("Energy (keV):"), 0, 0)
         self.energy_spin = QDoubleSpinBox()
         self.energy_spin.setRange(0.1, 1000.0)
-        self.energy_spin.setValue(30.0)
+        self.energy_spin.setValue(100.0)
         self.energy_spin.setDecimals(1)
         beam_layout.addWidget(self.energy_spin, 0, 1)
 
         beam_layout.addWidget(QLabel("Beam Size (nm):"), 1, 0)
         self.beam_size_spin = QDoubleSpinBox()
         self.beam_size_spin.setRange(0.1, 1000.0)
-        self.beam_size_spin.setValue(1.0)
+        self.beam_size_spin.setValue(2.0)
         self.beam_size_spin.setDecimals(1)
         beam_layout.addWidget(self.beam_size_spin, 1, 1)
 
@@ -503,7 +526,7 @@ class EBLMainWindow(QMainWindow):
         position_layout.addWidget(QLabel("Z:"), 1, 0)
         self.pos_z_spin = QDoubleSpinBox()
         self.pos_z_spin.setRange(-1000, 1000)
-        self.pos_z_spin.setValue(50.0)
+        self.pos_z_spin.setValue(100.0)
         position_layout.addWidget(self.pos_z_spin, 1, 1)
 
         position_layout.addWidget(QLabel("(Z should be above resist)"), 1, 2, 1, 2)
@@ -559,10 +582,10 @@ class EBLMainWindow(QMainWindow):
         sim_layout.addWidget(QLabel("Number of Events:"), 0, 0)
         self.events_spin = QSpinBox()
         self.events_spin.setRange(1, 100000000)
-        self.events_spin.setValue(100000)
+        self.events_spin.setValue(10000)
         sim_layout.addWidget(self.events_spin, 0, 1)
 
-        warning_label = QLabel("âš ï¸ >1M events may take significant time")
+        warning_label = QLabel("⚠️ >1M events may take significant time")
         warning_label.setStyleSheet("color: orange; font-size: 10px;")
         sim_layout.addWidget(warning_label, 0, 2)
 
@@ -575,7 +598,7 @@ class EBLMainWindow(QMainWindow):
         sim_layout.addWidget(QLabel("Verbose Level:"), 2, 0)
         self.verbose_spin = QSpinBox()
         self.verbose_spin.setRange(0, 5)
-        self.verbose_spin.setValue(0)
+        self.verbose_spin.setValue(1)
         sim_layout.addWidget(self.verbose_spin, 2, 1)
 
         sim_group.setLayout(sim_layout)
@@ -664,9 +687,35 @@ class EBLMainWindow(QMainWindow):
         self.material_combo.setCurrentText("Alucone_XPS")
         self.on_material_changed()
 
-        # Default executable path
-        self.executable_path = str(Path(__file__).resolve().parents[3] / "out" / "build" / "x64-release" / "bin" / "ebl_sim.exe")
-        self.working_dir = str(Path(self.executable_path).parent)
+        # Set the known working executable path
+        self.executable_path = r"C:\Users\dreec\Geant4Projects\EBeamSim\out\build\x64-release\bin\ebl_sim.exe"
+        self.working_dir = r"C:\Users\dreec\Geant4Projects\EBeamSim\out\build\x64-release\bin"
+        
+        # Verify it exists
+        if Path(self.executable_path).exists():
+            print(f"Found executable: {self.executable_path}")
+        else:
+            print(f"Warning: Executable not found at: {self.executable_path}")
+            # Try to find it dynamically as a fallback
+            project_root = Path(__file__).resolve().parents[3]
+            
+            # List of possible executable locations
+            possible_paths = [
+                project_root / "out" / "build" / "x64-release" / "bin" / "ebl_sim.exe",
+                project_root / "out" / "build" / "x64-debug" / "bin" / "ebl_sim.exe",
+                project_root / "out" / "build" / "x64-release" / "ebl_sim.exe",
+                project_root / "out" / "build" / "x64-debug" / "ebl_sim.exe",
+                project_root / "build" / "bin" / "Release" / "ebl_sim.exe",
+                project_root / "build" / "bin" / "Debug" / "ebl_sim.exe",
+            ]
+            
+            # Find the first existing executable
+            for path in possible_paths:
+                if path.exists():
+                    self.executable_path = str(path)
+                    self.working_dir = str(path.parent)
+                    print(f"Found executable: {self.executable_path}")
+                    break
 
     def on_material_changed(self):
         """Handle material selection change"""
@@ -682,11 +731,14 @@ class EBLMainWindow(QMainWindow):
     def generate_macro(self):
         """Generate Geant4 macro file"""
         try:
-            macro_path = Path(self.working_dir) / "ebl_sim_run.mac"
+            # Ensure the working directory exists
+            Path(self.working_dir).mkdir(parents=True, exist_ok=True)
+            
+            macro_path = Path(self.working_dir) / "gui_generated.mac"
 
             with open(macro_path, 'w') as f:
-                f.write("# EBL Simulation Macro - Generated by Qt GUI\n")
-                f.write(f"# Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                f.write("# EBL Simulation Macro - Generated by GUI\n")
+                f.write(f"# {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
 
                 # Verbose settings
                 verbose = min(self.verbose_spin.value(), 1) if self.events_spin.value() > 10000 else self.verbose_spin.value()
@@ -699,22 +751,23 @@ class EBLMainWindow(QMainWindow):
                     f.write(f"/random/setSeeds {self.seed_spin.value()} {self.seed_spin.value()+1}\n\n")
 
                 # Initialize
+                f.write("# Initialize\n")
                 f.write("/run/initialize\n\n")
 
-                # Resist properties
-                f.write("# Resist properties\n")
+                # Material settings
+                f.write("# Material settings\n")
                 f.write(f'/det/setResistComposition "{self.composition_edit.text()}"\n')
                 f.write(f"/det/setResistThickness {self.thickness_spin.value()} nm\n")
                 f.write(f"/det/setResistDensity {self.density_spin.value()} g/cm3\n")
                 f.write("/det/update\n\n")
 
-                # Physics
-                f.write("# Physics settings\n")
+                # Physics processes
+                f.write("# Physics processes\n")
                 f.write(f"/process/em/fluo {1 if self.fluorescence_check.isChecked() else 0}\n")
                 f.write(f"/process/em/auger {1 if self.auger_check.isChecked() else 0}\n\n")
 
-                # Beam parameters
-                f.write("# Beam parameters\n")
+                # Beam configuration
+                f.write("# Beam configuration\n")
                 f.write("/gun/particle e-\n")
                 f.write(f"/gun/energy {self.energy_spin.value()} keV\n")
                 f.write(f"/gun/position {self.pos_x_spin.value()} {self.pos_y_spin.value()} {self.pos_z_spin.value()} nm\n")
@@ -727,16 +780,17 @@ class EBLMainWindow(QMainWindow):
                 else:
                     dx, dy, dz = 0, 0, -1
 
-                f.write(f"/gun/direction {dx} {dy} {dz}\n\n")
+                f.write(f"/gun/direction {dx} {dy} {dz}\n")
+                f.write(f"/gun/beamSize {self.beam_size_spin.value()} nm\n\n")
 
                 # Visualization
                 if self.visualization_check.isChecked():
                     f.write("# Visualization\n")
-                    f.write("/vis/open OGLSQt\n")
+                    f.write("/vis/open OGL\n")
                     f.write("/vis/drawVolume\n")
                     f.write("/vis/scene/add/trajectories smooth\n\n")
 
-                # Run
+                # Run simulation
                 f.write("# Run simulation\n")
                 f.write(f"/run/beamOn {self.events_spin.value()}\n")
 
@@ -771,8 +825,17 @@ class EBLMainWindow(QMainWindow):
 
         # Check executable
         if not Path(self.executable_path).exists():
-            QMessageBox.critical(self, "Error", f"Executable not found: {self.executable_path}")
-            return
+            # First try to find the executable again
+            self.setup_defaults()
+            
+            if not Path(self.executable_path).exists():
+                QMessageBox.critical(self, "Error", 
+                    f"Executable not found: {self.executable_path}\n\n"
+                    f"Please select the correct executable using File > Select Executable")
+                return
+
+        # Ensure working directory exists
+        Path(self.working_dir).mkdir(parents=True, exist_ok=True)
 
         # Clear log and setup UI
         self.clear_log()
@@ -782,6 +845,9 @@ class EBLMainWindow(QMainWindow):
         self.progress_bar.setVisible(True)
         self.progress_bar.setMaximum(self.events_spin.value())
         self.progress_bar.setValue(0)
+
+        # Switch to output tab
+        self.tab_widget.setCurrentIndex(3)  # Output tab
 
         # Create worker thread
         self.simulation_thread = QThread()
@@ -821,6 +887,22 @@ class EBLMainWindow(QMainWindow):
 
         if success:
             QMessageBox.information(self, "Success", "Simulation completed successfully!")
+            
+            # Check for output files
+            output_dir = Path(self.working_dir)
+            psf_file = output_dir / "ebl_psf_data.csv"
+            
+            if psf_file.exists():
+                reply = QMessageBox.question(
+                    self, "Load Results",
+                    "PSF data generated. Would you like to load and visualize it?",
+                    QMessageBox.Yes | QMessageBox.No
+                )
+                
+                if reply == QMessageBox.Yes:
+                    self.tab_widget.setCurrentIndex(4)  # Visualization tab
+                    # Auto-load the data
+                    QTimer.singleShot(500, lambda: self.plot_widget.load_data())
 
     def update_progress(self, event_num):
         """Update progress bar"""
@@ -830,7 +912,8 @@ class EBLMainWindow(QMainWindow):
 
     def log_output(self, message):
         """Add message to output log"""
-        self.output_text.append(message)
+        timestamp = time.strftime("%H:%M:%S")
+        self.output_text.append(f"[{timestamp}] {message}")
 
     def clear_log(self):
         """Clear output log"""
@@ -839,7 +922,9 @@ class EBLMainWindow(QMainWindow):
     def save_log(self):
         """Save log to file"""
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Log", "", "Text files (*.txt);;All files (*.*)"
+            self, "Save Log", 
+            f"ebl_sim_log_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+            "Text files (*.txt);;All files (*.*)"
         )
 
         if file_path:
@@ -855,7 +940,9 @@ class EBLMainWindow(QMainWindow):
         macro_path = self.generate_macro()
         if macro_path:
             file_path, _ = QFileDialog.getSaveFileName(
-                self, "Save Macro", "", "Macro files (*.mac);;All files (*.*)"
+                self, "Save Macro", 
+                f"ebl_sim_{time.strftime('%Y%m%d_%H%M%S')}.mac",
+                "Macro files (*.mac);;All files (*.*)"
             )
 
             if file_path:
@@ -869,7 +956,9 @@ class EBLMainWindow(QMainWindow):
     def select_executable(self):
         """Select executable file"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Select EBL Executable", "", "Executable files (*.exe);;All files (*.*)"
+            self, "Select EBL Executable", 
+            str(Path(self.executable_path).parent) if self.executable_path else "",
+            "Executable files (*.exe);;All files (*.*)"
         )
 
         if file_path:
