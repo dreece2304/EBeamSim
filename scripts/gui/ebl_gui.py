@@ -52,6 +52,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import matplotlib.cm as cm
 
+# Updated SimulationWorker class for ebl_gui.py
+# Replace the existing SimulationWorker class with this version
+
 class SimulationWorker(QObject):
     """Worker thread for running simulations"""
     output = Signal(str)
@@ -65,16 +68,18 @@ class SimulationWorker(QObject):
         self.working_dir = working_dir
         self.process = None
         self.should_stop = False
+        self.total_events = None
+        self.last_reported_progress = -1
 
     def run_simulation(self):
         """Run the simulation in this thread"""
         try:
             args = [self.executable_path, self.macro_path]
-            
+
             # Set up environment variables for Geant4
             env = os.environ.copy()
             g4_path = r"C:\Users\dreec\Geant4Projects\program_files"
-            
+
             # Add Geant4 data paths
             env['G4ABLADATA'] = f"{g4_path}\\share\\Geant4\\data\\G4ABLA3.3"
             env['G4CHANNELINGDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4CHANNELING1.0"
@@ -88,7 +93,7 @@ class SimulationWorker(QObject):
             env['G4REALSURFACEDATA'] = f"{g4_path}\\share\\Geant4\\data\\RealSurface2.2"
             env['G4SAIDXSDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4SAIDDATA2.0"
             env['G4LEVELGAMMADATA'] = f"{g4_path}\\share\\Geant4\\data\\PhotonEvaporation6.1"
-            
+
             # Add to PATH
             env['PATH'] = f"{g4_path}\\bin;" + env.get('PATH', '')
 
@@ -97,14 +102,14 @@ class SimulationWorker(QObject):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
-                bufsize=0,
+                bufsize=1,  # Line buffered for real-time output
                 cwd=self.working_dir,
                 env=env,
                 creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
             )
 
             line_count = 0
-            max_lines = 5000
+            max_lines = 10000  # Increased for better monitoring
 
             while True:
                 if self.should_stop:
@@ -117,18 +122,69 @@ class SimulationWorker(QObject):
 
                 line = line.strip()
                 if line:
+                    # Always emit the line for display
                     if line_count < max_lines:
                         self.output.emit(line)
                     elif line_count == max_lines:
-                        self.output.emit("... (output truncated)")
+                        self.output.emit("... (output truncated, but simulation continues)")
 
-                    # Extract progress information
+                    # Parse for total events
+                    if "events will be processed" in line or "event will be processed" in line:
+                        match = re.search(r'(\d+)\s+events?\s+will be processed', line)
+                        if match:
+                            self.total_events = int(match.group(1))
+                            self.output.emit(f">>> Total events to process: {self.total_events}")
+
+                    # Extract progress information - handle multiple formats
+                    progress_extracted = False
+
+                    # Format 1: "Processing event X"
                     if "Processing event" in line:
-                        try:
-                            event_num = int(line.split()[-1])
+                        match = re.search(r'Processing event\s+(\d+)', line)
+                        if match:
+                            event_num = int(match.group(1))
                             self.progress.emit(event_num)
-                        except:
-                            pass
+                            progress_extracted = True
+
+                            # Calculate and show percentage if we know total
+                            if self.total_events and self.total_events > 0:
+                                percentage = (event_num / self.total_events) * 100
+                                if percentage - self.last_reported_progress >= 1.0:  # Report every 1%
+                                    self.output.emit(f">>> Progress: {percentage:.1f}%")
+                                    self.last_reported_progress = percentage
+
+                    # Format 2: "Progress: X%"
+                    if not progress_extracted and "Progress:" in line and "%" in line:
+                        match = re.search(r'Progress:\s*([\d.]+)%', line)
+                        if match:
+                            percentage = float(match.group(1))
+                            if self.total_events:
+                                event_num = int((percentage / 100.0) * self.total_events)
+                                self.progress.emit(event_num)
+
+                    # Format 3: "Event X deposited"
+                    if not progress_extracted and "Event" in line and "deposited" in line:
+                        match = re.search(r'Event\s+(\d+)\s+deposited', line)
+                        if match:
+                            event_num = int(match.group(1))
+                            # Only emit progress for significant events to avoid too many updates
+                            if event_num % 100 == 0:
+                                self.progress.emit(event_num)
+
+                    # Track important physics messages
+                    if "Fluorescence:" in line or "Auger:" in line or "PIXE:" in line:
+                        self.output.emit(f">>> PHYSICS: {line}")
+
+                    # Highlight warnings and errors
+                    if "WARNING" in line or "Warning" in line:
+                        self.output.emit(f"⚠️ {line}")
+                    elif "ERROR" in line or "Error" in line:
+                        self.output.emit(f"❌ {line}")
+
+                    # Track energy deposition info
+                    if "deposited" in line and ("keV" in line or "eV" in line or "MeV" in line):
+                        if "Event" in line:  # This is event summary
+                            self.output.emit(f"💡 {line}")
 
                     line_count += 1
 
@@ -147,7 +203,6 @@ class SimulationWorker(QObject):
         self.should_stop = True
         if self.process:
             self.process.terminate()
-
 class Enhanced2DPlotWidget(QWidget):
     """Enhanced widget for 2D depth-radius visualization"""
 

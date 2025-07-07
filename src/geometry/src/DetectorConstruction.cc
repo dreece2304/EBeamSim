@@ -1,4 +1,4 @@
-// DetectorConstruction.cc
+// DetectorConstruction.cc - Complete file with material validation
 #include "DetectorConstruction.hh"
 #include "DetectorMessenger.hh"
 #include "EBLConstants.hh"
@@ -19,7 +19,7 @@
 #include <sstream>
 #include <algorithm>
 
-// Helper function to parse composition string - ADD THIS FUNCTION
+// Helper function to parse composition string
 namespace {
     void parseComposition(const G4String& composition,
         std::map<G4String, G4int>& elements) {
@@ -127,7 +127,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         0,
         true);
 
-    // CREATE SUBSTRATE REGION - ADD THIS
+    // CREATE SUBSTRATE REGION for region-specific cuts
     G4Region* substrateRegion = new G4Region("SubstrateRegion");
     logicSubstrate->SetRegion(substrateRegion);
     substrateRegion->AddRootLogicalVolume(logicSubstrate);
@@ -209,40 +209,67 @@ G4Material* DetectorConstruction::CreateResistMaterial()
         return existingMat;
     }
 
-    // Calculate total atoms for stoichiometry
+    // Validate composition
     G4int totalAtoms = 0;
     for (const auto& elem : fResistElements) {
         totalAtoms += elem.second;
+        G4cout << "Element " << elem.first << ": " << elem.second << " atoms" << G4endl;
     }
 
     if (totalAtoms == 0) {
-        G4cerr << "Error: No elements defined for resist!" << G4endl;
-        // Return default PMMA
-        return nist->FindOrBuildMaterial("G4_PLEXIGLASS");
+        G4Exception("DetectorConstruction::CreateResistMaterial",
+                    "DC001", FatalException,
+                    "No elements defined for resist material!");
     }
 
     // Create new material
     G4Material* resist = new G4Material(materialName, fResistDensity,
         fResistElements.size());
 
-    // Add elements
+    // Calculate molecular weight for mass fractions
+    G4double molecularWeight = 0.0;
     for (const auto& elem : fResistElements) {
         G4Element* element = nist->FindOrBuildElement(elem.first);
-        if (element) {
-            G4double fraction = G4double(elem.second) / G4double(totalAtoms);
-            resist->AddElement(element, fraction);
+        if (!element) {
+            G4Exception("DetectorConstruction::CreateResistMaterial",
+                        "DC002", FatalException,
+                        ("Element " + elem.first + " not found!").c_str());
         }
-        else {
-            G4cerr << "Warning: Element " << elem.first << " not found!" << G4endl;
-        }
+        molecularWeight += element->GetA() * elem.second;
+    }
+
+    // Add elements with proper mass fractions
+    for (const auto& elem : fResistElements) {
+        G4Element* element = nist->FindOrBuildElement(elem.first);
+        G4double massFraction = (element->GetA() * elem.second) / molecularWeight;
+        resist->AddElement(element, massFraction);
+        G4cout << "  Mass fraction of " << elem.first << ": "
+               << massFraction << G4endl;
+    }
+
+    // Validate density
+    if (fResistDensity < 0.1*g/cm3 || fResistDensity > 10.0*g/cm3) {
+        G4cerr << "WARNING: Unusual resist density: "
+               << fResistDensity/(g/cm3) << " g/cm3" << G4endl;
+        G4cerr << "         Typical range is 0.5-3.0 g/cm3" << G4endl;
     }
 
     G4cout << "\nCreated resist material: " << materialName << G4endl;
     G4cout << "Composition: ";
+    bool first = true;
     for (const auto& elem : fResistElements) {
-        G4cout << elem.first << ":" << elem.second << " ";
+        if (!first) G4cout << ", ";
+        G4cout << elem.first << ":" << elem.second;
+        first = false;
     }
     G4cout << "\nDensity: " << G4BestUnit(fResistDensity, "Volumic Mass") << G4endl;
+    G4cout << "Molecular weight: " << molecularWeight << " g/mol" << G4endl;
+
+    // Print material properties for verification
+    G4cout << "\nMaterial properties:" << G4endl;
+    G4cout << "  Radiation length: " << G4BestUnit(resist->GetRadlen(), "Length") << G4endl;
+    G4cout << "  Nuclear int. length: " << G4BestUnit(resist->GetNuclearInterLength(), "Length") << G4endl;
+    G4cout << "  Ionisation potential: " << resist->GetIonisation()->GetMeanExcitationEnergy()/eV << " eV" << G4endl;
 
     return resist;
 }

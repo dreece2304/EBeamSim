@@ -1,4 +1,4 @@
-﻿// EventAction.cc
+﻿// EventAction.cc - Complete file with progress reporting fix
 #include "EventAction.hh"
 #include "RunAction.hh"
 #include "DetectorConstruction.hh"
@@ -61,7 +61,8 @@ void EventAction::BeginOfEventAction(const G4Event* event)
         totalEvents = currentRun->GetNumberOfEventToBeProcessed();
     }
 
-    // Report progress at key intervals
+    // FIXED: Output in format that GUI expects
+    // The GUI looks for "Processing event" followed by the event number
     if (totalEvents > 0) {
         G4bool shouldReport = false;
 
@@ -69,30 +70,48 @@ void EventAction::BeginOfEventAction(const G4Event* event)
         if (eventID == 0) {
             shouldReport = true;
         }
-        else if (eventID == totalEvents / 100 && eventID > 0) {  // 1%
+        else if (eventID < 100 && eventID % 10 == 0) {  // First 100 events, every 10
             shouldReport = true;
         }
-        else if (eventID == totalEvents * 2 / 100 && eventID > 0) {  // 2%
+        else if (eventID < 1000 && eventID % 100 == 0) {  // First 1000 events, every 100
             shouldReport = true;
         }
-        else if (eventID == totalEvents * 5 / 100 && eventID > 0) {  // 5%
-            shouldReport = true;
-        }
-        else if (totalEvents >= 20 && eventID % (totalEvents / 20) == 0) {  // Every 5%
+        else if (eventID % 1000 == 0) {  // After that, every 1000
             shouldReport = true;
         }
 
+        // Also report at percentage milestones
+        G4double currentPercent = 100.0 * eventID / totalEvents;
+        static G4double lastReportedPercent = -1.0;
+
+        // Report at 1%, 2%, 5%, then every 5%
+        if ((currentPercent >= 1.0 && lastReportedPercent < 1.0) ||
+            (currentPercent >= 2.0 && lastReportedPercent < 2.0) ||
+            (currentPercent >= 5.0 && lastReportedPercent < 5.0) ||
+            (static_cast<G4int>(currentPercent / 5.0) > static_cast<G4int>(lastReportedPercent / 5.0))) {
+            shouldReport = true;
+            lastReportedPercent = currentPercent;
+        }
+
         if (shouldReport) {
+            // CRITICAL: Use format that GUI expects
+            G4cout << "Processing event " << eventID << G4endl;
+
+            // Also output detailed progress info
             G4double progress = 100.0 * eventID / totalEvents;
-            G4cout << "\rProgress: " << std::fixed << std::setprecision(1)
-                << progress << "% (" << eventID << "/" << totalEvents << " events)"
-                << std::flush;
+            G4cout << "Progress: " << std::fixed << std::setprecision(1)
+                   << progress << "% (" << eventID << "/" << totalEvents << " events)"
+                   << G4endl;
+
+            // Flush to ensure GUI receives the output immediately
+            G4cout << std::flush;
         }
     }
     else {
-        // Fallback to simple progress reporting
+        // Fallback when total events unknown
         if (eventID < 10 || eventID % 10000 == 0) {
             G4cout << "Processing event " << eventID << G4endl;
+            G4cout << std::flush;
         }
     }
 }
@@ -155,8 +174,6 @@ G4int EventAction::GetLogBin(G4double radius) const
     return bin;
 }
 
-// Add this implementation to EventAction.cc
-
 G4double EventAction::GetBinRadius(G4int bin) const
 {
     if (bin < 0) return 0.0;
@@ -197,8 +214,6 @@ G4int EventAction::GetDepthBin(G4double z) const
 
     return bin;
 }
-
-// Add this improved version of AddEnergyDeposit to EventAction.cc
 
 void EventAction::AddEnergyDeposit(G4double edep, G4double x, G4double y, G4double z)
 {

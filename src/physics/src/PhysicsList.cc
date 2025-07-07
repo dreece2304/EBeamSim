@@ -1,4 +1,4 @@
-// PhysicsList.cc - Compatible with Geant4 11.3.2
+// PhysicsList.cc - Complete file with accuracy improvements
 #include "PhysicsList.hh"
 #include "PhysicsMessenger.hh"
 
@@ -23,9 +23,9 @@ PhysicsList::PhysicsList()
     : G4VModularPhysicsList(),
     fEmPhysics(nullptr),
     fDecayPhysics(nullptr),
-    fCutForGamma(0.1 * nanometer),
-    fCutForElectron(0.1 * nanometer),
-    fCutForPositron(0.1 * nanometer),
+    fCutForGamma(0.1 * nanometer),      // Ultra-fine for accuracy
+    fCutForElectron(0.1 * nanometer),   // Ultra-fine for accuracy
+    fCutForPositron(0.1 * nanometer),   // Ultra-fine for accuracy
     fMessenger(nullptr)
 {
     G4LossTableManager::Instance();
@@ -58,69 +58,64 @@ void PhysicsList::SetupEmParameters()
     // Get EM parameters instance
     G4EmParameters* param = G4EmParameters::Instance();
 
-    // Enable all secondary particle production
-    param->SetFluo(true);
-    param->SetAuger(true);
-    param->SetAugerCascade(true);
-    param->SetPixe(true);
+    // CRITICAL: Enable all atomic deexcitation processes
+    param->SetFluo(true);         // K-shell fluorescence
+    param->SetAuger(true);        // Auger electrons
+    param->SetAugerCascade(true); // Full Auger cascade
+    param->SetPixe(true);         // PIXE (Particle Induced X-ray Emission)
 
     // CRITICAL for Auger/fluorescence below cuts
+    // This allows deexcitation products to be generated even if their
+    // energy is below the production cuts - essential for accurate energy deposition
     param->SetDeexcitationIgnoreCut(true);
 
-    // Set energy range - these are set differently in 11.3
-    param->SetMinEnergy(10 * eV);
+    // Energy range for accurate low-energy physics
+    param->SetMinEnergy(10 * eV);     // Track down to 10 eV - critical for resist chemistry
     param->SetMaxEnergy(1 * GeV);
     param->SetLowestElectronEnergy(10 * eV);
     param->SetLowestMuHadEnergy(1 * keV);
 
-    // Multiple scattering parameters - these should work in 11.3
+    // Multiple scattering parameters - critical for PSF accuracy
     param->SetMscStepLimitType(fUseDistanceToBoundary);
-    param->SetMscRangeFactor(0.02);
-    param->SetMscGeomFactor(2.5);
-    param->SetMscSkin(3.0);
-    param->SetMscSafetyFactor(0.6);
+    param->SetMscRangeFactor(0.02);   // Smaller = more accurate, default is 0.04
+    param->SetMscGeomFactor(2.5);     // Default value
+    param->SetMscSkin(3.0);           // Number of skind depths
+    param->SetMscSafetyFactor(0.6);   // Safety factor for geometry
 
     // Lateral displacement
     param->SetMuHadLateralDisplacement(true);
-    // SetMscLateralDisplacement doesn't exist in 11.3.2
 
-    // Step function
-    param->SetStepFunction(0.1, 0.1 * nanometer);
+    // Step function - controls step size
+    param->SetStepFunction(0.1, 0.1 * nanometer);  // Max 10% energy loss, min 0.1 nm step
     param->SetStepFunctionMuHad(0.1, 0.05 * nanometer);
 
     // Energy loss parameters
-    param->SetLossFluctuations(true);
-    param->SetLinearLossLimit(0.01);
-    param->SetBuildCSDARange(true);
+    param->SetLossFluctuations(true);   // Landau fluctuations
+    param->SetLinearLossLimit(0.01);    // 1% linear loss limit
+    param->SetBuildCSDARange(true);     // Continuous slowing down approximation
     param->SetUseCutAsFinalRange(false);
 
     // Bremsstrahlung
     param->SetBremsstrahlungTh(1 * MeV);
 
     // Angular settings
-    param->SetFactorForAngleLimit(1.0);
+    param->SetFactorForAngleLimit(1.0); // No artificial angular limit
 
     // Apply cuts
     param->SetApplyCuts(true);
 
-    // Number of bins
-    param->SetNumberOfBinsPerDecade(20);
-
-    // Note: SetDEDXBinning and SetLambdaBinning might not exist in 11.3.2
-    // These are often set through SetNumberOfBinsPerDecade which affects all tables
+    // Number of bins for accuracy
+    param->SetNumberOfBinsPerDecade(20); // Fine binning for cross sections
 
     // Integral approach
     param->SetIntegral(true);
-
-    // Note: SetSpline, SetMinKinEnergy, SetMaxKinEnergy don't exist as setters in 11.3.2
-    // The min/max energies are read-only properties
 
     // Verbose
     param->SetVerbose(1);
 
     // Print configuration
     G4cout << "\n========================================" << G4endl;
-    G4cout << "EM Parameters configured for EBL (Geant4 11.3.2):" << G4endl;
+    G4cout << "EM Parameters configured for EBL:" << G4endl;
     G4cout << "  Min energy: " << param->MinKinEnergy() / eV << " eV" << G4endl;
     G4cout << "  Max energy: " << param->MaxKinEnergy() / MeV << " MeV" << G4endl;
     G4cout << "  Fluorescence: " << param->Fluo() << G4endl;
@@ -155,6 +150,12 @@ void PhysicsList::ConstructProcess()
 
 void PhysicsList::SetCuts()
 {
+    // CRITICAL: Use very small cuts for accurate simulation
+    // These are production thresholds, not tracking cuts
+    fCutForGamma = 0.1 * nanometer;     // 0.1 nm
+    fCutForElectron = 0.1 * nanometer;  // 0.1 nm
+    fCutForPositron = 0.1 * nanometer;  // 0.1 nm
+
     // Set default production cuts
     SetCutValue(fCutForGamma, "gamma");
     SetCutValue(fCutForElectron, "e-");
@@ -168,17 +169,32 @@ void PhysicsList::SetCuts()
 
     // Set region-specific cuts if regions exist
     G4RegionStore* regionStore = G4RegionStore::GetInstance();
-    G4Region* resistRegion = regionStore->GetRegion("ResistRegion", false);
 
+    // Ultra-fine cuts in resist region
+    G4Region* resistRegion = regionStore->GetRegion("ResistRegion", false);
     if (resistRegion) {
         G4ProductionCuts* resistCuts = new G4ProductionCuts();
-        resistCuts->SetProductionCut(0.1 * nanometer, "gamma");
-        resistCuts->SetProductionCut(0.1 * nanometer, "e-");
-        resistCuts->SetProductionCut(0.1 * nanometer, "e+");
+        // Even finer cuts in resist for maximum accuracy
+        resistCuts->SetProductionCut(0.05 * nanometer, "gamma");
+        resistCuts->SetProductionCut(0.05 * nanometer, "e-");
+        resistCuts->SetProductionCut(0.05 * nanometer, "e+");
         resistRegion->SetProductionCuts(resistCuts);
 
-        G4cout << "  Special cuts for resist region: "
-            << G4BestUnit(0.1 * nanometer, "Length") << G4endl;
+        G4cout << "  Ultra-fine cuts for resist region: "
+            << G4BestUnit(0.05 * nanometer, "Length") << G4endl;
+    }
+
+    // Fine cuts in substrate region (less critical but still important)
+    G4Region* substrateRegion = regionStore->GetRegion("SubstrateRegion", false);
+    if (substrateRegion) {
+        G4ProductionCuts* substrateCuts = new G4ProductionCuts();
+        substrateCuts->SetProductionCut(0.5 * nanometer, "gamma");
+        substrateCuts->SetProductionCut(0.5 * nanometer, "e-");
+        substrateCuts->SetProductionCut(0.5 * nanometer, "e+");
+        substrateRegion->SetProductionCuts(substrateCuts);
+
+        G4cout << "  Fine cuts for substrate region: "
+            << G4BestUnit(0.5 * nanometer, "Length") << G4endl;
     }
 
     // Dump the full particle/process list for verification
@@ -186,11 +202,18 @@ void PhysicsList::SetCuts()
         DumpCutValuesTable();
     }
 
-    // Additional checks
+    // Additional validation
     G4EmParameters* param = G4EmParameters::Instance();
     G4double lowestE = param->LowestElectronEnergy();
     G4cout << "\nLowest electron tracking energy: "
         << G4BestUnit(lowestE, "Energy") << G4endl;
+
+    // Calculate approximate range of lowest energy electron
+    // Range ~ (E/2)^2 / (dE/dx) ~ E^2 for low energies
+    // This is a rough approximation for validation
+    G4double approxRange = std::pow(lowestE/eV, 1.7) * 0.1 * nanometer;
+    G4cout << "Approximate range at " << lowestE/eV << " eV: "
+           << approxRange/nanometer << " nm" << G4endl;
 
     // Warning if cuts might be too large
     if (fCutForElectron > 1.0 * nanometer) {
@@ -198,4 +221,14 @@ void PhysicsList::SetCuts()
             << G4endl;
         G4cout << "         PSF accuracy requires sub-nm production thresholds." << G4endl;
     }
+
+    if (fCutForElectron > approxRange) {
+        G4cout << "\nWARNING: Production cut larger than range of lowest tracked energy!"
+               << G4endl;
+        G4cout << "         This may lead to energy non-conservation." << G4endl;
+    }
+
+    G4cout << "\nNOTE: These are production thresholds, not tracking cuts." << G4endl;
+    G4cout << "      Particles are tracked down to " << lowestE/eV << " eV" << G4endl;
+    G4cout << "      regardless of production thresholds.\n" << G4endl;
 }
