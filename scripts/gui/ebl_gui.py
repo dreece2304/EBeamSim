@@ -1961,55 +1961,56 @@ class EBLMainWindow(QMainWindow):
     def show_beamer_help(self):
         """Show BEAMER format help dialog"""
         help_text = """
-    <h3>BEAMER PSF Format Guide</h3>
+<h3>BEAMER PSF Format Guide</h3>
 
-    <h4>Format Requirements:</h4>
-    <ul>
-    <li><b>Normalization:</b> Maximum value = 1.0 (not area-normalized)</li>
-    <li><b>Units:</b> Radius in micrometers (μm), PSF unitless</li>
-    <li><b>Range:</b> Typically 0.01 to 100 μm</li>
-    <li><b>Scale:</b> Logarithmic spacing recommended</li>
-    </ul>
+<h4>Format Requirements:</h4>
+<ul>
+<li><b>Normalization:</b> Maximum value = 1.0 (not area-normalized)</li>
+<li><b>Units:</b> Radius in micrometers (μm), PSF unitless</li>
+<li><b>Range:</b> Typically 0.01 to 100 μm</li>
+<li><b>Scale:</b> Logarithmic spacing recommended</li>
+</ul>
 
-    <h4>File Format:</h4>
-    <pre>
-    # Comment lines start with #
-    # radius(um) relative_energy_deposition
-    0.01    0.98765
-    0.015   0.95432
-    ...
-    100.0   1.234e-9
-    </pre>
+<h4>File Format:</h4>
+<pre>
+# Comment lines start with #
+# radius(um) relative_energy_deposition
+0.01    0.98765
+0.015   0.95432
+...
+100.0   1.234e-9
+</pre>
 
-    <h4>Proximity Parameters:</h4>
-    <ul>
-    <li><b>α (alpha):</b> Forward scatter fraction (r < 1 μm)</li>
-    <li><b>β (beta):</b> Backscatter fraction (r > 1 μm)</li>
-    <li><b>η (eta):</b> Characteristic backscatter range</li>
-    </ul>
+<h4>Proximity Parameters:</h4>
+<ul>
+<li><b>α (alpha):</b> Forward scatter fraction (r < 1 μm)</li>
+<li><b>β (beta):</b> Backscatter fraction (r > 1 μm)</li>
+<li><b>η (eta):</b> Characteristic backscatter range</li>
+</ul>
 
-    <h4>Quality Checks:</h4>
-    <ul>
-    <li>PSF should be smooth and continuous</li>
-    <li>No sudden jumps or drops to zero</li>
-    <li>Monotonically decreasing (after initial peak)</li>
-    <li>Extends to capture 99%+ of deposited energy</li>
-    </ul>
+<h4>Quality Checks:</h4>
+<ul>
+<li>PSF should be smooth and continuous</li>
+<li>No sudden jumps or drops to zero</li>
+<li>Monotonically decreasing (after initial peak)</li>
+<li>Extends to capture 99%+ of deposited energy</li>
+</ul>
 
-    <h4>Common Issues:</h4>
-    <ul>
-    <li><b>Noisy tail:</b> Use smoothing option during conversion</li>
-    <li><b>Truncated data:</b> Extrapolation automatically applied</li>
-    <li><b>Wrong normalization:</b> Ensure max = 1.0, not integral = 1.0</li>
-    </ul>
-    """
-        
-            dialog = QMessageBox(self)
-            dialog.setWindowTitle("BEAMER Format Help")
-            dialog.setTextFormat(Qt.RichText)
-            dialog.setText(help_text)
-            dialog.setIcon(QMessageBox.Information)
-            dialog.exec()
+<h4>Common Issues:</h4>
+<ul>
+<li><b>Noisy tail:</b> Use smoothing option during conversion</li>
+<li><b>Truncated data:</b> Extrapolation automatically applied</li>
+<li><b>Wrong normalization:</b> Ensure max = 1.0, not integral = 1.0</li>
+</ul>
+"""
+
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("BEAMER Format Help")
+        dialog.setTextFormat(Qt.RichText)
+        dialog.setText(help_text)
+        dialog.setIcon(QMessageBox.Information)
+        dialog.exec()
+
 
     def generate_output_filename(self, base_name="ebl", extension=".csv", include_timestamp=False, run_number=None):
         """Generate dynamic filename based on simulation parameters"""
@@ -2592,26 +2593,26 @@ class EBLMainWindow(QMainWindow):
         """Updated about dialog"""
         QMessageBox.about(self, "About EBL Simulation GUI",
                           """<h3>EBL Simulation GUI v3.1 (BEAMER Edition)</h3>
-                          <p>A comprehensive GUI for Geant4-based electron beam lithography simulations.</p>
-                          <p><b>New in v3.1:</b></p>
-                          <ul>
-                          <li>BEAMER PSF format conversion</li>
-                          <li>PSF validation and quality checks</li>
-                          <li>Noise reduction with Savitzky-Golay filtering</li>
-                          <li>Automatic tail extrapolation</li>
-                          <li>Proximity effect parameter calculation</li>
-                          <li>Multi-file comparison tools</li>
-                          </ul>
-                          <p><b>Key Features:</b></p>
-                          <ul>
-                          <li>2D depth-radius visualization</li>
-                          <li>XPS-based material compositions</li>
-                          <li>Real-time simulation monitoring</li>
-                          <li>Comprehensive data analysis</li>
-                          <li>Export to multiple formats including BEAMER</li>
-                          </ul>
-                          <p>Based on experimental data from TMA + butyne-1,4-diol MLD process.</p>
-                          """)
+                  <p>A comprehensive GUI for Geant4-based electron beam lithography simulations.</p>
+                  <p><b>New in v3.1:</b></p>
+                  <ul>
+                    <li>BEAMER PSF format conversion</li>
+                    <li>PSF validation and quality checks</li>
+                    <li>Noise reduction with Savitzky-Golay filtering</li>
+                    <li>Automatic tail extrapolation</li>
+                    <li>Proximity effect parameter calculation</li>
+                    <li>Multi-file comparison tools</li>
+                  </ul>
+                  <p><b>Key Features:</b></p>
+                  <ul>
+                    <li>2D depth-radius visualization</li>
+                    <li>XPS-based material compositions</li>
+                    <li>Real-time simulation monitoring</li>
+                    <li>Comprehensive data analysis</li>
+                    <li>Export to multiple formats including BEAMER</li>
+                  </ul>
+                  <p>Based on experimental data from TMA + butyne-1,4-diol MLD process.</p>
+                  """)
 
     def load_settings(self):
         """Load application settings"""
@@ -2656,7 +2657,7 @@ def main():
     app.setApplicationVersion("3.0")
     app.setOrganizationName("EBL Research")
 
-    # Create and show main window
+    # Create and show the main window
     window = EBLMainWindow()
     window.show()
 
