@@ -23,7 +23,7 @@ import json
 import re
 import glob
 import random
-from scipy.signal import savgol_filter 
+import scipy.signal
 
 # Qt imports
 from PySide6.QtWidgets import (
@@ -40,7 +40,7 @@ from PySide6.QtGui import QFont, QIcon, QAction, QPalette, QColor
 # Scientific computing
 import numpy as np
 import pandas as pd
-from scipy.interpolate import griddata
+import scipy.interpolate
 
 # Matplotlib for Qt
 import matplotlib
@@ -2589,29 +2589,29 @@ class EBLMainWindow(QMainWindow):
                 "- Statistical analysis")
 
     def show_about(self):
-    """Updated about dialog"""
-    QMessageBox.about(self, "About EBL Simulation GUI",
-                      """<h3>EBL Simulation GUI v3.1 (BEAMER Edition)</h3>
-                      <p>A comprehensive GUI for Geant4-based electron beam lithography simulations.</p>
-                      <p><b>New in v3.1:</b></p>
-                      <ul>
-                      <li>BEAMER PSF format conversion</li>
-                      <li>PSF validation and quality checks</li>
-                      <li>Noise reduction with Savitzky-Golay filtering</li>
-                      <li>Automatic tail extrapolation</li>
-                      <li>Proximity effect parameter calculation</li>
-                      <li>Multi-file comparison tools</li>
-                      </ul>
-                      <p><b>Key Features:</b></p>
-                      <ul>
-                      <li>2D depth-radius visualization</li>
-                      <li>XPS-based material compositions</li>
-                      <li>Real-time simulation monitoring</li>
-                      <li>Comprehensive data analysis</li>
-                      <li>Export to multiple formats including BEAMER</li>
-                      </ul>
-                      <p>Based on experimental data from TMA + butyne-1,4-diol MLD process.</p>
-                      """)
+        """Updated about dialog"""
+        QMessageBox.about(self, "About EBL Simulation GUI",
+                          """<h3>EBL Simulation GUI v3.1 (BEAMER Edition)</h3>
+                          <p>A comprehensive GUI for Geant4-based electron beam lithography simulations.</p>
+                          <p><b>New in v3.1:</b></p>
+                          <ul>
+                          <li>BEAMER PSF format conversion</li>
+                          <li>PSF validation and quality checks</li>
+                          <li>Noise reduction with Savitzky-Golay filtering</li>
+                          <li>Automatic tail extrapolation</li>
+                          <li>Proximity effect parameter calculation</li>
+                          <li>Multi-file comparison tools</li>
+                          </ul>
+                          <p><b>Key Features:</b></p>
+                          <ul>
+                          <li>2D depth-radius visualization</li>
+                          <li>XPS-based material compositions</li>
+                          <li>Real-time simulation monitoring</li>
+                          <li>Comprehensive data analysis</li>
+                          <li>Export to multiple formats including BEAMER</li>
+                          </ul>
+                          <p>Based on experimental data from TMA + butyne-1,4-diol MLD process.</p>
+                          """)
 
     def load_settings(self):
         """Load application settings"""
