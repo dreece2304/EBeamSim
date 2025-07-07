@@ -1,4 +1,4 @@
-﻿// EBLConstants.hh - Complete version with all required constants
+﻿// EBLConstants.hh - BEAMER Optimized Parameters
 #ifndef EBLCONSTANTS_HH
 #define EBLCONSTANTS_HH
 
@@ -10,31 +10,32 @@ namespace EBL {
         constexpr G4double DEFAULT_ENERGY = 100.0 * keV;
         constexpr G4double DEFAULT_SPOT_SIZE = 1.0 * nm;
         constexpr G4double POSITION_SIGMA = 0.0 * nm;
-        constexpr G4double DEFAULT_POSITION_Z = 100.0 * nm;  // Added
+        constexpr G4double DEFAULT_POSITION_Z = 100.0 * nm;
     }
 
-    // PSF calculation parameters
+    // PSF calculation parameters - OPTIMIZED FOR BEAMER
     namespace PSF {
         constexpr G4bool USE_LOG_BINNING = true;
-        constexpr G4int NUM_RADIAL_BINS = 200;
-        constexpr G4double MIN_RADIUS = 0.1 * nm;
-        constexpr G4double MAX_RADIUS = 100.0 * micrometer;
+        constexpr G4int NUM_RADIAL_BINS = 150;  // Reduced from 200 for efficiency
+        constexpr G4double MIN_RADIUS = 0.5 * nm;  // Slightly larger minimum
+        constexpr G4double MAX_RADIUS = 100.0 * micrometer;  // 100 μm is sufficient
 
         // Additional parameters for improved calculation
-        constexpr G4double OVERFLOW_RADIUS = 1000.0 * micrometer;
+        constexpr G4double OVERFLOW_RADIUS = 200.0 * micrometer;  // For tracking beyond PSF
         constexpr G4int MIN_COUNTS_FOR_STATISTICS = 10;
         constexpr G4double SMOOTHING_WINDOW_FRACTION = 0.05;
     }
 
-    // Energy thresholds
+    // Energy thresholds - OPTIMIZED FOR BEAMER
     namespace Thresholds {
-        constexpr G4double MIN_EDEP_TRACKING = 1.0e-3 * eV;
-        constexpr G4double ELECTRON_EDEP_FRACTION = 1.0e-6;
-        constexpr G4double PHOTON_EDEP_THRESHOLD = 1.0e-2 * eV;
-        constexpr G4double MAX_TRACKING_RADIUS = 1000.0 * micrometer;
+        // No filtering in resist for BEAMER accuracy
+        constexpr G4double MIN_EDEP_TRACKING = 0.0 * eV;  // Track all energy in resist
+        constexpr G4double ELECTRON_EDEP_FRACTION = 0.0;  // No fractional filtering
+        constexpr G4double PHOTON_EDEP_THRESHOLD = 0.0 * eV;  // Track all photons in resist
+        constexpr G4double MAX_TRACKING_RADIUS = 200.0 * micrometer;  // Beyond PSF max
     }
 
-    // Material parameters - REORGANIZED WITH PROPER NAMESPACES
+    // Material parameters
     namespace Materials {
         // HSQ resist
         namespace HSQ {
@@ -52,42 +53,43 @@ namespace EBL {
         }
     }
 
-    // ADD MISSING Resist namespace
+    // Resist namespace
     namespace Resist {
         constexpr G4double DEFAULT_THICKNESS = 30.0 * nm;
         constexpr G4double DEFAULT_DENSITY = 1.4 * g / cm3;
     }
 
-    // ADD MISSING Geometry namespace
+    // Geometry namespace
     namespace Geometry {
         constexpr G4double WORLD_SIZE = 1.0 * mm;
         constexpr G4double SUBSTRATE_THICKNESS = 500.0 * micrometer;
         constexpr G4double SUBSTRATE_RADIUS = 50.0 * mm;
     }
 
-    // Physics parameters
+    // Physics parameters - OPTIMIZED FOR BEAMER
     namespace Physics {
+        // Fine in resist, coarse elsewhere
         constexpr G4double ELECTRON_RANGE_CUTOFF = 10.0 * nm;
         constexpr G4double PHOTON_RANGE_CUTOFF = 10.0 * nm;
         constexpr G4double MAX_STEP_SIZE = 5.0 * nm;
         constexpr G4bool USE_ADVANCED_MULTIPLE_SCATTERING = true;
     }
 
-    // Output parameters - FIXED WITH CORRECT NAMES
+    // Output parameters - STREAMLINED FOR BEAMER
     namespace Output {
-        constexpr const char* DEFAULT_OUTPUT_DIR = "output";  // Fixed name
-        constexpr const char* DEFAULT_DIRECTORY = "output";   // Keep for compatibility
+        constexpr const char* DEFAULT_OUTPUT_DIR = "output";
+        constexpr const char* DEFAULT_DIRECTORY = "output";
         constexpr const char* DEFAULT_FILENAME = "psf_data.csv";
-        constexpr const char* PSF_DATA_FILENAME = "psf_data.csv";  // Added
-        constexpr const char* BEAMER_FILENAME = "psf_beamer.txt";
+        constexpr const char* PSF_DATA_FILENAME = "psf_data.csv";
+        constexpr const char* BEAMER_FILENAME = "psf_beamer.txt";  // Direct BEAMER format
         constexpr const char* SUMMARY_FILENAME = "simulation_summary.txt";
         constexpr const char* STATISTICS_FILENAME = "bin_statistics.csv";
 
-        // Output options
+        // Output options - OPTIMIZED FOR BEAMER
         constexpr G4bool SAVE_RAW_DATA = true;
-        constexpr G4bool SAVE_SMOOTHED_DATA = true;
-        constexpr G4bool SAVE_BIN_STATISTICS = true;
-        constexpr G4bool VERBOSE_PROGRESS = true;
+        constexpr G4bool SAVE_SMOOTHED_DATA = false;  // Do smoothing in post
+        constexpr G4bool SAVE_BIN_STATISTICS = false;  // Not needed for production
+        constexpr G4bool VERBOSE_PROGRESS = false;  // Minimize output overhead
     }
 
     // Analysis parameters
@@ -106,13 +108,13 @@ namespace EBL {
         constexpr G4double POSITION_VALIDATION_MAX = 10.0 * meter;
     }
 
-    // Debug parameters
+    // Debug parameters - MINIMIZED FOR PRODUCTION
     namespace Debug {
-        constexpr G4bool VERBOSE_SCORING = false;
-        constexpr G4int MAX_DEBUG_DEPOSITS = 50;
-        constexpr G4int PROGRESS_UPDATE_INTERVAL = 10000;
-        constexpr G4bool TRACK_BIN_STATISTICS = true;
-        constexpr G4int BIN_STATISTICS_INTERVAL = 100000;
+        constexpr G4bool VERBOSE_SCORING = false;  // Off for production
+        constexpr G4int MAX_DEBUG_DEPOSITS = 0;    // No debug output
+        constexpr G4int PROGRESS_UPDATE_INTERVAL = 100000;  // Less frequent updates
+        constexpr G4bool TRACK_BIN_STATISTICS = false;  // Off for production
+        constexpr G4int BIN_STATISTICS_INTERVAL = 1000000;  // Very infrequent
     }
 }
 

@@ -1,9 +1,10 @@
-// ActionInitialization.cc - Updated for proper MT support
+// ActionInitialization.cc - Updated with StackingAction for BEAMER efficiency
 #include "ActionInitialization.hh"
 #include "PrimaryGeneratorAction.hh"
 #include "RunAction.hh"
 #include "EventAction.hh"
 #include "SteppingAction.hh"
+#include "StackingAction.hh"
 #include "DetectorConstruction.hh"
 #include "G4Threading.hh"
 
@@ -46,9 +47,15 @@ void ActionInitialization::Build() const
     SteppingAction* steppingAction = new SteppingAction(eventAction, fDetConstruction);
     SetUserAction(steppingAction);
 
+    // BEAMER OPTIMIZATION: Add stacking action for track killing
+    StackingAction* stackingAction = new StackingAction(fDetConstruction);
+    SetUserAction(stackingAction);
+
     // Debug output to confirm thread creation
     if (G4Threading::IsWorkerThread()) {
         G4cout << ">>> Worker thread " << G4Threading::G4GetThreadId()
-            << " initialized" << G4endl;
+            << " initialized with BEAMER optimizations" << G4endl;
+    } else {
+        G4cout << ">>> Sequential mode initialized with BEAMER optimizations" << G4endl;
     }
 }

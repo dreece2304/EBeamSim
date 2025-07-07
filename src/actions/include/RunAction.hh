@@ -1,10 +1,12 @@
-﻿#ifndef RunAction_h
+﻿// RunAction.hh - BEAMER Optimized with Performance Monitoring
+#ifndef RunAction_h
 #define RunAction_h 1
 
 #include "G4UserRunAction.hh"
 #include "globals.hh"
 #include <vector>
 #include <mutex>
+#include <chrono>
 #include "G4Accumulable.hh"
 #include "G4Threading.hh"
 
@@ -30,6 +32,7 @@ public:
 
     // Access methods for analysis
     std::vector<G4double> GetRadialEnergyProfile() const { return fRadialEnergyProfile; }
+    
     // Output filename setters
     void SetOutputDirectory(const G4String& dir) { fOutputDirectory = dir; }
     void SetPSFFilename(const G4String& name) { fPSFFilename = name; }
@@ -54,7 +57,6 @@ private:
     G4int fNumEvents;
 
     // For thread-safe accumulation of histograms
-    // We'll use mutex-protected accumulation at end of run instead of per-event
     static std::mutex fArrayMergeMutex;
     static std::vector<G4double> fMasterRadialProfile;
     static std::vector<std::vector<G4double>> fMaster2DProfile;
@@ -69,6 +71,9 @@ private:
 
     // Messenger for output control
     OutputMessenger* fOutputMessenger;
+    
+    // Performance monitoring
+    std::chrono::high_resolution_clock::time_point fStartTime;
 
     // Helper functions for logarithmic binning
     G4double GetBinRadius(G4int bin) const;
