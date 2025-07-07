@@ -1,8 +1,7 @@
-﻿// RunAction.cc - Complete Optimized Implementation with Minimal Accumulables and Dynamic File Naming
+﻿// RunAction.cc - Complete Optimized Implementation with Minimal Accumulables
 #include "RunAction.hh"
 #include "PrimaryGeneratorAction.hh"
 #include "DetectorConstruction.hh"
-#include "OutputMessenger.hh"  // For dynamic file naming
 #include "G4Run.hh"
 #include "G4RunManager.hh"
 #include "G4AccumulableManager.hh"
@@ -15,6 +14,7 @@
 #include <filesystem>
 #include <cmath>
 #include "EBLConstants.hh"
+#include "OutputMessenger.hh" 
 
 // Initialize static members
 std::mutex RunAction::fArrayMergeMutex;
@@ -36,13 +36,7 @@ RunAction::RunAction(DetectorConstruction* detConstruction,
     fResistEnergyTotal("ResistEnergy", 0.0),
     fSubstrateEnergyTotal("SubstrateEnergy", 0.0),
     fAboveResistEnergyTotal("AboveResistEnergy", 0.0),
-    fNumEvents(0),
-    fOutputDirectory(""),
-    fPSFFilename("ebl_psf_data.csv"),
-    fPSF2DFilename("ebl_2d_data.csv"),
-    fSummaryFilename("simulation_summary.txt"),
-    fBeamerFilename("beamer_psf.dat"),
-    fOutputMessenger(nullptr)
+    fNumEvents(0)
 {
     // Initialize LOCAL vectors for scoring (per thread)
     const G4int numBins = EBL::PSF::NUM_RADIAL_BINS;
@@ -72,14 +66,10 @@ RunAction::RunAction(DetectorConstruction* detConstruction,
         }
         fMasterArraysInitialized = true;
     }
-
-    // Create messenger for output control
-    fOutputMessenger = new OutputMessenger(this);
 }
 
 RunAction::~RunAction()
 {
-    delete fOutputMessenger;
 }
 
 void RunAction::BeginOfRunAction(const G4Run* run)
@@ -126,9 +116,15 @@ void RunAction::BeginOfRunAction(const G4Run* run)
 void RunAction::EndOfRunAction(const G4Run* run)
 {
     // Complete the progress bar
-    G4cout << "\rProgress: 100.0% (" << run->GetNumberOfEvent()
-        << "/" << run->GetNumberOfEvent() << " events) - Complete!"
-        << G4endl << G4endl;
+    G4cout << "\rProgress: 100.0% (" << run->GetNumberOfEvent() 
+           << "/" << run->GetNumberOfEvent() << " events) - Complete!" 
+           << G4endl << G4endl;
+
+    // Complete the progress bar
+    G4cout << "\rProgress: 100.0% (" << run->GetNumberOfEvent() 
+           << "/" << run->GetNumberOfEvent() << " events) - Complete!" 
+           << G4endl << G4endl;
+
 
     G4int nofEvents = run->GetNumberOfEvent();
     if (nofEvents == 0) return;
@@ -309,10 +305,7 @@ void RunAction::SaveResults()
         << " in " << nonZeroBins << " bins" << G4endl;
     G4cout << "Total energy from accumulable: " << G4BestUnit(fTotalEnergyDeposit.GetValue(), "Energy") << G4endl;
 
-    std::string outputDir = fOutputDirectory.empty() ?
-        EBL::Output::DEFAULT_DIRECTORY :
-        std::string(fOutputDirectory);
-
+    std::string outputDir = EBL::Output::DEFAULT_DIRECTORY;
     if (!outputDir.empty()) {
         try {
             std::filesystem::create_directories(outputDir);
@@ -331,12 +324,9 @@ void RunAction::SaveResults()
 
 void RunAction::SaveCSVFormat(const std::string& outputDir)
 {
-    // Use member variable for output directory if set
-    std::string actualOutputDir = fOutputDirectory.empty() ? outputDir : std::string(fOutputDirectory);
-
-    std::string outputPath = actualOutputDir.empty() ?
-        std::string(fPSFFilename) :
-        actualOutputDir + "/" + std::string(fPSFFilename);
+    std::string outputPath = outputDir.empty() ?
+        std::string(EBL::Output::DEFAULT_FILENAME) :
+        outputDir + "/" + std::string(EBL::Output::DEFAULT_FILENAME);
 
     G4cout << "Saving PSF data to: " << outputPath << G4endl;
 
@@ -386,10 +376,9 @@ void RunAction::SaveCSVFormat(const std::string& outputDir)
 
 void RunAction::SaveBEAMERFormat(const std::string& outputDir)
 {
-    std::string actualOutputDir = fOutputDirectory.empty() ? outputDir : std::string(fOutputDirectory);
-    std::string outputPath = actualOutputDir.empty() ?
-        std::string(fBeamerFilename) :
-        actualOutputDir + "/" + std::string(fBeamerFilename);
+    std::string outputPath = outputDir.empty() ?
+        std::string(EBL::Output::BEAMER_FILENAME) :
+        outputDir + "/" + std::string(EBL::Output::BEAMER_FILENAME);
 
     G4cout << "Saving BEAMER format to: " << outputPath << G4endl;
 
@@ -511,11 +500,7 @@ void RunAction::SaveBEAMERFormat(const std::string& outputDir)
 
 void RunAction::Save2DFormat(const std::string& outputDir)
 {
-    std::string actualOutputDir = fOutputDirectory.empty() ? outputDir : std::string(fOutputDirectory);
-    std::string filename = actualOutputDir.empty() ?
-        std::string(fPSF2DFilename) :
-        actualOutputDir + "/" + std::string(fPSF2DFilename);
-
+    std::string filename = outputDir.empty() ? "ebl_2d_data.csv" : outputDir + "/ebl_2d_data.csv";
     G4cout << "Saving 2D depth-radius data to: " << filename << G4endl;
 
     std::ofstream file(filename);
@@ -564,11 +549,7 @@ void RunAction::Save2DFormat(const std::string& outputDir)
 
 void RunAction::SaveSummary(const std::string& outputDir)
 {
-    std::string actualOutputDir = fOutputDirectory.empty() ? outputDir : std::string(fOutputDirectory);
-    std::string summaryPath = actualOutputDir.empty() ?
-        std::string(fSummaryFilename) :
-        actualOutputDir + "/" + std::string(fSummaryFilename);
-
+    std::string summaryPath = outputDir.empty() ? "simulation_summary.txt" : outputDir + "/simulation_summary.txt";
     std::ofstream summaryFile(summaryPath);
 
     summaryFile << "EBL Simulation Summary" << std::endl;
@@ -682,13 +663,7 @@ void RunAction::SaveSummary(const std::string& outputDir)
         }
     }
 
-    // Output filenames used
-    summaryFile << "\nOutput files:" << std::endl;
-    summaryFile << "PSF data: " << fPSFFilename << std::endl;
-    summaryFile << "2D data: " << fPSF2DFilename << std::endl;
-    summaryFile << "BEAMER format: " << fBeamerFilename << std::endl;
-    summaryFile << "This summary: " << fSummaryFilename << std::endl;
-
     summaryFile.close();
     G4cout << "Summary saved to: " << summaryPath << G4endl;
 }
+

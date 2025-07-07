@@ -20,6 +20,10 @@ import csv
 import queue
 from collections import deque
 import json
+import re
+import glob
+import random
+from scipy.signal import savgol_filter 
 
 # Qt imports
 from PySide6.QtWidgets import (
@@ -507,7 +511,7 @@ class Enhanced2DPlotWidget(QWidget):
                 QMessageBox.critical(self, "Error", f"Failed to export data: {str(e)}")
 
 class PlotWidget(QWidget):
-    """Widget for 1D PSF plots"""
+    """Enhanced widget for 1D PSF plots with BEAMER conversion"""
 
     def __init__(self):
         super().__init__()
@@ -544,14 +548,36 @@ class PlotWidget(QWidget):
         controls.addWidget(self.compare_button)
         controls.addWidget(self.save_button)
 
+        # NEW: BEAMER conversion controls
+        beamer_controls = QHBoxLayout()
+        
+        self.beamer_button = QPushButton("Convert to BEAMER")
+        self.beamer_button.clicked.connect(self.convert_to_beamer)
+        self.beamer_button.setEnabled(False)
+        
+        self.validate_button = QPushButton("Validate PSF")
+        self.validate_button.clicked.connect(self.validate_psf)
+        self.validate_button.setEnabled(False)
+        
+        self.smooth_check = QCheckBox("Apply Smoothing")
+        self.smooth_check.setChecked(True)
+        
+        beamer_controls.addWidget(QLabel("BEAMER Tools:"))
+        beamer_controls.addWidget(self.beamer_button)
+        beamer_controls.addWidget(self.validate_button)
+        beamer_controls.addWidget(self.smooth_check)
+        beamer_controls.addStretch()
+
         layout.addWidget(self.toolbar)
         layout.addLayout(controls)
+        layout.addLayout(beamer_controls)
         layout.addWidget(self.canvas)
 
         self.setLayout(layout)
 
-        # Store data for replotting
+        # Store data for replotting and conversion
         self.datasets = []
+        self.current_csv_path = None
 
     def plot_data(self, radii, energies, title="PSF Profile", clear=True):
         """Plot the data with current settings"""
@@ -628,6 +654,9 @@ class PlotWidget(QWidget):
 
         if file_path:
             try:
+                # Store the path for BEAMER conversion
+                self.current_csv_path = file_path
+                
                 radii, energies = [], []
 
                 with open(file_path, 'r') as f:
@@ -644,6 +673,9 @@ class PlotWidget(QWidget):
 
                 if radii and energies:
                     self.plot_data(radii, energies, f"PSF - {Path(file_path).stem}")
+                    # Enable BEAMER tools
+                    self.beamer_button.setEnabled(True)
+                    self.validate_button.setEnabled(True)
                 else:
                     QMessageBox.warning(self, "Warning", "No valid data found in file")
 
@@ -697,6 +729,292 @@ class PlotWidget(QWidget):
                 QMessageBox.information(self, "Success", f"Plot saved to {file_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to save plot: {str(e)}")
+
+    def convert_to_beamer(self):
+        """Convert current PSF data to BEAMER format"""
+        if not self.current_csv_path:
+            QMessageBox.warning(self, "Warning", "No PSF data loaded")
+            return
+            
+        try:
+            # Load the full CSV data
+            df = pd.read_csv(self.current_csv_path)
+            
+            # Get non-zero data
+            mask = df['EnergyDeposition(eV/nm^2)'] > 0
+            if not mask.any():
+                QMessageBox.warning(self, "Warning", "No non-zero energy deposition found")
+                return
+                
+            # Extract data
+            radius_nm = df.loc[mask, 'Radius(nm)'].values
+            energy_density = df.loc[mask, 'EnergyDeposition(eV/nm^2)'].values
+            
+            # Convert to micrometers
+            radius_um = radius_nm / 1000.0
+            
+            # Normalize to maximum = 1.0 (BEAMER standard)
+            max_density = np.max(energy_density)
+            psf_normalized = energy_density / max_density
+            
+            # Apply smoothing if requested
+            if self.smooth_check.isChecked() and len(psf_normalized) > 7:
+                from scipy.signal import savgol_filter
+                
+                # Smooth only the tail region (r > 10 μm)
+                smooth_start = np.where(radius_um > 10.0)[0]
+                if len(smooth_start) > 0:
+                    start_idx = smooth_start[0]
+                    if len(psf_normalized) - start_idx > 7:
+                        # Apply Savitzky-Golay filter to tail
+                        window = min(7, len(psf_normalized) - start_idx)
+                        if window % 2 == 0:
+                            window -= 1
+                        psf_normalized[start_idx:] = savgol_filter(
+                            psf_normalized[start_idx:], window, 3
+                        )
+            
+            # Prepare output data
+            output_radius = []
+            output_psf = []
+            
+            # Add point at 0.01 μm if needed
+            if radius_um[0] > 0.02:
+                output_radius.append(0.01)
+                output_psf.append(psf_normalized[0])
+                
+            # Add all valid points
+            for r, p in zip(radius_um, psf_normalized):
+                if p > 1e-12:  # Filter noise floor
+                    output_radius.append(r)
+                    output_psf.append(p)
+            
+            # Extrapolate tail if needed
+            if output_radius[-1] < 100.0 and len(output_radius) > 10:
+                # Fit exponential to last 10 points
+                n_fit = min(10, len(output_radius) // 2)
+                r_fit = np.array(output_radius[-n_fit:])
+                p_fit = np.array(output_psf[-n_fit:])
+                
+                if np.all(p_fit > 0):
+                    # Fit in log space
+                    coeffs = np.polyfit(r_fit, np.log(p_fit), 1)
+                    
+                    # Extrapolate
+                    r_extrap = output_radius[-1]
+                    while r_extrap < 100.0:
+                        r_extrap *= 1.2
+                        p_extrap = np.exp(coeffs[0] * r_extrap + coeffs[1])
+                        
+                        if p_extrap < 1e-10:
+                            break
+                            
+                        output_radius.append(r_extrap)
+                        output_psf.append(p_extrap)
+            
+            # Ask for save location
+            default_name = Path(self.current_csv_path).stem + "_beamer.txt"
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Save BEAMER Format", default_name,
+                "Text files (*.txt);;All files (*.*)"
+            )
+            
+            if file_path:
+                # Write BEAMER format
+                with open(file_path, 'w') as f:
+                    f.write("# Electron beam PSF for BEAMER proximity correction\n")
+                    f.write("# Generated from Geant4 simulation by EBL GUI\n")
+                    f.write(f"# Source: {Path(self.current_csv_path).name}\n")
+                    f.write("# Format: radius(um) relative_energy_deposition\n")
+                    f.write("# PSF normalized to maximum = 1.0\n")
+                    f.write("#\n")
+                    
+                    for r, p in zip(output_radius, output_psf):
+                        f.write(f"{r:.6e} {p:.6e}\n")
+                
+                # Calculate proximity parameters
+                forward_energy = 0
+                total_energy = 0
+                
+                for i in range(len(output_radius)-1):
+                    r1, r2 = output_radius[i], output_radius[i+1]
+                    p1, p2 = output_psf[i], output_psf[i+1]
+                    
+                    dr = r2 - r1
+                    avg_r = (r1 + r2) / 2
+                    avg_p = (p1 + p2) / 2
+                    contrib = 2 * np.pi * avg_r * avg_p * dr
+                    
+                    total_energy += contrib
+                    if avg_r < 1.0:
+                        forward_energy += contrib
+                
+                alpha = forward_energy / total_energy if total_energy > 0 else 0
+                beta = 1 - alpha
+                
+                # Show success message with parameters
+                QMessageBox.information(self, "BEAMER Conversion Complete",
+                    f"PSF saved to: {file_path}\n\n"
+                    f"Proximity effect parameters:\n"
+                    f"α (forward scatter): {alpha:.3f}\n"
+                    f"β (backscatter): {beta:.3f}\n\n"
+                    f"Data points: {len(output_radius)}\n"
+                    f"Radius range: {output_radius[0]:.3f} - {output_radius[-1]:.3f} μm")
+                
+                # Offer to visualize BEAMER format
+                reply = QMessageBox.question(self, "Visualize BEAMER Format",
+                    "Would you like to plot the BEAMER format PSF?",
+                    QMessageBox.Yes | QMessageBox.No)
+                    
+                if reply == QMessageBox.Yes:
+                    self.plot_beamer_format(output_radius, output_psf)
+                    
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to convert to BEAMER format: {str(e)}")
+
+    def plot_beamer_format(self, radius_um, psf_norm):
+        """Plot BEAMER format PSF in standard style"""
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        
+        # Plot in BEAMER standard format (log-log)
+        ax.loglog(radius_um, psf_norm, 'b-', linewidth=2, label='BEAMER PSF')
+        
+        # Formatting to match BEAMER standard
+        ax.set_xlabel('radius, μm', fontsize=12)
+        ax.set_ylabel('relative energy deposition', fontsize=12)
+        ax.set_title('Electron energy deposition point spread function', fontsize=14)
+        
+        # Set axis limits similar to BEAMER
+        ax.set_xlim(0.01, 100)
+        ax.set_ylim(1e-10, 2)
+        
+        # Grid
+        ax.grid(True, which="both", ls="-", alpha=0.2)
+        
+        # Legend
+        ax.legend(loc='upper right')
+        
+        self.figure.tight_layout()
+        self.canvas.draw()
+
+    def validate_psf(self):
+        """Validate PSF data quality"""
+        if not self.datasets:
+            QMessageBox.warning(self, "Warning", "No PSF data loaded")
+            return
+            
+        # Create validation report
+        report = "PSF VALIDATION REPORT\n" + "="*50 + "\n\n"
+        
+        for radii, energies, label in self.datasets:
+            report += f"Dataset: {label}\n"
+            report += "-"*30 + "\n"
+            
+            # Convert to numpy arrays
+            r = np.array(radii)
+            e = np.array(energies)
+            
+            # Test 1: Check for negative values
+            negative_count = np.sum(e < 0)
+            if negative_count > 0:
+                report += f"❌ Found {negative_count} negative energy values\n"
+            else:
+                report += "✅ No negative energy values\n"
+                
+            # Test 2: Check data range
+            nonzero_mask = e > 0
+            if np.any(nonzero_mask):
+                r_min = r[nonzero_mask].min()
+                r_max = r[nonzero_mask].max()
+                report += f"✅ Radius range: {r_min:.1f} - {r_max:.1f} nm\n"
+            else:
+                report += "❌ No non-zero data found\n"
+                
+            # Test 3: Check monotonicity (general trend)
+            if len(e) > 10:
+                # Use moving average to check trend
+                window = min(5, len(e) // 4)
+                if window >= 3:
+                    smoothed = np.convolve(e, np.ones(window)/window, mode='valid')
+                    increases = np.sum(np.diff(smoothed) > 0)
+                    increase_frac = increases / len(smoothed)
+                    
+                    if increase_frac < 0.3:
+                        report += "✅ PSF shows generally decreasing trend\n"
+                    else:
+                        report += f"⚠️ PSF has {increase_frac*100:.1f}% increasing segments\n"
+                        
+            # Test 4: Statistical quality
+            if np.any(nonzero_mask):
+                # Calculate coefficient of variation in tail
+                tail_mask = r > 1000  # Beyond 1 μm
+                if np.any(tail_mask & nonzero_mask):
+                    tail_energy = e[tail_mask & nonzero_mask]
+                    if len(tail_energy) > 5:
+                        cv = np.std(tail_energy) / np.mean(tail_energy)
+                        if cv < 0.5:
+                            report += "✅ Good statistical quality in tail\n"
+                        elif cv < 1.0:
+                            report += "⚠️ Moderate noise in tail region\n"
+                        else:
+                            report += "❌ High noise in tail region\n"
+                            
+            # Test 5: Physical reasonableness
+            if np.any(e > 0):
+                # Calculate cumulative energy
+                if len(r) > 1:
+                    # Simple trapezoidal integration
+                    cumulative = 0
+                    total = 0
+                    r50 = None
+                    r90 = None
+                    
+                    for i in range(len(r)-1):
+                        if e[i] > 0 and e[i+1] > 0:
+                            dr = r[i+1] - r[i]
+                            avg_e = (e[i] + e[i+1]) / 2
+                            avg_r = (r[i] + r[i+1]) / 2
+                            contrib = 2 * np.pi * avg_r * avg_e * dr
+                            total += contrib
+                            
+                    cumulative = 0
+                    for i in range(len(r)-1):
+                        if e[i] > 0 and e[i+1] > 0:
+                            dr = r[i+1] - r[i]
+                            avg_e = (e[i] + e[i+1]) / 2
+                            avg_r = (r[i] + r[i+1]) / 2
+                            contrib = 2 * np.pi * avg_r * avg_e * dr
+                            cumulative += contrib
+                            
+                            if r50 is None and cumulative > 0.5 * total:
+                                r50 = r[i]
+                            if r90 is None and cumulative > 0.9 * total:
+                                r90 = r[i]
+                                
+                    if r50 and r90:
+                        report += f"✅ R50: {r50:.1f} nm, R90: {r90:.1f} nm\n"
+                        ratio = r90 / r50
+                        if 2 < ratio < 100:
+                            report += f"✅ R90/R50 ratio: {ratio:.1f} (reasonable)\n"
+                        else:
+                            report += f"⚠️ R90/R50 ratio: {ratio:.1f} (check parameters)\n"
+                            
+            report += "\n"
+            
+        # Show report in dialog
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("PSF Validation Report")
+        dialog.setText(report)
+        dialog.setIcon(QMessageBox.Information)
+        dialog.setStandardButtons(QMessageBox.Ok)
+        dialog.setDetailedText("This validation checks:\n"
+                              "• Data integrity (no negative values)\n"
+                              "• Monotonicity (decreasing trend)\n"
+                              "• Statistical quality (noise levels)\n"
+                              "• Physical reasonableness (R50, R90 values)\n\n"
+                              "Use this to verify your PSF calculation is correct.")
+        dialog.exec()
 
 class EBLMainWindow(QMainWindow):
     """Main window for EBL simulation GUI"""
@@ -815,7 +1133,7 @@ class EBLMainWindow(QMainWindow):
         self.create_status_bar()
 
     def create_menu_bar(self):
-        """Create menu bar"""
+        """Create enhanced menu bar with BEAMER tools"""
         menubar = self.menuBar()
 
         # File menu
@@ -858,12 +1176,37 @@ class EBLMainWindow(QMainWindow):
         batch_action.triggered.connect(self.batch_run)
         sim_menu.addAction(batch_action)
 
+        # NEW: BEAMER menu
+        beamer_menu = menubar.addMenu("BEAMER")
+    
+        convert_action = QAction("Convert PSF to BEAMER Format", self)
+        convert_action.triggered.connect(self.convert_psf_to_beamer)
+        beamer_menu.addAction(convert_action)
+    
+        batch_convert_action = QAction("Batch Convert to BEAMER", self)
+        batch_convert_action.triggered.connect(self.batch_convert_beamer)
+        beamer_menu.addAction(batch_convert_action)
+    
+        beamer_menu.addSeparator()
+    
+        validate_psf_action = QAction("Validate PSF Data", self)
+        validate_psf_action.triggered.connect(self.validate_psf_data)
+        beamer_menu.addAction(validate_psf_action)
+    
+        compare_beamer_action = QAction("Compare BEAMER Files", self)
+        compare_beamer_action.triggered.connect(self.compare_beamer_files)
+        beamer_menu.addAction(compare_beamer_action)
+
         # Help menu
         help_menu = menubar.addMenu("Help")
 
         about_action = QAction("About", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
+    
+        beamer_help_action = QAction("BEAMER Format Help", self)
+        beamer_help_action.triggered.connect(self.show_beamer_help)
+        help_menu.addAction(beamer_help_action)
 
     def create_status_bar(self):
         """Create status bar"""
@@ -1066,6 +1409,16 @@ class EBLMainWindow(QMainWindow):
         self.verbose_spin.setValue(1)
         sim_layout.addWidget(self.verbose_spin, 2, 1)
 
+        # Add auto-increment checkbox
+        self.auto_increment_check = QCheckBox("Auto-increment run number")
+        self.auto_increment_check.setChecked(True)
+        sim_layout.addWidget(self.auto_increment_check, 3, 0, 1, 2)
+    
+        # Add option to include timestamp
+        self.timestamp_check = QCheckBox("Include timestamp in filename")
+        self.timestamp_check.setChecked(False)
+        sim_layout.addWidget(self.timestamp_check, 4, 0, 1, 2)
+
         sim_group.setLayout(sim_layout)
 
         # Physics options group
@@ -1229,6 +1582,484 @@ class EBLMainWindow(QMainWindow):
                     print(f"Found executable: {self.executable_path}")
                     break
 
+    def convert_psf_to_beamer(self):
+        """Convert PSF data to BEAMER format from menu"""
+        # Check if we have recent simulation data
+        psf_file = Path(self.working_dir) / "ebl_psf_data.csv"
+    
+        if psf_file.exists():
+            reply = QMessageBox.question(self, "Convert to BEAMER",
+                f"Convert the most recent simulation output to BEAMER format?\n\n"
+                f"File: {psf_file.name}",
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+            
+            if reply == QMessageBox.Yes:
+                # Use existing file
+                self._do_beamer_conversion(str(psf_file))
+            elif reply == QMessageBox.No:
+                # Let user choose file
+                file_path, _ = QFileDialog.getOpenFileName(
+                    self, "Select PSF Data", str(self.working_dir),
+                    "CSV files (*.csv);;All files (*.*)"
+                )
+                if file_path:
+                    self._do_beamer_conversion(file_path)
+        else:
+            # No recent file, ask user to select
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Select PSF Data", "",
+                "CSV files (*.csv);;All files (*.*)"
+            )
+            if file_path:
+                self._do_beamer_conversion(file_path)
+
+    def _do_beamer_conversion(self, csv_file):
+        """Perform the actual BEAMER conversion"""
+        try:
+            # Load CSV data
+            df = pd.read_csv(csv_file)
+        
+            # Get beam energy from current settings or ask user
+            beam_energy = self.energy_spin.value()
+        
+            # Ask about smoothing
+            smooth_reply = QMessageBox.question(self, "Smoothing",
+                "Apply smoothing to reduce noise in tail region?",
+                QMessageBox.Yes | QMessageBox.No)
+            apply_smoothing = (smooth_reply == QMessageBox.Yes)
+        
+            # Convert to BEAMER format
+            result = self._convert_csv_to_beamer(df, beam_energy, apply_smoothing)
+        
+            if result:
+                output_radius, output_psf, alpha, beta = result
+            
+                # Ask for save location
+                default_name = Path(csv_file).stem + "_beamer.txt"
+                file_path, _ = QFileDialog.getSaveFileName(
+                    self, "Save BEAMER Format", default_name,
+                    "Text files (*.txt);;All files (*.*)"
+                )
+            
+                if file_path:
+                    # Write BEAMER format
+                    with open(file_path, 'w') as f:
+                        f.write("# Electron beam PSF for BEAMER proximity correction\n")
+                        f.write("# Generated from Geant4 simulation by EBL GUI\n")
+                        f.write(f"# Source: {Path(csv_file).name}\n")
+                        f.write(f"# Beam energy: {beam_energy} keV\n")
+                        f.write("# Format: radius(um) relative_energy_deposition\n")
+                        f.write("# PSF normalized to maximum = 1.0\n")
+                        f.write("#\n")
+                    
+                        for r, p in zip(output_radius, output_psf):
+                            f.write(f"{r:.6e} {p:.6e}\n")
+                
+                    # Show success with preview option
+                    msg = QMessageBox(self)
+                    msg.setWindowTitle("BEAMER Conversion Complete")
+                    msg.setText(f"PSF saved to: {Path(file_path).name}")
+                    msg.setInformativeText(
+                        f"Proximity parameters:\n"
+                        f"α (forward): {alpha:.3f}\n"
+                        f"β (backscatter): {beta:.3f}\n\n"
+                        f"Data points: {len(output_radius)}"
+                    )
+                    msg.setStandardButtons(QMessageBox.Ok)
+                    preview_button = msg.addButton("Preview", QMessageBox.ActionRole)
+                    msg.exec()
+                
+                    if msg.clickedButton() == preview_button:
+                        # Switch to plot tab and show BEAMER format
+                        self.tab_widget.setCurrentIndex(4)  # 1D visualization
+                        self.plot_widget.plot_beamer_format(output_radius, output_psf)
+                    
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to convert to BEAMER format: {str(e)}")
+
+    def _convert_csv_to_beamer(self, df, beam_energy, apply_smoothing=True):
+        """Core BEAMER conversion logic"""
+        try:
+            # Get non-zero data
+            mask = df['EnergyDeposition(eV/nm^2)'] > 0
+            if not mask.any():
+                return None
+            
+            # Extract data
+            radius_nm = df.loc[mask, 'Radius(nm)'].values
+            energy_density = df.loc[mask, 'EnergyDeposition(eV/nm^2)'].values
+        
+            # Convert to micrometers
+            radius_um = radius_nm / 1000.0
+        
+            # Normalize to maximum = 1.0
+            max_density = np.max(energy_density)
+            psf_normalized = energy_density / max_density
+        
+            # Apply smoothing if requested
+            if apply_smoothing and len(psf_normalized) > 7:
+                from scipy.signal import savgol_filter
+            
+                # Smooth only the tail region
+                smooth_start = np.where(radius_um > 10.0)[0]
+                if len(smooth_start) > 0:
+                    start_idx = smooth_start[0]
+                    if len(psf_normalized) - start_idx > 7:
+                        window = min(7, len(psf_normalized) - start_idx)
+                        if window % 2 == 0:
+                            window -= 1
+                        psf_normalized[start_idx:] = savgol_filter(
+                            psf_normalized[start_idx:], window, 3
+                        )
+        
+            # Prepare output data
+            output_radius = []
+            output_psf = []
+        
+            # Add point at 0.01 μm if needed
+            if radius_um[0] > 0.02:
+                output_radius.append(0.01)
+                output_psf.append(psf_normalized[0])
+            
+            # Add all valid points
+            for r, p in zip(radius_um, psf_normalized):
+                if p > 1e-12:
+                    output_radius.append(r)
+                    output_psf.append(p)
+        
+            # Extrapolate tail if needed
+            if output_radius[-1] < 100.0 and len(output_radius) > 10:
+                n_fit = min(10, len(output_radius) // 2)
+                r_fit = np.array(output_radius[-n_fit:])
+                p_fit = np.array(output_psf[-n_fit:])
+            
+                if np.all(p_fit > 0):
+                    coeffs = np.polyfit(r_fit, np.log(p_fit), 1)
+                
+                    r_extrap = output_radius[-1]
+                    while r_extrap < 100.0:
+                        r_extrap *= 1.2
+                        p_extrap = np.exp(coeffs[0] * r_extrap + coeffs[1])
+                    
+                        if p_extrap < 1e-10:
+                            break
+                        
+                        output_radius.append(r_extrap)
+                        output_psf.append(p_extrap)
+        
+            # Calculate proximity parameters
+            forward_energy = 0
+            total_energy = 0
+        
+            for i in range(len(output_radius)-1):
+                r1, r2 = output_radius[i], output_radius[i+1]
+                p1, p2 = output_psf[i], output_psf[i+1]
+            
+                dr = r2 - r1
+                avg_r = (r1 + r2) / 2
+                avg_p = (p1 + p2) / 2
+                contrib = 2 * np.pi * avg_r * avg_p * dr
+            
+                total_energy += contrib
+                if avg_r < 1.0:
+                    forward_energy += contrib
+        
+            alpha = forward_energy / total_energy if total_energy > 0 else 0
+            beta = 1 - alpha
+        
+            return output_radius, output_psf, alpha, beta
+        
+        except Exception as e:
+            print(f"Conversion error: {str(e)}")
+            return None
+
+    def batch_convert_beamer(self):
+        """Convert multiple PSF files to BEAMER format"""
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self, "Select PSF Files", str(self.working_dir),
+            "CSV files (*.csv);;All files (*.*)"
+        )
+    
+        if file_paths:
+            # Ask for output directory
+            output_dir = QFileDialog.getExistingDirectory(
+                self, "Select Output Directory", str(self.working_dir)
+            )
+        
+            if output_dir:
+                success_count = 0
+            
+                for file_path in file_paths:
+                    try:
+                        df = pd.read_csv(file_path)
+                        result = self._convert_csv_to_beamer(df, self.energy_spin.value(), True)
+                    
+                        if result:
+                            output_radius, output_psf, alpha, beta = result
+                        
+                            # Generate output filename
+                            output_name = Path(file_path).stem + "_beamer.txt"
+                            output_path = Path(output_dir) / output_name
+                        
+                            # Write file
+                            with open(output_path, 'w') as f:
+                                f.write("# Electron beam PSF for BEAMER proximity correction\n")
+                                f.write("# Generated from Geant4 simulation by EBL GUI\n")
+                                f.write(f"# Source: {Path(file_path).name}\n")
+                                f.write("# Format: radius(um) relative_energy_deposition\n")
+                                f.write("#\n")
+                            
+                                for r, p in zip(output_radius, output_psf):
+                                    f.write(f"{r:.6e} {p:.6e}\n")
+                        
+                            success_count += 1
+                        
+                    except Exception as e:
+                        print(f"Error converting {file_path}: {str(e)}")
+            
+                QMessageBox.information(self, "Batch Conversion Complete",
+                    f"Successfully converted {success_count}/{len(file_paths)} files")
+
+    def validate_psf_data(self):
+        """Validate PSF data from menu"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Select PSF Data to Validate", str(self.working_dir),
+            "CSV files (*.csv);;All files (*.*)"
+        )
+    
+        if file_path:
+            # Load and validate
+            try:
+                df = pd.read_csv(file_path)
+                report = self._validate_psf_dataframe(df, Path(file_path).name)
+            
+                # Show report
+                dialog = QMessageBox(self)
+                dialog.setWindowTitle("PSF Validation Report")
+                dialog.setText(report)
+                dialog.setIcon(QMessageBox.Information)
+                dialog.setDetailedText(
+                    "Validation checks:\n"
+                    "• Data integrity\n"
+                    "• Monotonicity\n"
+                    "• Statistical quality\n"
+                    "• Physical parameters\n"
+                    "• Energy conservation"
+                )
+                dialog.exec()
+            
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to validate PSF: {str(e)}")
+
+    def _validate_psf_dataframe(self, df, filename):
+        """Validate a PSF dataframe"""
+        report = f"PSF VALIDATION: {filename}\n" + "="*60 + "\n\n"
+    
+        # Check for required columns
+        required_cols = ['Radius(nm)', 'EnergyDeposition(eV/nm^2)']
+        if not all(col in df.columns for col in required_cols):
+            report += "❌ Missing required columns\n"
+            return report
+        
+        # Get data
+        radius = df['Radius(nm)'].values
+        energy = df['EnergyDeposition(eV/nm^2)'].values
+    
+        # Test 1: Negative values
+        if np.any(energy < 0):
+            report += f"❌ Found {np.sum(energy < 0)} negative energy values\n"
+        else:
+            report += "✅ No negative energy values\n"
+        
+        # Test 2: Data range
+        nonzero = energy > 0
+        if np.any(nonzero):
+            report += f"✅ Data points: {len(energy)} ({np.sum(nonzero)} non-zero)\n"
+            report += f"✅ Radius range: {radius[nonzero].min():.1f} - {radius[nonzero].max():.1f} nm\n"
+        
+            # Test 3: Energy conservation
+            if 'BinLower(nm)' in df.columns and 'BinUpper(nm)' in df.columns:
+                area = np.pi * (df['BinUpper(nm)'].values**2 - df['BinLower(nm)'].values**2)
+                total_energy = np.sum(energy * area)
+                report += f"✅ Total integrated energy: {total_energy:.3e} eV·nm²\n"
+            
+            # Test 4: Monotonicity
+            if len(energy[nonzero]) > 10:
+                # Check general trend
+                mid_idx = len(energy) // 2
+                if energy[mid_idx] < energy[0]:
+                    report += "✅ PSF shows decreasing trend\n"
+                else:
+                    report += "⚠️ PSF may not be monotonically decreasing\n"
+                
+            # Test 5: Noise assessment
+            tail_mask = radius > 1000  # Beyond 1 μm
+            if np.any(tail_mask & nonzero):
+                tail_energy = energy[tail_mask & nonzero]
+                if len(tail_energy) > 5:
+                    cv = np.std(tail_energy) / np.mean(tail_energy)
+                    if cv < 0.5:
+                        report += "✅ Good statistical quality\n"
+                    else:
+                        report += f"⚠️ High noise in tail (CV={cv:.2f})\n"
+        else:
+            report += "❌ No non-zero data found\n"
+        
+        return report
+
+    def compare_beamer_files(self):
+        """Compare multiple BEAMER format files"""
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self, "Select BEAMER Files to Compare", "",
+            "Text files (*.txt);;All files (*.*)"
+        )
+    
+        if len(file_paths) >= 2:
+            # Switch to plot tab
+            self.tab_widget.setCurrentIndex(4)
+        
+            # Clear existing plots
+            self.plot_widget.figure.clear()
+            ax = self.plot_widget.figure.add_subplot(111)
+        
+            # Load and plot each file
+            for file_path in file_paths:
+                try:
+                    radius = []
+                    psf = []
+                
+                    with open(file_path, 'r') as f:
+                        for line in f:
+                            if not line.startswith('#') and line.strip():
+                                try:
+                                    r, p = map(float, line.split())
+                                    radius.append(r)
+                                    psf.append(p)
+                                except:
+                                    continue
+                
+                    if radius and psf:
+                        ax.loglog(radius, psf, linewidth=2, 
+                                 label=Path(file_path).stem)
+                    
+                except Exception as e:
+                    print(f"Error loading {file_path}: {str(e)}")
+        
+            # Format plot
+            ax.set_xlabel('radius, μm')
+            ax.set_ylabel('relative energy deposition')
+            ax.set_title('BEAMER PSF Comparison')
+            ax.set_xlim(0.01, 100)
+            ax.set_ylim(1e-10, 2)
+            ax.grid(True, which="both", ls="-", alpha=0.2)
+            ax.legend()
+        
+            self.plot_widget.figure.tight_layout()
+            self.plot_widget.canvas.draw()
+
+
+    def show_beamer_help(self):
+        """Show BEAMER format help dialog"""
+        help_text = """
+    <h3>BEAMER PSF Format Guide</h3>
+
+    <h4>Format Requirements:</h4>
+    <ul>
+    <li><b>Normalization:</b> Maximum value = 1.0 (not area-normalized)</li>
+    <li><b>Units:</b> Radius in micrometers (μm), PSF unitless</li>
+    <li><b>Range:</b> Typically 0.01 to 100 μm</li>
+    <li><b>Scale:</b> Logarithmic spacing recommended</li>
+    </ul>
+
+    <h4>File Format:</h4>
+    <pre>
+    # Comment lines start with #
+    # radius(um) relative_energy_deposition
+    0.01    0.98765
+    0.015   0.95432
+    ...
+    100.0   1.234e-9
+    </pre>
+
+    <h4>Proximity Parameters:</h4>
+    <ul>
+    <li><b>α (alpha):</b> Forward scatter fraction (r < 1 μm)</li>
+    <li><b>β (beta):</b> Backscatter fraction (r > 1 μm)</li>
+    <li><b>η (eta):</b> Characteristic backscatter range</li>
+    </ul>
+
+    <h4>Quality Checks:</h4>
+    <ul>
+    <li>PSF should be smooth and continuous</li>
+    <li>No sudden jumps or drops to zero</li>
+    <li>Monotonically decreasing (after initial peak)</li>
+    <li>Extends to capture 99%+ of deposited energy</li>
+    </ul>
+
+    <h4>Common Issues:</h4>
+    <ul>
+    <li><b>Noisy tail:</b> Use smoothing option during conversion</li>
+    <li><b>Truncated data:</b> Extrapolation automatically applied</li>
+    <li><b>Wrong normalization:</b> Ensure max = 1.0, not integral = 1.0</li>
+    </ul>
+    """
+        
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle("BEAMER Format Help")
+            dialog.setTextFormat(Qt.RichText)
+            dialog.setText(help_text)
+            dialog.setIcon(QMessageBox.Information)
+            dialog.exec()
+
+    def generate_output_filename(self, base_name="ebl", extension=".csv", include_timestamp=False, run_number=None):
+        """Generate dynamic filename based on simulation parameters"""
+        # Get current parameters
+        beam_diameter = self.beam_size_spin.value()
+        resist_thickness = self.thickness_spin.value()
+        beam_energy = self.energy_spin.value()
+        material = self.material_combo.currentText()
+    
+        # Build filename components
+        parts = [base_name]
+        parts.append(f"E{beam_energy:.0f}keV")
+        parts.append(f"beam{beam_diameter:.1f}nm")
+        parts.append(f"resist{resist_thickness:.0f}nm")
+        parts.append(material.replace("_", ""))
+    
+        # Add run number if specified
+        if run_number is not None:
+            parts.append(f"run{run_number:03d}")
+    
+        # Add timestamp if requested
+        if include_timestamp:
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            parts.append(timestamp)
+    
+        # Join parts and add extension
+        filename = "_".join(parts) + extension
+        return filename
+
+    def find_next_run_number(self, base_pattern):
+        """Find the next available run number for a given pattern"""
+        import re
+        import glob
+    
+        # Look for existing files matching the pattern
+        pattern = base_pattern + "_run*.csv"
+        existing_files = glob.glob(os.path.join(self.working_dir, pattern))
+    
+        if not existing_files:
+            return 1
+    
+        # Extract run numbers
+        run_numbers = []
+        for file in existing_files:
+            match = re.search(r'run(\d+)', file)
+            if match:
+                run_numbers.append(int(match.group(1)))
+    
+        return max(run_numbers) + 1 if run_numbers else 1
+
     def on_material_changed(self):
         """Handle material selection change"""
         material = self.material_combo.currentText()
@@ -1241,16 +2072,57 @@ class EBLMainWindow(QMainWindow):
             self.composition_edit.setReadOnly(material != "Custom")
 
     def generate_macro(self):
-        """Generate Geant4 macro file"""
+        """Generate Geant4 macro file with dynamic output names"""
         try:
             # Ensure the working directory exists
             Path(self.working_dir).mkdir(parents=True, exist_ok=True)
-            
+        
+            # Generate base filename pattern  
+            base_pattern = self.generate_output_filename(extension="")
+        
+            # Find next run number if auto-increment is enabled
+            run_number = None
+            if hasattr(self, 'auto_increment_check') and self.auto_increment_check.isChecked():
+                run_number = self.find_next_run_number(base_pattern)
+        
+            # Add timestamp if requested
+            use_timestamp = hasattr(self, 'timestamp_check') and self.timestamp_check.isChecked()
+        
+            # Generate output filenames
+            psf_filename = self.generate_output_filename("psf", ".csv", 
+                                                       include_timestamp=use_timestamp, 
+                                                       run_number=run_number)
+            psf2d_filename = self.generate_output_filename("psf2d", ".csv", 
+                                                         include_timestamp=use_timestamp,
+                                                         run_number=run_number)
+            summary_filename = self.generate_output_filename("summary", ".txt",
+                                                           include_timestamp=use_timestamp,
+                                                           run_number=run_number)
+            beamer_filename = self.generate_output_filename("beamer", ".dat",
+                                                          include_timestamp=use_timestamp,
+                                                          run_number=run_number)
+        
+            # Store filenames for later use
+            self.current_output_files = {
+                'psf': os.path.join(self.working_dir, psf_filename),
+                'psf2d': os.path.join(self.working_dir, psf2d_filename),
+                'summary': os.path.join(self.working_dir, summary_filename),
+                'beamer': os.path.join(self.working_dir, beamer_filename)
+            }
+        
             macro_path = Path(self.working_dir) / "gui_generated.mac"
 
             with open(macro_path, 'w') as f:
                 f.write("# EBL Simulation Macro - Generated by GUI\n")
                 f.write(f"# {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            
+                # Add output filename commands
+                f.write("# Output file configuration\n")
+                f.write(f"/ebl/output/setDirectory {self.working_dir}\n")
+                f.write(f"/ebl/output/setPSFFile {psf_filename}\n")
+                f.write(f"/ebl/output/setPSF2DFile {psf2d_filename}\n")
+                f.write(f"/ebl/output/setSummaryFile {summary_filename}\n")
+                f.write(f"/ebl/output/setBeamerFile {beamer_filename}\n\n")
 
                 # Verbose settings
                 verbose = min(self.verbose_spin.value(), 1) if self.events_spin.value() > 10000 else self.verbose_spin.value()
@@ -1258,9 +2130,17 @@ class EBLMainWindow(QMainWindow):
                 f.write(f"/event/verbose {max(0, verbose-1)}\n")
                 f.write(f"/tracking/verbose {max(0, verbose-2)}\n\n")
 
-                # Random seed
-                if self.seed_spin.value() > 0:
+                # Random seed handling
+                if self.seed_spin.value() == -1:
+                    # Generate truly random seed
+                    import random
+                    random_seed = random.randint(1, 2147483647)
+                    f.write(f"/random/setSeeds {random_seed} {random_seed+1}\n")
+                    f.write(f"# Auto-generated random seed: {random_seed}\n\n")
+                    self.last_used_seed = random_seed
+                elif self.seed_spin.value() > 0:
                     f.write(f"/random/setSeeds {self.seed_spin.value()} {self.seed_spin.value()+1}\n\n")
+                # If seed is 0, don't set any seed (use Geant4 default time-based)
 
                 # Initialize
                 f.write("# Initialize\n")
@@ -1398,13 +2278,21 @@ class EBLMainWindow(QMainWindow):
 
         if success:
             QMessageBox.information(self, "Success", "Simulation completed successfully!")
-            
-            # Check for output files
-            output_dir = Path(self.working_dir)
-            psf_file = output_dir / "ebl_psf_data.csv"
-            psf_2d_file = output_dir / "ebl_2d_data.csv"
-            summary_file = output_dir / "simulation_summary.txt"
-            
+        
+            # Check for output files using stored names
+            if hasattr(self, 'current_output_files'):
+                psf_file = Path(self.current_output_files['psf'])
+                psf_2d_file = Path(self.current_output_files['psf2d'])
+                summary_file = Path(self.current_output_files['summary'])
+                beamer_file = Path(self.current_output_files.get('beamer', ''))
+            else:
+                # Fallback to default names
+                output_dir = Path(self.working_dir)
+                psf_file = output_dir / "ebl_psf_data.csv"
+                psf_2d_file = output_dir / "ebl_2d_data.csv"
+                summary_file = output_dir / "simulation_summary.txt"
+                beamer_file = output_dir / "beamer_psf.dat"
+        
             available_files = []
             if psf_file.exists():
                 available_files.append("1D PSF data")
@@ -1412,7 +2300,9 @@ class EBLMainWindow(QMainWindow):
                 available_files.append("2D depth-radius data")
             if summary_file.exists():
                 available_files.append("Summary statistics")
-            
+            if beamer_file.exists():
+                available_files.append("BEAMER format")
+        
             if available_files:
                 reply = QMessageBox.question(
                     self, "Load Results",
@@ -1421,17 +2311,17 @@ class EBLMainWindow(QMainWindow):
                     "\n\nWould you like to load and visualize them?",
                     QMessageBox.Yes | QMessageBox.No
                 )
-                
+            
                 if reply == QMessageBox.Yes:
                     # Load 1D PSF if available
                     if psf_file.exists():
                         self.tab_widget.setCurrentIndex(4)  # 1D visualization tab
                         QTimer.singleShot(500, lambda: self.auto_load_1d(str(psf_file)))
-                    
+                
                     # Load 2D data if available
                     if psf_2d_file.exists():
                         QTimer.singleShot(1000, lambda: self.auto_load_2d(str(psf_2d_file)))
-                    
+                
                     # Load summary if available
                     if summary_file.exists():
                         QTimer.singleShot(1500, lambda: self.auto_load_summary(str(summary_file)))
@@ -1699,28 +2589,29 @@ class EBLMainWindow(QMainWindow):
                 "- Statistical analysis")
 
     def show_about(self):
-        """Show about dialog"""
-        QMessageBox.about(self, "About EBL Simulation GUI",
-                          """<h3>EBL Simulation GUI v3.0 (Enhanced Edition)</h3>
-                          <p>A comprehensive GUI for Geant4-based electron beam lithography simulations.</p>
-                          <p><b>New Features in v3.0:</b></p>
-                          <ul>
-                          <li>2D depth-radius visualization with multiple display modes</li>
-                          <li>Enhanced data analysis capabilities</li>
-                          <li>Configuration save/load functionality</li>
-                          <li>Multi-dataset comparison tools</li>
-                          <li>Improved performance monitoring</li>
-                          <li>Region-based energy tracking</li>
-                          </ul>
-                          <p><b>Key Capabilities:</b></p>
-                          <ul>
-                          <li>XPS-based material compositions</li>
-                          <li>Real-time simulation monitoring</li>
-                          <li>Comprehensive data visualization</li>
-                          <li>Export to multiple formats</li>
-                          </ul>
-                          <p>Based on experimental data from TMA + butyne-1,4-diol MLD process.</p>
-                          """)
+    """Updated about dialog"""
+    QMessageBox.about(self, "About EBL Simulation GUI",
+                      """<h3>EBL Simulation GUI v3.1 (BEAMER Edition)</h3>
+                      <p>A comprehensive GUI for Geant4-based electron beam lithography simulations.</p>
+                      <p><b>New in v3.1:</b></p>
+                      <ul>
+                      <li>BEAMER PSF format conversion</li>
+                      <li>PSF validation and quality checks</li>
+                      <li>Noise reduction with Savitzky-Golay filtering</li>
+                      <li>Automatic tail extrapolation</li>
+                      <li>Proximity effect parameter calculation</li>
+                      <li>Multi-file comparison tools</li>
+                      </ul>
+                      <p><b>Key Features:</b></p>
+                      <ul>
+                      <li>2D depth-radius visualization</li>
+                      <li>XPS-based material compositions</li>
+                      <li>Real-time simulation monitoring</li>
+                      <li>Comprehensive data analysis</li>
+                      <li>Export to multiple formats including BEAMER</li>
+                      </ul>
+                      <p>Based on experimental data from TMA + butyne-1,4-diol MLD process.</p>
+                      """)
 
     def load_settings(self):
         """Load application settings"""

@@ -1,0 +1,87 @@
+# comprehensive_physics_validation.mac
+# Complete macro to verify all physics processes are active
+
+# ==================================
+# Verbose settings for detailed output
+# ==================================
+/run/verbose 2
+/event/verbose 1
+/tracking/verbose 1
+/process/verbose 1
+/process/em/verbose 2
+
+# ==================================
+# Enable all EM physics processes
+# ==================================
+/process/em/fluo true
+/process/em/auger true
+/process/em/augerCascade true
+/process/em/pixe true
+/process/em/deexcitationIgnoreCut true
+
+# ==================================
+# Set production cuts very low
+# ==================================
+/run/setCut 0.1 nm
+/run/setCutForAGivenParticle e- 0.1 nm
+/run/setCutForAGivenParticle e+ 0.1 nm
+/run/setCutForAGivenParticle gamma 0.1 nm
+
+# ==================================
+# Initialize geometry and physics
+# ==================================
+/run/initialize
+
+# ==================================
+# List all registered processes
+# ==================================
+/particle/select e-
+/particle/process/dump
+
+/particle/select gamma
+/particle/process/dump
+
+# ==================================
+# Configure detector
+# ==================================
+/det/setResistComposition "Al:1,C:5,H:4,O:2"
+/det/setResistThickness 30 nm
+/det/setResistDensity 1.35 g/cm3
+/det/update
+
+# ==================================
+# Test 1: Low energy for Auger
+# ==================================
+/gun/particle e-
+/gun/energy 2 keV  # Good for L-shell in Al
+/gun/position 0 0 100 nm
+/gun/direction 0 0 -1
+/gun/beamSize 2 nm
+
+/analysis/verbose 2
+/run/printProgress 1
+/run/beamOn 10
+
+# ==================================
+# Test 2: K-shell excitation energy
+# ==================================
+/gun/energy 10 keV  # Above Al K-edge (1.56 keV)
+/run/beamOn 10
+
+# ==================================
+# Test 3: Higher energy
+# ==================================
+/gun/energy 100 keV
+/run/beamOn 10
+
+# ==================================
+# Now run with normal verbosity
+# ==================================
+/run/verbose 0
+/event/verbose 0
+/tracking/verbose 0
+/process/verbose 0
+
+/gun/energy 100 keV
+/run/printProgress 1000
+/run/beamOn 10000

@@ -1,10 +1,9 @@
-﻿# Actions module - user actions
+# Actions module - user actions
 add_library(ebl_actions STATIC
     src/ActionInitialization.cc
     src/RunAction.cc
     src/EventAction.cc
     src/SteppingAction.cc
-    src/OutputMessenger.cc
 )
 
 target_include_directories(ebl_actions

@@ -1,4 +1,5 @@
-﻿#ifndef RunAction_h
+﻿// RunAction.hh - Optimized with Minimal Accumulables
+#ifndef RunAction_h
 #define RunAction_h 1
 
 #include "G4UserRunAction.hh"
@@ -30,7 +31,8 @@ public:
 
     // Access methods for analysis
     std::vector<G4double> GetRadialEnergyProfile() const { return fRadialEnergyProfile; }
-    // Output filename setters
+
+    // Methods for dynamic file naming
     void SetOutputDirectory(const G4String& dir) { fOutputDirectory = dir; }
     void SetPSFFilename(const G4String& name) { fPSFFilename = name; }
     void SetPSF2DFilename(const G4String& name) { fPSF2DFilename = name; }
