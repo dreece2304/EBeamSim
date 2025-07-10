@@ -1,22 +1,24 @@
-# Actions module - user actions
+﻿# Actions module - user actions with BEAMER optimizations
 add_library(ebl_actions STATIC
-    src/ActionInitialization.cc
-    src/RunAction.cc
-    src/EventAction.cc
-    src/SteppingAction.cc
+        src/ActionInitialization.cc
+        src/RunAction.cc
+        src/EventAction.cc
+        src/SteppingAction.cc
+        src/StackingAction.cc
+        src/OutputMessenger.cc
 )
 
 target_include_directories(ebl_actions
-    PUBLIC 
+        PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
-    PRIVATE
+        PRIVATE
         ${Geant4_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/src  # For cross-module includes
 )
 
 target_link_libraries(ebl_actions
-    PUBLIC
+        PUBLIC
         ${Geant4_LIBRARIES}
         ebl_common
         ebl_geometry
@@ -25,22 +27,22 @@ target_link_libraries(ebl_actions
 
 # Set properties
 set_target_properties(ebl_actions PROPERTIES
-    POSITION_INDEPENDENT_CODE ON
-    FOLDER "Libraries"
-    VERSION ${PROJECT_VERSION}
-    SOVERSION ${PROJECT_VERSION_MAJOR}
+        POSITION_INDEPENDENT_CODE ON
+        FOLDER "Libraries"
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
 # Install library
 install(TARGETS ebl_actions
-    EXPORT EBeamSimTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        EXPORT EBeamSimTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 # Install headers
 install(DIRECTORY include/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ebl_sim/actions
-    FILES_MATCHING PATTERN "*.hh"
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ebl_sim/actions
+        FILES_MATCHING PATTERN "*.hh"
 )

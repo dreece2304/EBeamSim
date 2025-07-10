@@ -1,4 +1,4 @@
-// PhysicsList.cc
+// PhysicsList.cc - Optimized for BEAMER with region-specific cuts
 #include "PhysicsList.hh"
 #include "PhysicsMessenger.hh"
 
@@ -20,13 +20,13 @@
 #include "G4ProductionCuts.hh"
 
 PhysicsList::PhysicsList()
-: G4VModularPhysicsList(),
-  fEmPhysics(nullptr),
-  fDecayPhysics(nullptr),
-  fCutForGamma(0.1*nanometer),     // Very fine cuts for accuracy
-  fCutForElectron(0.1*nanometer),  // Critical for PSF resolution
-  fCutForPositron(0.1*nanometer),
-  fMessenger(nullptr)
+    : G4VModularPhysicsList(),
+    fEmPhysics(nullptr),
+    fDecayPhysics(nullptr),
+    fCutForGamma(0.1 * nanometer),      // Ultra-fine for accuracy
+    fCutForElectron(0.1 * nanometer),   // Ultra-fine for accuracy
+    fCutForPositron(0.1 * nanometer),   // Ultra-fine for accuracy
+    fMessenger(nullptr)
 {
     G4LossTableManager::Instance();
 
@@ -58,57 +58,73 @@ void PhysicsList::SetupEmParameters()
     // Get EM parameters instance
     G4EmParameters* param = G4EmParameters::Instance();
 
-    // Enable all secondary particle production
-    param->SetFluo(true);           // Fluorescence
-    param->SetAuger(true);          // Auger electrons
-    param->SetAugerCascade(true);   // Full Auger cascade
-    param->SetPixe(true);           // Particle induced X-ray emission
+    // CRITICAL: Enable all atomic deexcitation processes
+    param->SetFluo(true);         // K-shell fluorescence
+    param->SetAuger(true);        // Auger electrons
+    param->SetAugerCascade(true); // Full Auger cascade
+    param->SetPixe(true);         // PIXE (Particle Induced X-ray Emission)
 
-    // Set energy range - critical for capturing all electrons
-    param->SetMinEnergy(10*eV);     // Track electrons down to 10 eV
-    param->SetMaxEnergy(1*GeV);     // Up to 1 GeV
-    param->SetLowestElectronEnergy(10*eV);  // Don't kill low-energy electrons
-    param->SetLowestMuHadEnergy(1*keV);
+    // CRITICAL for Auger/fluorescence below cuts
+    param->SetDeexcitationIgnoreCut(true);
+
+    // Energy range for accurate low-energy physics
+    param->SetMinEnergy(10 * eV);     // Track down to 10 eV
+    param->SetMaxEnergy(1 * GeV);
+    param->SetLowestElectronEnergy(10 * eV);
+    param->SetLowestMuHadEnergy(1 * keV);
 
     // Multiple scattering parameters - critical for PSF accuracy
-    param->SetMscStepLimitType(fUseDistanceToBoundary);  // Most accurate
-    param->SetMscRangeFactor(0.02);    // Smaller = more accurate (default 0.04)
-    param->SetMscGeomFactor(2.5);      // Default, good for thin layers
-    param->SetMscSkin(3.0);            // Default
+    param->SetMscStepLimitType(fUseDistanceToBoundary);
+    param->SetMscRangeFactor(0.02);   // Smaller = more accurate
+    param->SetMscGeomFactor(2.5);
+    param->SetMscSkin(3.0);
+    param->SetMscSafetyFactor(0.6);
 
-    // Very important: small step near boundaries for accurate position
-    param->SetStepFunction(0.1, 0.1*nanometer);  // dRoverRange, finalRange
+    // Lateral displacement
+    param->SetMuHadLateralDisplacement(true);
+
+    // Step function - controls step size
+    param->SetStepFunction(0.1, 0.1 * nanometer);  // Max 10% energy loss, min 0.1 nm step
+    param->SetStepFunctionMuHad(0.1, 0.05 * nanometer);
 
     // Energy loss parameters
-    param->SetLossFluctuations(true);   // Include Landau fluctuations
-    param->SetLinearLossLimit(0.01);    // 1% - default
-    param->SetBuildCSDARange(true);     // Build CSDA range tables
+    param->SetLossFluctuations(true);
+    param->SetLinearLossLimit(0.01);
+    param->SetBuildCSDARange(true);
+    param->SetUseCutAsFinalRange(false);
 
-    // Bremsstrahlung and pair production
-    param->SetBremsstrahlungTh(1*MeV);  // Enable above 1 MeV
+    // Bremsstrahlung
+    param->SetBremsstrahlungTh(1 * MeV);
 
-    // Apply cuts properly
+    // Angular settings
+    param->SetFactorForAngleLimit(1.0);
+
+    // Apply cuts
     param->SetApplyCuts(true);
 
-    // Number of bins for tables - more bins = better accuracy
-    param->SetNumberOfBinsPerDecade(20);  // Default is 7, we want more
+    // Number of bins for accuracy
+    param->SetNumberOfBinsPerDecade(20);
 
-    // Verbose output for debugging
-    param->SetVerbose(1);
+    // Integral approach
+    param->SetIntegral(true);
 
-    // Print to verify
-    G4cout << "\nEM Parameters configured for EBL:" << G4endl;
-    G4cout << "  Min energy: " << param->MinKinEnergy()/eV << " eV" << G4endl;
-    G4cout << "  Max energy: " << param->MaxKinEnergy()/MeV << " MeV" << G4endl;
+    // Verbose
+    param->SetVerbose(0);  // Reduced for BEAMER production runs
+
+    G4cout << "\n========================================" << G4endl;
+    G4cout << "EM Parameters configured for BEAMER PSF:" << G4endl;
+    G4cout << "  Resist-optimized with region-specific cuts" << G4endl;
+    G4cout << "  Min tracking energy: " << param->MinKinEnergy() / eV << " eV" << G4endl;
     G4cout << "  Fluorescence: " << param->Fluo() << G4endl;
     G4cout << "  Auger: " << param->Auger() << G4endl;
-    G4cout << "  MSC range factor: " << param->MscRangeFactor() << G4endl;
-    G4cout << "  Number of bins per decade: " << param->NumberOfBinsPerDecade() << G4endl;
+    G4cout << "  Deexcitation ignore cut: " << param->DeexcitationIgnoreCut() << G4endl;
+    G4cout << "========================================\n" << G4endl;
 }
 
 void PhysicsList::ConstructParticle()
 {
     fDecayPhysics->ConstructParticle();
+    fEmPhysics->ConstructParticle();
 }
 
 void PhysicsList::ConstructProcess()
@@ -125,30 +141,69 @@ void PhysicsList::ConstructProcess()
 
 void PhysicsList::SetCuts()
 {
-    // Set default production cuts - these are CRITICAL for PSF accuracy
+    // BEAMER OPTIMIZATION: Use region-specific cuts
+
+    // Default global cuts (moderate)
+    fCutForGamma = 1.0 * nanometer;
+    fCutForElectron = 1.0 * nanometer;
+    fCutForPositron = 1.0 * nanometer;
+
+    // Set default production cuts
     SetCutValue(fCutForGamma, "gamma");
     SetCutValue(fCutForElectron, "e-");
     SetCutValue(fCutForPositron, "e+");
 
     // Report the cuts
-    G4cout << "\nPhysicsList::SetCuts() - Production thresholds:" << G4endl;
-    G4cout << "  Gamma:    " << G4BestUnit(fCutForGamma, "Length") << G4endl;
-    G4cout << "  Electron: " << G4BestUnit(fCutForElectron, "Length") << G4endl;
-    G4cout << "  Positron: " << G4BestUnit(fCutForPositron, "Length") << G4endl;
+    G4cout << "\nPhysicsList::SetCuts() - BEAMER Optimized Production Thresholds:" << G4endl;
+    G4cout << "  Global defaults:" << G4endl;
+    G4cout << "    Gamma:    " << G4BestUnit(fCutForGamma, "Length") << G4endl;
+    G4cout << "    Electron: " << G4BestUnit(fCutForElectron, "Length") << G4endl;
+    G4cout << "    Positron: " << G4BestUnit(fCutForPositron, "Length") << G4endl;
 
-    // Set region-specific cuts if regions exist
+    // Set region-specific cuts
     G4RegionStore* regionStore = G4RegionStore::GetInstance();
-    G4Region* resistRegion = regionStore->GetRegion("ResistRegion", false);
 
+    // CRITICAL: Ultra-fine cuts in resist region for PSF accuracy
+    G4Region* resistRegion = regionStore->GetRegion("ResistRegion", false);
     if (resistRegion) {
         G4ProductionCuts* resistCuts = new G4ProductionCuts();
-        resistCuts->SetProductionCut(0.1*nanometer, "gamma");
-        resistCuts->SetProductionCut(0.1*nanometer, "e-");
-        resistCuts->SetProductionCut(0.1*nanometer, "e+");
+        // Ultra-fine cuts for maximum accuracy in resist
+        resistCuts->SetProductionCut(0.05 * nanometer, "gamma");
+        resistCuts->SetProductionCut(0.05 * nanometer, "e-");
+        resistCuts->SetProductionCut(0.05 * nanometer, "e+");
         resistRegion->SetProductionCuts(resistCuts);
 
-        G4cout << "  Special cuts for resist region: "
-               << G4BestUnit(0.1*nanometer, "Length") << G4endl;
+        G4cout << "  Resist region (ultra-fine for PSF accuracy): "
+            << G4BestUnit(0.05 * nanometer, "Length") << G4endl;
+    }
+
+    // OPTIMIZATION: Coarser cuts in substrate for efficiency
+    // We still track backscatter but with less detail
+    G4Region* substrateRegion = regionStore->GetRegion("SubstrateRegion", false);
+    if (substrateRegion) {
+        G4ProductionCuts* substrateCuts = new G4ProductionCuts();
+        // Much coarser cuts in substrate - 200x larger than resist
+        substrateCuts->SetProductionCut(10.0 * nanometer, "gamma");
+        substrateCuts->SetProductionCut(10.0 * nanometer, "e-");
+        substrateCuts->SetProductionCut(10.0 * nanometer, "e+");
+        substrateRegion->SetProductionCuts(substrateCuts);
+
+        G4cout << "  Substrate region (coarse for efficiency): "
+            << G4BestUnit(10.0 * nanometer, "Length") << G4endl;
+    }
+
+    // Add world region with even coarser cuts
+    G4Region* defaultRegion = regionStore->GetRegion("DefaultRegionForTheWorld", false);
+    if (defaultRegion) {
+        G4ProductionCuts* worldCuts = new G4ProductionCuts();
+        // Very coarse cuts outside substrate
+        worldCuts->SetProductionCut(100.0 * nanometer, "gamma");
+        worldCuts->SetProductionCut(100.0 * nanometer, "e-");
+        worldCuts->SetProductionCut(100.0 * nanometer, "e+");
+        defaultRegion->SetProductionCuts(worldCuts);
+
+        G4cout << "  World region (very coarse): "
+            << G4BestUnit(100.0 * nanometer, "Length") << G4endl;
     }
 
     // Dump the full particle/process list for verification
@@ -156,16 +211,13 @@ void PhysicsList::SetCuts()
         DumpCutValuesTable();
     }
 
-    // Additional check for energy thresholds
+    // Additional validation for BEAMER
     G4EmParameters* param = G4EmParameters::Instance();
     G4double lowestE = param->LowestElectronEnergy();
-    G4cout << "\nLowest electron tracking energy: "
-           << G4BestUnit(lowestE, "Energy") << G4endl;
 
-    // Warning if cuts might be too large for EBL
-    if (fCutForElectron > 1.0*nanometer) {
-        G4cout << "\nWARNING: Electron production cut > 1 nm may be too coarse for EBL simulation!"
-               << G4endl;
-        G4cout << "         PSF accuracy requires sub-nm production thresholds." << G4endl;
-    }
+    G4cout << "\nBEAMER PSF Optimization Summary:" << G4endl;
+    G4cout << "  Resist: Ultra-fine cuts (0.05 nm) for accuracy" << G4endl;
+    G4cout << "  Substrate: Coarse cuts (10 nm) for efficiency" << G4endl;
+    G4cout << "  Tracking threshold: " << lowestE/eV << " eV" << G4endl;
+    G4cout << "  This configuration optimizes for resist-only PSF calculation\n" << G4endl;
 }

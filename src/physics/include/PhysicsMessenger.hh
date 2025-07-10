@@ -1,4 +1,4 @@
-// PhysicsMessenger.hh
+// PhysicsMessenger.hh - Enhanced version
 #ifndef PhysicsMessenger_h
 #define PhysicsMessenger_h 1
 
@@ -8,6 +8,7 @@
 class PhysicsList;
 class G4UIdirectory;
 class G4UIcmdWithAnInteger;
+class G4UIcmdWithABool;
 
 class PhysicsMessenger : public G4UImessenger {
 public:
@@ -23,6 +24,8 @@ private:
     G4UIdirectory* fEmDir;
     G4UIcmdWithAnInteger* fFluoCmd;
     G4UIcmdWithAnInteger* fAugerCmd;
+    G4UIcmdWithABool* fDeexcitationCmd;
+    G4UIcmdWithABool* fPixeCmd;
 };
 
 #endif
