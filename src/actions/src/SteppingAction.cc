@@ -1,4 +1,4 @@
-﻿// SteppingAction.cc - Optimized for BEAMER PSF (resist-only energy scoring)
+﻿// SteppingAction.cc - Optimized for BEAMER PSF with efficient logging
 #include "SteppingAction.hh"
 #include "EventAction.hh"
 #include "DetectorConstruction.hh"
@@ -10,6 +10,7 @@
 #include "G4Track.hh"
 #include "G4ParticleDefinition.hh"
 #include <chrono>
+#include <cstdio>
 
 SteppingAction::SteppingAction(EventAction* eventAction, DetectorConstruction* detConstruction)
     : G4UserSteppingAction(),
@@ -54,7 +55,7 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
     // For BEAMER PSF, we don't filter any energy deposits in resist
     // Every bit of energy matters for accurate proximity correction
 
-    // Get track information for debugging/validation only
+    // OPTIMIZED reporting - minimize hot-path output
     static G4long resistDeposits = 0;
     static G4double totalResistEnergy = 0.0;
     static auto lastReportTime = std::chrono::steady_clock::now();
@@ -62,14 +63,26 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
     resistDeposits++;
     totalResistEnergy += edep;
 
-    // Periodic reporting (every 5 seconds) to show progress without overhead
+    // MUCH LESS FREQUENT reporting for large simulations
     auto currentTime = std::chrono::steady_clock::now();
     auto timeDiff = std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastReportTime).count();
 
-    if (timeDiff >= 5) {
-        G4cout << "Resist energy deposits: " << resistDeposits
-               << ", Total energy: " << G4BestUnit(totalResistEnergy, "Energy")
-               << G4endl;
+    // Adaptive reporting interval based on deposit rate
+    G4int reportInterval = 15;  // Default 15 seconds
+
+    // For very active simulations, report less frequently
+    if (resistDeposits > 100000) {
+        reportInterval = 30;  // 30 seconds for high-activity sims
+    }
+    if (resistDeposits > 1000000) {
+        reportInterval = 60;  // 1 minute for very high-activity sims
+    }
+
+    if (timeDiff >= reportInterval) {
+        // Use printf for speed (no C++ stream formatting overhead)
+        printf("Resist energy deposits: %ld, Total energy: %.3f MeV\n",
+               resistDeposits, totalResistEnergy / CLHEP::MeV);
+        fflush(stdout);
         lastReportTime = currentTime;
     }
 

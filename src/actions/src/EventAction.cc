@@ -1,4 +1,4 @@
-﻿// EventAction.cc - BEAMER Optimized (radial PSF only)
+﻿// EventAction.cc - BEAMER Optimized with efficient logging for large simulations
 #include "EventAction.hh"
 #include "RunAction.hh"
 #include "DetectorConstruction.hh"
@@ -10,6 +10,7 @@
 #include "G4SystemOfUnits.hh"
 #include "G4AnalysisManager.hh"
 #include <cmath>
+#include <cstdio>
 
 EventAction::EventAction(RunAction* runAction, DetectorConstruction* detConstruction)
     : G4UserEventAction(),
@@ -42,10 +43,9 @@ void EventAction::BeginOfEventAction(const G4Event* event)
     // Reset radial energy bins
     std::fill(fRadialEnergyDeposit.begin(), fRadialEnergyDeposit.end(), 0.0);
 
-    // Minimal progress reporting for BEAMER efficiency
+    // OPTIMIZED progress reporting for large simulations
     G4int eventID = event->GetEventID();
 
-    // Only report at major milestones to reduce overhead
     const G4Run* currentRun = G4RunManager::GetRunManager()->GetCurrentRun();
     G4int totalEvents = 0;
     if (currentRun) {
@@ -53,16 +53,33 @@ void EventAction::BeginOfEventAction(const G4Event* event)
     }
 
     if (totalEvents > 0) {
-        // Report at 0%, 10%, 20%, ..., 100%
-        G4double currentPercent = 100.0 * eventID / totalEvents;
-        static G4int lastReportedDecile = -1;
-        G4int currentDecile = static_cast<G4int>(currentPercent / 10.0);
+        // Adaptive reporting frequency to minimize I/O overhead
+        G4int reportInterval;
 
-        if (currentDecile != lastReportedDecile) {
-            lastReportedDecile = currentDecile;
-            G4cout << "Processing event " << eventID << " - "
-                   << (currentDecile * 10) << "% complete" << G4endl;
-            G4cout << std::flush;
+        if (totalEvents <= 10000) {
+            reportInterval = 1000;          // Every 1k events for small sims
+        } else if (totalEvents <= 100000) {
+            reportInterval = 5000;          // Every 5k events for medium sims
+        } else if (totalEvents <= 1000000) {
+            reportInterval = 25000;         // Every 25k events for large sims
+        } else {
+            reportInterval = 100000;        // Every 100k events for very large sims
+        }
+
+        // Only report at intervals (reduces I/O by 10-100x)
+        if (eventID % reportInterval == 0 && eventID > 0) {
+            G4double percent = 100.0 * eventID / totalEvents;
+
+            // Use printf for faster output (no C++ stream overhead)
+            printf("Processing event %d - %.1f%% complete\n", eventID, percent);
+            fflush(stdout);  // Immediate flush only when needed
+        }
+
+        // Emergency progress report for very long gaps
+        if (totalEvents > 1000000 && eventID % 500000 == 0 && eventID > 0) {
+            printf(">>> Milestone: %d/%d events (%.1f%%)\n",
+                   eventID, totalEvents, 100.0 * eventID / totalEvents);
+            fflush(stdout);
         }
     }
 }

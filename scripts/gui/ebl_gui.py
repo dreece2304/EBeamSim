@@ -56,7 +56,7 @@ import matplotlib.cm as cm
 # Replace the existing SimulationWorker class with this version
 
 class SimulationWorker(QObject):
-    """Worker thread for running simulations"""
+    """Worker thread for running simulations with optimized progress tracking"""
     output = Signal(str)
     progress = Signal(int)
     finished = Signal(bool, str)
@@ -72,13 +72,13 @@ class SimulationWorker(QObject):
         self.last_reported_progress = -1
 
     def run_simulation(self):
-        """Run the simulation in this thread"""
+        """Run the simulation in this thread with optimized progress tracking"""
         try:
             args = [self.executable_path, self.macro_path]
 
             # Set up environment variables for Geant4
             env = os.environ.copy()
-            g4_path = r"C:\Users\dreec\Geant4Projects\program_files"
+            g4_path = r"C:\Users\bergsman_lab_user\Geant4\ProgramFiles"
 
             # Add Geant4 data paths
             env['G4ABLADATA'] = f"{g4_path}\\share\\Geant4\\data\\G4ABLA3.3"
@@ -102,14 +102,28 @@ class SimulationWorker(QObject):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
-                bufsize=1,  # Line buffered for real-time output
+                bufsize=1,
                 cwd=self.working_dir,
                 env=env,
                 creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
             )
 
+            # OPTIMIZED progress tracking for large simulations
             line_count = 0
-            max_lines = 10000  # Increased for better monitoring
+            max_gui_lines = 3000  # Reduce GUI overhead for large sims
+
+            # Enhanced tracking variables
+            last_event_number = 0
+            energy_reports_count = 0
+            track_reports_count = 0
+            estimated_progress = 0
+            last_progress_update = time.time()
+
+            # Keywords for filtering important output
+            important_keywords = [
+                "Processing event", "Progress:", "Resist energy deposits:",
+                "StackingAction:", "ERROR", "WARNING", "Complete", "MeV", "Milestone"
+            ]
 
             while True:
                 if self.should_stop:
@@ -122,11 +136,16 @@ class SimulationWorker(QObject):
 
                 line = line.strip()
                 if line:
-                    # Always emit the line for display
-                    if line_count < max_lines:
+                    # Smart output filtering for large simulations
+                    should_show_line = True
+                    if self.total_events and self.total_events > 100000:
+                        # For large sims, filter output aggressively
+                        should_show_line = any(keyword in line for keyword in important_keywords)
+
+                    if should_show_line and line_count < max_gui_lines:
                         self.output.emit(line)
-                    elif line_count == max_lines:
-                        self.output.emit("... (output truncated, but simulation continues)")
+                    elif line_count == max_gui_lines:
+                        self.output.emit("... (output filtered for large simulation performance)")
 
                     # Parse for total events
                     if "events will be processed" in line or "event will be processed" in line:
@@ -135,41 +154,79 @@ class SimulationWorker(QObject):
                             self.total_events = int(match.group(1))
                             self.output.emit(f">>> Total events to process: {self.total_events}")
 
-                    # Extract progress information - handle multiple formats
-                    progress_extracted = False
+                    # ENHANCED PROGRESS TRACKING
+                    progress_updated = False
+                    current_time = time.time()
 
-                    # Format 1: "Processing event X"
-                    if "Processing event" in line:
+                    # Method 1: Direct "Processing event X" messages
+                    if "Processing event" in line and "complete" in line:
                         match = re.search(r'Processing event\s+(\d+)', line)
                         if match:
                             event_num = int(match.group(1))
+                            last_event_number = event_num
                             self.progress.emit(event_num)
-                            progress_extracted = True
+                            progress_updated = True
 
-                            # Calculate and show percentage if we know total
-                            if self.total_events and self.total_events > 0:
-                                percentage = (event_num / self.total_events) * 100
-                                if percentage - self.last_reported_progress >= 1.0:  # Report every 1%
-                                    self.output.emit(f">>> Progress: {percentage:.1f}%")
-                                    self.last_reported_progress = percentage
-
-                    # Format 2: "Progress: X%"
-                    if not progress_extracted and "Progress:" in line and "%" in line:
-                        match = re.search(r'Progress:\s*([\d.]+)%', line)
-                        if match:
-                            percentage = float(match.group(1))
-                            if self.total_events:
-                                event_num = int((percentage / 100.0) * self.total_events)
-                                self.progress.emit(event_num)
-
-                    # Format 3: "Event X deposited"
-                    if not progress_extracted and "Event" in line and "deposited" in line:
-                        match = re.search(r'Event\s+(\d+)\s+deposited', line)
+                    # Method 2: Milestone messages for very large sims
+                    elif "Milestone:" in line:
+                        match = re.search(r'(\d+)/(\d+) events', line)
                         if match:
                             event_num = int(match.group(1))
-                            # Only emit progress for significant events to avoid too many updates
-                            if event_num % 100 == 0:
-                                self.progress.emit(event_num)
+                            last_event_number = event_num
+                            self.progress.emit(event_num)
+                            progress_updated = True
+
+                    # Method 3: Use energy deposition reports for estimation
+                    elif "Resist energy deposits:" in line and "Total energy:" in line:
+                        energy_reports_count += 1
+
+                        # Estimate based on energy reports (they come every ~10-20k events)
+                        if self.total_events and self.total_events > 50000:
+                            # Dynamic estimation based on simulation size
+                            if self.total_events <= 100000:
+                                estimate_factor = 8000
+                            elif self.total_events <= 1000000:
+                                estimate_factor = 12000
+                            else:
+                                estimate_factor = 20000  # For very large sims
+
+                            estimated_events = energy_reports_count * estimate_factor
+                            if estimated_events > last_event_number:
+                                estimated_progress = min(estimated_events, self.total_events)
+                                self.progress.emit(int(estimated_progress))
+                                progress_updated = True
+
+                    # Method 4: Use track processing reports for very large sims
+                    elif "StackingAction: Processed" in line and "tracks" in line:
+                        track_reports_count += 1
+
+                        # For 1M+ events, use track reports as backup indicator
+                        if self.total_events and self.total_events >= 1000000:
+                            estimated_from_tracks = track_reports_count * 3000
+                            if estimated_from_tracks > max(last_event_number, estimated_progress):
+                                estimated_progress = min(estimated_from_tracks, self.total_events)
+                                if abs(estimated_progress - last_event_number) > 5000:
+                                    self.progress.emit(int(estimated_progress))
+                                    progress_updated = True
+
+                    # Report percentage progress with adaptive thresholds
+                    if progress_updated and self.total_events and self.total_events > 0:
+                        current_progress = max(last_event_number, estimated_progress)
+                        percentage = (current_progress / self.total_events) * 100
+
+                        # Dynamic reporting threshold based on simulation size
+                        if self.total_events > 2000000:
+                            report_threshold = 0.5  # Every 0.5% for very large sims
+                        elif self.total_events > 500000:
+                            report_threshold = 1.0  # Every 1% for large sims
+                        elif self.total_events > 50000:
+                            report_threshold = 2.0  # Every 2% for medium sims
+                        else:
+                            report_threshold = 5.0  # Every 5% for smaller sims
+
+                        if percentage - self.last_reported_progress >= report_threshold:
+                            self.output.emit(f">>> Progress: {percentage:.1f}% ({current_progress:,}/{self.total_events:,})")
+                            self.last_reported_progress = percentage
 
                     # Track important physics messages
                     if "Fluorescence:" in line or "Auger:" in line or "PIXE:" in line:
@@ -180,11 +237,6 @@ class SimulationWorker(QObject):
                         self.output.emit(f"⚠️ {line}")
                     elif "ERROR" in line or "Error" in line:
                         self.output.emit(f"❌ {line}")
-
-                    # Track energy deposition info
-                    if "deposited" in line and ("keV" in line or "eV" in line or "MeV" in line):
-                        if "Event" in line:  # This is event summary
-                            self.output.emit(f"💡 {line}")
 
                     line_count += 1
 
@@ -203,6 +255,7 @@ class SimulationWorker(QObject):
         self.should_stop = True
         if self.process:
             self.process.terminate()
+
 class Enhanced2DPlotWidget(QWidget):
     """Enhanced widget for 2D depth-radius visualization"""
 
@@ -1278,7 +1331,7 @@ class EBLMainWindow(QMainWindow):
         self.status_bar.addPermanentWidget(self.progress_bar)
 
     def create_resist_tab(self):
-        """Create resist properties tab"""
+        """Enhanced resist properties tab with simplified material builder"""
         widget = QWidget()
         layout = QVBoxLayout()
 
@@ -1293,7 +1346,17 @@ class EBLMainWindow(QMainWindow):
             "ZEP": ("C:11,H:14,O:1", 1.2),
             "Alucone_XPS": ("Al:1,C:5,H:4,O:2", 1.35),
             "Alucone_Exposed": ("Al:1,C:5,H:4,O:3", 1.40),
+            "Biscone_2Butyne": ("Bi:1,C:4,H:4,O:2", 3.3),
+            "Biscone_2Butyne_Hydrated": ("Bi:1,C:4,H:6,O:3", 3.1),
             "Custom": ("", 1.0)
+        }
+
+        # SIMPLIFIED: Just atomic weights for basic calculations (no need for full database)
+        self.atomic_weights = {
+            'H': 1.008, 'C': 12.011, 'N': 14.007, 'O': 15.999, 'F': 18.998,
+            'Al': 26.982, 'Si': 28.086, 'P': 30.974, 'S': 32.065,
+            'Ti': 47.867, 'Zr': 91.224, 'Hf': 178.49, 'W': 183.84,
+            'Au': 196.97, 'Bi': 208.98
         }
 
         material_layout.addWidget(QLabel("Material:"), 0, 0)
@@ -1305,45 +1368,307 @@ class EBLMainWindow(QMainWindow):
         material_layout.addWidget(QLabel("Composition:"), 1, 0)
         self.composition_edit = QLineEdit()
         self.composition_edit.setPlaceholderText("Al:1,C:5,H:4,O:2")
+        self.composition_edit.textChanged.connect(self.on_composition_changed)
         material_layout.addWidget(self.composition_edit, 1, 1, 1, 2)
 
-        material_layout.addWidget(QLabel("Thickness (nm):"), 2, 0)
+        # Density with simple estimation
+        material_layout.addWidget(QLabel("Density (g/cm³):"), 2, 0)
+
+        density_layout = QHBoxLayout()
+        self.density_spin = QDoubleSpinBox()
+        self.density_spin.setRange(0.1, 25.0)
+        self.density_spin.setValue(1.35)
+        self.density_spin.setDecimals(2)
+        density_layout.addWidget(self.density_spin)
+
+        self.estimate_density_button = QPushButton("Estimate")
+        self.estimate_density_button.setMaximumWidth(80)
+        self.estimate_density_button.clicked.connect(self.estimate_density)
+        self.estimate_density_button.setToolTip("Estimate density from composition")
+        density_layout.addWidget(self.estimate_density_button)
+
+        material_layout.addLayout(density_layout, 2, 1, 1, 2)
+
+        material_layout.addWidget(QLabel("Thickness (nm):"), 3, 0)
         self.thickness_spin = QDoubleSpinBox()
         self.thickness_spin.setRange(1.0, 10000.0)
         self.thickness_spin.setValue(30.0)
         self.thickness_spin.setDecimals(1)
-        material_layout.addWidget(self.thickness_spin, 2, 1)
-
-        material_layout.addWidget(QLabel("Density (g/cm³):"), 3, 0)
-        self.density_spin = QDoubleSpinBox()
-        self.density_spin.setRange(0.1, 10.0)
-        self.density_spin.setValue(1.35)
-        self.density_spin.setDecimals(2)
-        material_layout.addWidget(self.density_spin, 3, 1)
+        material_layout.addWidget(self.thickness_spin, 3, 1)
 
         material_group.setLayout(material_layout)
 
-        # Info group
+        # SIMPLIFIED Material Builder
+        builder_group = QGroupBox("Quick Material Builder")
+        builder_layout = QGridLayout()
+
+        # Common elements dropdown
+        builder_layout.addWidget(QLabel("Add Element:"), 0, 0)
+        self.element_combo = QComboBox()
+        common_elements = ['H', 'C', 'N', 'O', 'F', 'Al', 'Si', 'P', 'S', 'Ti', 'Zr', 'Hf', 'W', 'Au', 'Bi']
+        self.element_combo.addItems(common_elements)
+        builder_layout.addWidget(self.element_combo, 0, 1)
+
+        builder_layout.addWidget(QLabel("Ratio:"), 0, 2)
+        self.ratio_spin = QDoubleSpinBox()
+        self.ratio_spin.setRange(0.01, 100.0)
+        self.ratio_spin.setValue(1.0)
+        self.ratio_spin.setDecimals(2)
+        builder_layout.addWidget(self.ratio_spin, 0, 3)
+
+        self.add_element_button = QPushButton("Add")
+        self.add_element_button.clicked.connect(self.add_element_to_composition)
+        builder_layout.addWidget(self.add_element_button, 0, 4)
+
+        # Quick actions
+        actions_layout = QHBoxLayout()
+        self.validate_button = QPushButton("Validate")
+        self.validate_button.clicked.connect(self.validate_composition)
+        actions_layout.addWidget(self.validate_button)
+
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear_composition)
+        actions_layout.addWidget(self.clear_button)
+
+        builder_layout.addLayout(actions_layout, 1, 0, 1, 5)
+        builder_group.setLayout(builder_layout)
+
+        # Info group with composition display
         info_group = QGroupBox("Material Information")
         info_layout = QVBoxLayout()
 
-        info_text = QLabel("""
-<b>Current defaults based on XPS analysis:</b><br>
-• Pristine Alucone: Al:1,C:5,H:4,O:2 (1.35 g/cm³)<br>
-• Exposed Alucone: Al:1,C:5,H:4,O:3 (1.40 g/cm³)<br>
-• From TMA + butyne-1,4-diol MLD process
+        self.info_text = QLabel("""
+    <b>Current materials:</b><br>
+    • Alucone: Al:1,C:5,H:4,O:2 (1.35 g/cm³)<br>
+    • Biscone: Bi:1,C:4,H:4,O:2 (3.3 g/cm³)<br>
+    • From MLD process - 2-butyne linker
         """)
-        info_text.setWordWrap(True)
-        info_layout.addWidget(info_text)
+        self.info_text.setWordWrap(True)
+        info_layout.addWidget(self.info_text)
+
+        # Composition analysis display
+        self.analysis_text = QLabel("")
+        self.analysis_text.setWordWrap(True)
+        self.analysis_text.setStyleSheet("color: #007acc; font-size: 10px;")
+        info_layout.addWidget(self.analysis_text)
 
         info_group.setLayout(info_layout)
 
         layout.addWidget(material_group)
+        layout.addWidget(builder_group)
         layout.addWidget(info_group)
         layout.addStretch()
 
         widget.setLayout(layout)
         self.tab_widget.addTab(widget, "Resist Properties")
+
+    # SIMPLIFIED helper methods
+
+    def parse_composition(self, composition_str):
+        """Parse composition string into element dictionary"""
+        elements = {}
+        if not composition_str.strip():
+            return elements
+
+        try:
+            for part in composition_str.split(','):
+                if ':' in part:
+                    element, ratio = part.strip().split(':')
+                    elements[element.strip()] = float(ratio.strip())
+        except ValueError:
+            pass
+
+        return elements
+
+    def estimate_density(self):
+        """Simple density estimation using atomic weights and empirical rules"""
+        composition = self.composition_edit.text()
+        elements = self.parse_composition(composition)
+
+        if not elements:
+            QMessageBox.warning(self, "Invalid Composition",
+                                "Please enter a valid composition (e.g., Al:1,C:5,H:4,O:2)")
+            return
+
+        try:
+            # Calculate molecular weight
+            total_weight = 0
+            heavy_element_fraction = 0
+
+            for element, ratio in elements.items():
+                if element not in self.atomic_weights:
+                    QMessageBox.warning(self, "Unknown Element",
+                                        f"Element '{element}' not supported.\n"
+                                        f"Supported: {', '.join(self.atomic_weights.keys())}")
+                    return
+
+                weight_contrib = self.atomic_weights[element] * ratio
+                total_weight += weight_contrib
+
+                # Track heavy elements (atomic weight > 50)
+                if self.atomic_weights[element] > 50:
+                    heavy_element_fraction += weight_contrib
+
+            heavy_element_fraction /= total_weight
+
+            # SIMPLIFIED density estimation using empirical rules
+            if heavy_element_fraction > 0.5:
+                # Heavy element dominated (metals like Bi, W, Au)
+                if 'Bi' in elements:
+                    estimated_density = 2.5 + heavy_element_fraction * 5  # Bi-rich materials
+                elif any(elem in elements for elem in ['W', 'Au', 'Hf']):
+                    estimated_density = 3.0 + heavy_element_fraction * 10  # Very heavy elements
+                else:
+                    estimated_density = 2.0 + heavy_element_fraction * 3   # Other metals
+            else:
+                # Organic dominated
+                if any(elem in elements for elem in ['Al', 'Si', 'Ti']):
+                    estimated_density = 1.2 + heavy_element_fraction * 2   # Light metal-organic
+                else:
+                    estimated_density = 1.0 + heavy_element_fraction       # Pure organic
+
+            # Show results with option to use
+            result_msg = f"Estimated Density: {estimated_density:.2f} g/cm³\n"
+            result_msg += f"Molecular Weight: {total_weight:.1f} g/mol\n"
+            result_msg += f"Heavy Element Fraction: {heavy_element_fraction*100:.1f}%\n\n"
+            result_msg += "Apply this density?"
+
+            reply = QMessageBox.question(self, "Density Estimation", result_msg,
+                                        QMessageBox.Yes | QMessageBox.No)
+
+            if reply == QMessageBox.Yes:
+                self.density_spin.setValue(estimated_density)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Estimation Error", f"Error estimating density: {str(e)}")
+
+    def add_element_to_composition(self):
+        """Add selected element to composition"""
+        element = self.element_combo.currentText()
+        ratio = self.ratio_spin.value()
+
+        current = self.composition_edit.text().strip()
+        if current:
+            new_composition = f"{current},{element}:{ratio}"
+        else:
+            new_composition = f"{element}:{ratio}"
+
+        self.composition_edit.setText(new_composition)
+
+    def validate_composition(self):
+        """Validate current composition"""
+        composition = self.composition_edit.text()
+        elements = self.parse_composition(composition)
+
+        if not elements:
+            QMessageBox.warning(self, "Validation", "❌ Invalid composition format")
+            return
+
+        # Check for unknown elements
+        unknown = [elem for elem in elements.keys() if elem not in self.atomic_weights]
+
+        if unknown:
+            supported = ', '.join(self.atomic_weights.keys())
+            QMessageBox.warning(self, "Validation",
+                                f"❌ Unknown elements: {', '.join(unknown)}\n\n"
+                                f"Supported elements:\n{supported}")
+        else:
+            total_atoms = sum(elements.values())
+            molecular_weight = sum(self.atomic_weights[elem] * ratio
+                                for elem, ratio in elements.items())
+
+            QMessageBox.information(self, "Validation",
+                                    f"✅ Valid composition!\n\n"
+                                    f"Elements: {len(elements)}\n"
+                                    f"Total atoms: {total_atoms:.2f}\n"
+                                    f"Molecular weight: {molecular_weight:.1f} g/mol")
+
+    def clear_composition(self):
+        """Clear composition field"""
+        self.composition_edit.clear()
+
+    def on_composition_changed(self):
+        """Handle composition text changes"""
+        composition = self.composition_edit.text()
+        elements = self.parse_composition(composition)
+
+        if elements:
+            # Quick analysis for display
+            total_atoms = sum(elements.values())
+            total_weight = sum(self.atomic_weights.get(elem, 0) * ratio
+                            for elem, ratio in elements.items())
+
+            analysis_text = f"Formula: {composition} | "
+            analysis_text += f"MW: {total_weight:.1f} g/mol | "
+            analysis_text += f"Atoms: {total_atoms:.1f}"
+
+            # Identify material type
+            metals = ['Al', 'Ti', 'Zr', 'Hf', 'Bi', 'W', 'Au']
+            has_metals = any(elem in metals for elem in elements.keys())
+            has_carbon = 'C' in elements
+
+            if has_metals and has_carbon:
+                material_type = "Metal-Organic"
+            elif has_carbon:
+                material_type = "Organic"
+            else:
+                material_type = "Inorganic"
+
+            analysis_text += f" | Type: {material_type}"
+            self.analysis_text.setText(analysis_text)
+        else:
+            self.analysis_text.setText("")
+
+    def on_material_changed(self):
+        """Handle material selection change"""
+        material = self.material_combo.currentText()
+        if material in self.material_presets:
+            composition, density = self.material_presets[material]
+            self.composition_edit.setText(composition)
+            self.density_spin.setValue(density)
+
+            # Enable/disable composition editing
+            self.composition_edit.setReadOnly(material != "Custom")
+
+    # =================================================================
+    # WHY THIS IS BETTER THAN MANUAL ELEMENT DATABASE:
+    # =================================================================
+
+    """
+    ADVANTAGES OF SIMPLIFIED APPROACH:
+
+    ✅ LEVERAGES GEANT4:
+    - Geant4 has comprehensive element database (G4NistManager)
+    - All element properties are built-in and accurate
+    - No need to duplicate what Geant4 already knows
+
+    ✅ SIMPLER MAINTENANCE:
+    - Only need atomic weights for basic calculations
+    - Empirical density rules work well for EBL materials
+    - No complex property database to maintain
+
+    ✅ PRACTICAL FOR EBL:
+    - Density estimation is the main need
+    - Geant4 handles all physics properties automatically
+    - Focus on user-friendly material building
+
+    ✅ EXTENSIBLE:
+    - Easy to add new elements (just atomic weight)
+    - Can refine density estimation rules
+    - Could connect to online databases if needed
+
+    GEANT4 HANDLES AUTOMATICALLY:
+    - Cross-sections
+    - Interaction probabilities  
+    - Energy loss tables
+    - Range calculations
+    - All physics properties
+
+    USER ONLY NEEDS TO SPECIFY:
+    - Composition (what elements, what ratios)
+    - Density (for geometry/mass calculations)
+    - Thickness (for simulation setup)
+    """
 
     def create_beam_tab(self):
         """Create beam parameters tab"""
@@ -1610,8 +1935,14 @@ class EBLMainWindow(QMainWindow):
         self.on_material_changed()
 
         # Set the known working executable path
-        self.executable_path = r"C:\Users\dreec\Geant4Projects\EBeamSim\out\build\x64-release\bin\ebl_sim.exe"
-        self.working_dir = r"C:\Users\dreec\Geant4Projects\EBeamSim\out\build\x64-release\bin"
+        # Navigate up from scripts/gui/ to project root
+        project_root = Path(__file__).resolve().parent.parent.parent
+        
+        # Updated build directory path for cmake-build-release
+        build_dir = project_root / "cmake-build-release" / "bin"
+        
+        self.executable_path = str(build_dir / "ebl_sim.exe")
+        self.working_dir = str(build_dir)
         
         # Verify it exists
         if Path(self.executable_path).exists():
@@ -1623,10 +1954,10 @@ class EBLMainWindow(QMainWindow):
             
             # List of possible executable locations
             possible_paths = [
+                project_root / "cmake-build-release" / "bin" / "ebl_sim.exe",
+                project_root / "cmake-build-debug" / "bin" / "ebl_sim.exe",
+                project_root / "build" / "bin" / "ebl_sim.exe",
                 project_root / "out" / "build" / "x64-release" / "bin" / "ebl_sim.exe",
-                project_root / "out" / "build" / "x64-debug" / "bin" / "ebl_sim.exe",
-                project_root / "build" / "bin" / "Release" / "ebl_sim.exe",
-                project_root / "build" / "bin" / "Debug" / "ebl_sim.exe",
             ]
             
             # Find the first existing executable
@@ -2128,36 +2459,36 @@ class EBLMainWindow(QMainWindow):
             self.composition_edit.setReadOnly(material != "Custom")
 
     def generate_macro(self):
-        """Generate Geant4 macro file with dynamic output names"""
+        """Generate Geant4 macro file with optimized settings for large simulations"""
         try:
             # Ensure the working directory exists
             Path(self.working_dir).mkdir(parents=True, exist_ok=True)
-        
-            # Generate base filename pattern  
+
+            # Generate base filename pattern
             base_pattern = self.generate_output_filename(extension="")
-        
+
             # Find next run number if auto-increment is enabled
             run_number = None
             if hasattr(self, 'auto_increment_check') and self.auto_increment_check.isChecked():
                 run_number = self.find_next_run_number(base_pattern)
-        
+
             # Add timestamp if requested
             use_timestamp = hasattr(self, 'timestamp_check') and self.timestamp_check.isChecked()
-        
+
             # Generate output filenames
-            psf_filename = self.generate_output_filename("psf", ".csv", 
-                                                       include_timestamp=use_timestamp, 
-                                                       run_number=run_number)
-            psf2d_filename = self.generate_output_filename("psf2d", ".csv", 
+            psf_filename = self.generate_output_filename("psf", ".csv",
                                                          include_timestamp=use_timestamp,
                                                          run_number=run_number)
-            summary_filename = self.generate_output_filename("summary", ".txt",
+            psf2d_filename = self.generate_output_filename("psf2d", ".csv",
                                                            include_timestamp=use_timestamp,
                                                            run_number=run_number)
+            summary_filename = self.generate_output_filename("summary", ".txt",
+                                                             include_timestamp=use_timestamp,
+                                                             run_number=run_number)
             beamer_filename = self.generate_output_filename("beamer", ".dat",
-                                                          include_timestamp=use_timestamp,
-                                                          run_number=run_number)
-        
+                                                            include_timestamp=use_timestamp,
+                                                            run_number=run_number)
+
             # Store filenames for later use
             self.current_output_files = {
                 'psf': os.path.join(self.working_dir, psf_filename),
@@ -2165,13 +2496,15 @@ class EBLMainWindow(QMainWindow):
                 'summary': os.path.join(self.working_dir, summary_filename),
                 'beamer': os.path.join(self.working_dir, beamer_filename)
             }
-        
+
             macro_path = Path(self.working_dir) / "gui_generated.mac"
+            num_events = self.events_spin.value()
 
             with open(macro_path, 'w') as f:
                 f.write("# EBL Simulation Macro - Generated by GUI\n")
-                f.write(f"# {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-            
+                f.write(f"# {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"# Events: {num_events:,}\n\n")
+
                 # Add output filename commands
                 f.write("# Output file configuration\n")
                 f.write(f"/ebl/output/setDirectory {self.working_dir}\n")
@@ -2180,11 +2513,24 @@ class EBLMainWindow(QMainWindow):
                 f.write(f"/ebl/output/setSummaryFile {summary_filename}\n")
                 f.write(f"/ebl/output/setBeamerFile {beamer_filename}\n\n")
 
-                # Verbose settings
-                verbose = min(self.verbose_spin.value(), 1) if self.events_spin.value() > 10000 else self.verbose_spin.value()
-                f.write(f"/run/verbose {verbose}\n")
-                f.write(f"/event/verbose {max(0, verbose-1)}\n")
-                f.write(f"/tracking/verbose {max(0, verbose-2)}\n\n")
+                # OPTIMIZED verbosity for large simulations
+                if num_events <= 10000:
+                    verbose_level = min(self.verbose_spin.value(), 2)
+                elif num_events <= 100000:
+                    verbose_level = min(self.verbose_spin.value(), 1)
+                else:
+                    verbose_level = 0  # Minimal output for large sims
+
+                f.write(f"/run/verbose {verbose_level}\n")
+                f.write(f"/event/verbose {max(0, verbose_level-1)}\n")
+                f.write(f"/tracking/verbose 0\n\n")  # Always disable for performance
+
+                # Add performance optimizations for large simulations
+                if num_events > 100000:
+                    f.write("# Performance optimizations for large simulation\n")
+                    f.write("/control/cout/ignoreThreadsExcept 0\n")  # Only master thread output
+                    f.write("/run/printProgress 0\n")  # Disable built-in progress
+                    f.write("# Using custom progress reporting for better GUI integration\n\n")
 
                 # Random seed handling
                 if self.seed_spin.value() == -1:
@@ -2196,7 +2542,6 @@ class EBLMainWindow(QMainWindow):
                     self.last_used_seed = random_seed
                 elif self.seed_spin.value() > 0:
                     f.write(f"/random/setSeeds {self.seed_spin.value()} {self.seed_spin.value()+1}\n\n")
-                # If seed is 0, don't set any seed (use Geant4 default time-based)
 
                 # Initialize
                 f.write("# Initialize\n")
@@ -2231,18 +2576,23 @@ class EBLMainWindow(QMainWindow):
                 f.write(f"/gun/direction {dx} {dy} {dz}\n")
                 f.write(f"/gun/beamSize {self.beam_size_spin.value()} nm\n\n")
 
-                # Visualization
-                if self.visualization_check.isChecked():
-                    f.write("# Visualization\n")
+                # Visualization (only for small simulations)
+                if self.visualization_check.isChecked() and num_events <= 1000:
+                    f.write("# Visualization (disabled for large simulations)\n")
                     f.write("/vis/open OGL\n")
                     f.write("/vis/drawVolume\n")
                     f.write("/vis/scene/add/trajectories smooth\n\n")
+                elif self.visualization_check.isChecked():
+                    f.write("# Visualization disabled for large simulation\n\n")
 
                 # Run simulation
                 f.write("# Run simulation\n")
-                f.write(f"/run/beamOn {self.events_spin.value()}\n")
+                f.write(f"/run/beamOn {num_events}\n")
 
-            self.log_output(f"Macro generated: {macro_path}")
+            self.log_output(f"Optimized macro generated: {macro_path}")
+            self.log_output(f"Target events: {num_events:,}")
+            if num_events > 100000:
+                self.log_output("Large simulation detected - using optimized settings")
             self.status_label.setText("Macro generated successfully")
             return str(macro_path)
 

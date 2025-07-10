@@ -26,7 +26,7 @@ endif()
 
 # Help CMake find Geant4 on Windows
 if(WIN32)
-    set(Geant4_DIR "C:/Users/dreec/Geant4Projects/program_files/lib/cmake/Geant4" CACHE PATH "Geant4 installation directory")
+    set(Geant4_DIR "C:/Users/bergsman_lab_user/Geant4/ProgramFiles/lib/cmake/Geant4" CACHE PATH "Geant4 installation directory")
 endif()
 
 # Find Geant4

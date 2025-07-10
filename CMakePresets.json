@@ -16,7 +16,7 @@
                 "rhs": "Windows"
             },
             "cacheVariables": {
-                "Geant4_DIR": "C:/Users/dreec/Geant4Projects/program_files/lib/cmake/Geant4"
+                "Geant4_DIR": "C:/Users/bergsman_lab_user/Geant4/ProgramFiles/lib/cmake/Geant4"
             }
         },
         {
