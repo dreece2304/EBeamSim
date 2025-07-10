@@ -1,4 +1,4 @@
-﻿// EventAction.cc - BEAMER Optimized with efficient logging for large simulations
+﻿// EventAction.cc - BEAMER Optimized with efficient logging for large simulations + 2D Data
 #include "EventAction.hh"
 #include "RunAction.hh"
 #include "DetectorConstruction.hh"
@@ -22,10 +22,18 @@ EventAction::EventAction(RunAction* runAction, DetectorConstruction* detConstruc
     fSubstrateEnergy(0.),
     fAboveResistEnergy(0.)
 {
-    // Initialize the radial bins for energy deposition
+    // Initialize the radial bins for energy deposition (1D - for BEAMER)
     fRadialEnergyDeposit.resize(EBL::PSF::NUM_RADIAL_BINS, 0.0);
 
-    // Skip 2D initialization for BEAMER mode
+    // RE-ENABLE 2D data collection for visualization
+    f2DEnergyDeposit.resize(NUM_DEPTH_BINS);
+    for (auto& radialBins : f2DEnergyDeposit) {
+        radialBins.resize(NUM_RADIAL_BINS, 0.0);
+    }
+
+    G4cout << "EventAction initialized with:" << G4endl;
+    G4cout << "  1D radial bins: " << EBL::PSF::NUM_RADIAL_BINS << " (for BEAMER PSF)" << G4endl;
+    G4cout << "  2D bins: " << NUM_DEPTH_BINS << " x " << NUM_RADIAL_BINS << " (for visualization)" << G4endl;
 }
 
 EventAction::~EventAction()
@@ -40,8 +48,13 @@ void EventAction::BeginOfEventAction(const G4Event* event)
     fSubstrateEnergy = 0.;
     fAboveResistEnergy = 0.;
 
-    // Reset radial energy bins
+    // Reset radial energy bins (1D)
     std::fill(fRadialEnergyDeposit.begin(), fRadialEnergyDeposit.end(), 0.0);
+
+    // Reset 2D energy bins
+    for (auto& radialBins : f2DEnergyDeposit) {
+        std::fill(radialBins.begin(), radialBins.end(), 0.0);
+    }
 
     // OPTIMIZED progress reporting for large simulations
     G4int eventID = event->GetEventID();
@@ -86,17 +99,22 @@ void EventAction::BeginOfEventAction(const G4Event* event)
 
 void EventAction::EndOfEventAction(const G4Event* event)
 {
-    // For BEAMER, we only care about resist energy
     // Pass accumulated energy data to run action
-    if (fResistEnergy > 0) {
+    if (fResistEnergy > 0 || fSubstrateEnergy > 0 || fAboveResistEnergy > 0) {
+        // 1D data for BEAMER PSF
         fRunAction->AddRadialEnergyDeposit(fRadialEnergyDeposit);
+
+        // 2D data for visualization
+        fRunAction->Add2DEnergyDeposit(f2DEnergyDeposit);
+
+        // Region energy totals
         fRunAction->AddRegionEnergy(fResistEnergy, fSubstrateEnergy, fAboveResistEnergy);
     }
 
     // Skip verbose event reporting for efficiency
 }
 
-// Helper function for logarithmic binning
+// Helper function for logarithmic binning (1D)
 G4int EventAction::GetLogBin(G4double radius) const
 {
     if (!EBL::PSF::USE_LOG_BINNING) {
@@ -148,30 +166,80 @@ G4double EventAction::GetBinRadius(G4int bin) const
     return std::exp(logCenter);
 }
 
+// 2D binning functions
 G4int EventAction::GetDepthBin(G4double z) const
 {
-    // Not used in BEAMER mode
-    return 0;
+    // Get resist thickness
+    G4double resistThickness = fDetConstruction->GetActualResistThickness();
+
+    // For 2D visualization, we want to include some substrate
+    G4double totalDepth = resistThickness + 50.0 * nanometer;  // 50 nm into substrate
+
+    // Linear binning for depth
+    if (z < -50.0 * nanometer) return 0;  // Deep substrate
+    if (z > resistThickness) return NUM_DEPTH_BINS - 1;  // Above resist
+
+    // Shift z so that z=0 (resist bottom) maps to bin ~50
+    G4double shiftedZ = z + 50.0 * nanometer;
+    G4double binWidth = totalDepth / NUM_DEPTH_BINS;
+    G4int bin = static_cast<G4int>(shiftedZ / binWidth);
+
+    if (bin < 0) bin = 0;
+    if (bin >= NUM_DEPTH_BINS) bin = NUM_DEPTH_BINS - 1;
+
+    return bin;
+}
+
+G4double EventAction::GetDepthBinCenter(G4int bin) const
+{
+    if (bin < 0 || bin >= NUM_DEPTH_BINS) return 0.0;
+
+    G4double resistThickness = fDetConstruction->GetActualResistThickness();
+    G4double totalDepth = resistThickness + 50.0 * nanometer;
+    G4double binWidth = totalDepth / NUM_DEPTH_BINS;
+
+    // Convert back from shifted coordinates
+    G4double shiftedZ = (bin + 0.5) * binWidth;
+    return shiftedZ - 50.0 * nanometer;
 }
 
 void EventAction::AddEnergyDeposit(G4double edep, G4double x, G4double y, G4double z)
 {
-    // BEAMER OPTIMIZATION: We know this is already filtered for resist only
-    // by SteppingAction, so we can skip validation
+    // Get resist boundaries
+    G4double resistThickness = fDetConstruction->GetActualResistThickness();
 
     // Accumulate total energy deposit
     fEnergyDeposit += edep;
-    fResistEnergy += edep;  // All energy is in resist
+
+    // Classify by region
+    if (z >= 0 && z <= resistThickness) {
+        fResistEnergy += edep;
+    } else if (z < 0) {
+        fSubstrateEnergy += edep;
+    } else {
+        fAboveResistEnergy += edep;
+    }
 
     // Calculate radial distance from beam axis
     G4double r = std::sqrt(x * x + y * y);
 
-    // Get logarithmic bin number for radius
-    G4int radialBin = GetLogBin(r);
+    // 1D radial binning (for BEAMER PSF) - ALL energy deposits
+    G4int radialBin1D = GetLogBin(r);
+    if (radialBin1D >= 0 && radialBin1D < static_cast<G4int>(fRadialEnergyDeposit.size())) {
+        fRadialEnergyDeposit[radialBin1D] += edep;
+    }
 
-    // Add energy to radial bin
-    if (radialBin >= 0 && radialBin < static_cast<G4int>(fRadialEnergyDeposit.size())) {
-        fRadialEnergyDeposit[radialBin] += edep;
+    // 2D binning (for visualization) - ALL energy deposits
+    G4int depthBin = GetDepthBin(z);
+
+    // For 2D, use linear radial binning to match typical 2D visualization
+    G4double maxRadius2D = 50.0 * micrometer;  // Reasonable max for 2D viz
+    G4int radialBin2D = static_cast<G4int>((r / maxRadius2D) * NUM_RADIAL_BINS);
+    if (radialBin2D >= NUM_RADIAL_BINS) radialBin2D = NUM_RADIAL_BINS - 1;
+
+    if (depthBin >= 0 && depthBin < NUM_DEPTH_BINS &&
+        radialBin2D >= 0 && radialBin2D < NUM_RADIAL_BINS) {
+        f2DEnergyDeposit[depthBin][radialBin2D] += edep;
     }
 
     // Skip all debug output and statistics for production efficiency
