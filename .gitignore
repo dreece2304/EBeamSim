@@ -83,18 +83,31 @@ ebl_2d_data.csv
 #===============================================
 # Backup directories
 backup_*/
+deleted_backups/
 improvement_summary_*.txt
 
-# PowerShell scripts (remove this line if you want to track them)
+# PowerShell scripts - removed from project
 *.ps1
 fix_*.ps1
 verify_*.ps1
+create_*.ps1
+update_*.ps1
+install_*.ps1
+
+# Batch files - removed from project  
+*.bat
+
+# Backup files
+*.backup*
+*.bak
 
 # Temporary files
 *.tmp
 *.temp
 *.swp
 *~
+temp_*.mac
+gui_generated.mac
 
 #===============================================
 # Python
