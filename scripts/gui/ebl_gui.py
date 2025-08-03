@@ -766,10 +766,19 @@ class Enhanced2DPlotWidget(QWidget):
             self.plot_2d_data()
 
     def update_cross_section(self):
-        """Update cross section when slider moves"""
+        """Update cross section when slider moves - enhanced version"""
         if self.current_data and self.plot_type_group.checkedId() == 3:
+            # Get current depth index and update label immediately
+            depth_idx = self.depth_slider.value()
+            depths = self.current_data['depths']
+            
+            if depth_idx < len(depths):
+                current_depth = depths[depth_idx]
+                self.depth_label.setText(f"Depth: {current_depth:.1f} nm")
+            
+            # Replot with new depth slice
             self.plot_2d_data()
-
+   
     def save_plot(self):
         """Save current plot"""
         if not self.current_data:
@@ -3150,36 +3159,80 @@ class EBLMainWindow(QMainWindow):
             self.log_output(f"Error auto-loading 1D data: {str(e)}")
 
     def auto_load_2d(self, file_path):
-        """Auto-load 2D data with error handling"""
+        """Auto-load 2D data with enhanced error handling and debugging"""
         try:
             self.tab_widget.setCurrentIndex(5)  # 2D visualization tab
 
-            df, message = self.file_manager.load_csv_with_validation(file_path)
+            # Check if file exists and has content
+            if not Path(file_path).exists():
+                self.log_output(f"❌ 2D file not found: {file_path}")
+                return
 
-            if df is not None:
-                # Extract depth and radius arrays
-                depths = df.index.values
-                radii = df.columns.astype(float).values
-                data = df.values
+            file_size = Path(file_path).stat().st_size
+            self.log_output(f"📊 Loading 2D data from: {Path(file_path).name} ({file_size} bytes)")
 
-                # Store the data in the 2D plot widget
-                self.plot_2d_widget.current_data = {
-                    'depths': depths,
-                    'radii': radii,
-                    'energy': data,
-                    'filename': Path(file_path).stem
-                }
+            if file_size < 100:  # Very small file, likely empty
+                with open(file_path, 'r') as f:
+                    content = f.read().strip()
+                    if "No 2D data collected" in content:
+                        self.log_output("⚠️ No 2D data was collected during simulation")
+                        return
 
-                # Update UI and plot
-                self.plot_2d_widget.depth_slider.setMaximum(len(depths) - 1)
-                self.plot_2d_widget.save_plot_button.set_status(True)
-                self.plot_2d_widget.export_button.set_status(True)
-                self.plot_2d_widget.plot_2d_data()
+            # Load CSV with explicit index column
+            df = pd.read_csv(file_path, index_col=0)
 
-                self.status_label.setText("2D data loaded successfully")
+            if df.empty:
+                self.log_output("❌ 2D CSV file is empty")
+                return
+
+            self.log_output(f"✅ 2D data shape: {df.shape[0]} depths × {df.shape[1]} radii")
+
+            # Extract data
+            depths = df.index.values.astype(float)  # Depth values (nm)
+            radii = df.columns.astype(float).values  # Radius values (nm)
+            data = df.values.astype(float)  # Energy data (eV)
+
+            # Check for valid data
+            non_zero_count = np.count_nonzero(data)
+            total_energy = np.sum(data)
+
+            self.log_output(f"📈 2D data stats: {non_zero_count} non-zero bins, total: {total_energy:.2e} eV")
+
+            if non_zero_count == 0:
+                self.log_output("⚠️ 2D data contains no energy deposits")
+                return
+
+            # Store the data in the 2D plot widget
+            self.plot_2d_widget.current_data = {
+                'depths': depths,
+                'radii': radii,
+                'energy': data,
+                'filename': Path(file_path).stem
+            }
+
+            # Update UI controls
+            self.plot_2d_widget.depth_slider.setMaximum(len(depths) - 1)
+            self.plot_2d_widget.depth_slider.setValue(len(depths) // 2)  # Start in middle
+            self.plot_2d_widget.save_plot_button.set_status(True)
+            self.plot_2d_widget.export_button.set_status(True)
+
+            # Plot the data
+            self.plot_2d_widget.plot_2d_data()
+
+            self.status_label.setText("2D data loaded successfully")
+            self.log_output("✅ 2D visualization ready - check the 2D Visualization tab")
 
         except Exception as e:
-            self.log_output(f"Error auto-loading 2D data: {str(e)}")
+            error_msg = f"❌ Error auto-loading 2D data: {str(e)}"
+            self.log_output(error_msg)
+
+            # Try to provide more specific error information
+            try:
+                with open(file_path, 'r') as f:
+                    first_lines = [f.readline().strip() for _ in range(3)]
+                    self.log_output(f"📄 File preview: {first_lines}")
+            except:
+                pass
 
     def auto_load_summary(self, file_path):
         """Auto-load simulation summary"""

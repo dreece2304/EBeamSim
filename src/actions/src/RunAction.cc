@@ -534,26 +534,64 @@ void RunAction::Save2DFormat(const std::string& outputDir)
         return;
     }
 
-    file << "DepthBin,RadialBin,Depth(nm),Radius(nm),Energy(eV)" << std::endl;
+    // Check if we have 2D data
+    if (f2DEnergyProfile.empty() || f2DEnergyProfile[0].empty()) {
+        G4cout << "Warning: No 2D energy profile data to save" << G4endl;
+        file << "# No 2D data collected" << std::endl;
+        file.close();
+        return;
+    }
 
+    G4cout << "Saving 2D data: " << f2DEnergyProfile.size() << " x " << f2DEnergyProfile[0].size() << " bins" << G4endl;
+
+    // Calculate physical coordinates
+    G4double resistThickness = fDetConstruction ? fDetConstruction->GetActualResistThickness() : 30.0*CLHEP::nanometer;
+    G4double totalDepth = resistThickness + 50.0*CLHEP::nanometer;
+
+    // Count non-zero entries for verification
+    G4int nonZeroCount = 0;
+    G4double totalEnergy2D = 0.0;
     for (size_t i = 0; i < f2DEnergyProfile.size(); ++i) {
         for (size_t j = 0; j < f2DEnergyProfile[i].size(); ++j) {
             if (f2DEnergyProfile[i][j] > 0) {
-                // Calculate physical coordinates
-                G4double resistThickness = fDetConstruction ? fDetConstruction->GetActualResistThickness() : 30.0*CLHEP::nanometer;
-                G4double totalDepth = resistThickness + 50.0*CLHEP::nanometer;
-                G4double depth = -50.0 + (i + 0.5) * totalDepth / f2DEnergyProfile.size();
-                G4double radius = (j + 0.5) * 50.0*CLHEP::micrometer / f2DEnergyProfile[i].size();
-
-                file << i << "," << j << "," << depth/CLHEP::nanometer << ","
-                     << radius/CLHEP::nanometer << ","
-                     << f2DEnergyProfile[i][j]/CLHEP::eV << std::endl;
+                nonZeroCount++;
+                totalEnergy2D += f2DEnergyProfile[i][j];
             }
         }
     }
 
+    G4cout << "2D profile has " << nonZeroCount << " non-zero bins, total energy: "
+           << totalEnergy2D/CLHEP::eV << " eV" << G4endl;
+
+    // Save in pandas-compatible CSV format with proper indexing
+    // First row: header with radius values
+    file << "depth_nm";  // Index column name
+    for (size_t j = 0; j < f2DEnergyProfile[0].size(); ++j) {
+        G4double radius = (j + 0.5) * 50.0*CLHEP::micrometer / f2DEnergyProfile[0].size();
+        file << "," << std::fixed << std::setprecision(1) << radius/CLHEP::nanometer;
+    }
+    file << std::endl;
+
+    // Data rows: depth value followed by energy values
+    for (size_t i = 0; i < f2DEnergyProfile.size(); ++i) {
+        // Calculate depth for this row (center of depth bin)
+        G4double depth = -50.0*CLHEP::nanometer + (i + 0.5) * totalDepth / f2DEnergyProfile.size();
+        file << std::fixed << std::setprecision(2) << depth/CLHEP::nanometer;
+
+        // Write energy values for all radii at this depth
+        for (size_t j = 0; j < f2DEnergyProfile[i].size(); ++j) {
+            file << "," << std::scientific << std::setprecision(6) << f2DEnergyProfile[i][j]/CLHEP::eV;
+        }
+        file << std::endl;
+    }
+
     file.close();
-    G4cout << "2D data saved to: " << outputPath << G4endl;
+    G4cout << "2D data saved to: " << outputPath << " (pandas-compatible matrix format)" << G4endl;
+
+    // Additional verification
+    G4cout << "Depth range: " << (-50.0) << " to "
+           << (-50.0 + totalDepth/CLHEP::nanometer) << " nm" << G4endl;
+    G4cout << "Radius range: 0 to " << (50.0) << " μm" << G4endl;
 }
 
 void RunAction::SaveSummary(const std::string& outputDir)
