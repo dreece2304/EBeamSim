@@ -1,4 +1,4 @@
-﻿// EventAction.hh - BEAMER Optimized (radial PSF only)
+﻿// EventAction.hh - BEAMER Optimized + 2D Data Collection
 #ifndef EVENTACTION_HH
 #define EVENTACTION_HH
 
@@ -38,17 +38,19 @@ private:
     G4double fSubstrateEnergy;
     G4double fAboveResistEnergy;
 
-    // Radial energy distribution (1D) - this is all we need for BEAMER
+    // Radial energy distribution (1D) - primary for BEAMER
     std::vector<G4double> fRadialEnergyDeposit;
 
-    // 2D functionality removed for BEAMER efficiency
-    // static constexpr G4int NUM_DEPTH_BINS = 100;
-    // std::vector<std::vector<G4double>> f2DEnergyDeposit;
+    // 2D functionality RE-ENABLED for visualization
+    static constexpr G4int NUM_DEPTH_BINS = 100;
+    static constexpr G4int NUM_RADIAL_BINS = 150;  // Match EBL::PSF::NUM_RADIAL_BINS
+    std::vector<std::vector<G4double>> f2DEnergyDeposit;
 
     // Helper functions
     G4int GetLogBin(G4double radius) const;
-    G4int GetDepthBin(G4double z) const;  // Kept for compatibility but not used
+    G4int GetDepthBin(G4double z) const;
     G4double GetBinRadius(G4int bin) const;
+    G4double GetDepthBinCenter(G4int bin) const;
 };
 
 #endif

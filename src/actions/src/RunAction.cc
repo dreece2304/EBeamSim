@@ -1,23 +1,26 @@
-﻿// RunAction.cc - Optimized for BEAMER with minimal output
+﻿// RunAction.cc - BEAMER Optimized with Performance Monitoring
 #include "RunAction.hh"
-#include "PrimaryGeneratorAction.hh"
-#include "DetectorConstruction.hh"
 #include "OutputMessenger.hh"
-#include "G4Run.hh"
+#include "DetectorConstruction.hh"
+#include "PrimaryGeneratorAction.hh"
+#include "EBLConstants.hh"
+
 #include "G4RunManager.hh"
+#include "G4Run.hh"
 #include "G4AccumulableManager.hh"
 #include "G4UnitsTable.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4Threading.hh"
 #include "G4AutoLock.hh"
+
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <filesystem>
 #include <cmath>
+#include <algorithm>
 #include <chrono>
-#include "EBLConstants.hh"
 
-// Initialize static members
+// Static member definitions
 std::mutex RunAction::fArrayMergeMutex;
 std::vector<G4double> RunAction::fMasterRadialProfile;
 std::vector<std::vector<G4double>> RunAction::fMaster2DProfile;
@@ -29,28 +32,33 @@ namespace {
 }
 
 RunAction::RunAction(DetectorConstruction* detConstruction,
-    PrimaryGeneratorAction* primaryGenerator)
+                     PrimaryGeneratorAction* primaryGenerator)
     : G4UserRunAction(),
-    fDetConstruction(detConstruction),
-    fPrimaryGenerator(primaryGenerator),
-    fTotalEnergyDeposit("TotalEnergyDeposit", 0.0),
-    fResistEnergyTotal("ResistEnergy", 0.0),
-    fSubstrateEnergyTotal("SubstrateEnergy", 0.0),
-    fAboveResistEnergyTotal("AboveResistEnergy", 0.0),
-    fNumEvents(0),
-    fOutputDirectory(""),
-    fPSFFilename("ebl_psf_data.csv"),
-    fPSF2DFilename("ebl_2d_data.csv"),
-    fSummaryFilename("simulation_summary.txt"),
-    fBeamerFilename("beamer_psf.dat"),
-    fOutputMessenger(nullptr)
+      fDetConstruction(detConstruction),
+      fPrimaryGenerator(primaryGenerator),
+      fTotalEnergyDeposit("TotalEnergyDeposit", 0.0),
+      fResistEnergyTotal("ResistEnergy", 0.0),
+      fSubstrateEnergyTotal("SubstrateEnergy", 0.0),
+      fAboveResistEnergyTotal("AboveResistEnergy", 0.0),
+      fNumEvents(0),
+      fOutputDirectory(""),
+      fPSFFilename("ebl_psf_data.csv"),
+      fPSF2DFilename("ebl_2d_data.csv"),
+      fSummaryFilename("simulation_summary.txt"),
+      fBeamerFilename("beamer_psf.dat"),
+      fOutputMessenger(nullptr)
 {
     // Initialize LOCAL vectors for scoring (per thread)
     const G4int numBins = EBL::PSF::NUM_RADIAL_BINS;
     fRadialEnergyProfile.resize(numBins, 0.0);
 
-    // Skip 2D profile initialization for BEAMER-only mode
-    // We don't need depth-resolved data
+    // Initialize 2D profile for visualization capabilities
+    const G4int depthBins = 100;  // NUM_DEPTH_BINS
+    const G4int radialBins = 150; // NUM_RADIAL_BINS for 2D
+    f2DEnergyProfile.resize(depthBins);
+    for (auto& radialRow : f2DEnergyProfile) {
+        radialRow.resize(radialBins, 0.0);
+    }
 
     // Register ONLY scalar accumulables
     G4AccumulableManager* accumulableManager = G4AccumulableManager::Instance();
@@ -63,12 +71,18 @@ RunAction::RunAction(DetectorConstruction* detConstruction,
     G4AutoLock lock(&arrayMergeMutex);
     if (!fMasterArraysInitialized && G4Threading::IsMasterThread()) {
         fMasterRadialProfile.resize(numBins, 0.0);
-        // Skip 2D master profile for BEAMER mode
+        fMaster2DProfile.resize(depthBins);
+        for (auto& radialRow : fMaster2DProfile) {
+            radialRow.resize(radialBins, 0.0);
+        }
         fMasterArraysInitialized = true;
     }
 
     // Create messenger for output control
     fOutputMessenger = new OutputMessenger(this);
+
+    G4cout << "RunAction initialized for thread "
+           << (G4Threading::IsWorkerThread() ? "worker" : "master/sequential") << G4endl;
 }
 
 RunAction::~RunAction()
@@ -92,23 +106,31 @@ void RunAction::BeginOfRunAction(const G4Run* run)
     const G4int numBins = EBL::PSF::NUM_RADIAL_BINS;
     fRadialEnergyProfile.assign(numBins, 0.0);
 
+    // Reset 2D profile
+    for (auto& depthBin : f2DEnergyProfile) {
+        std::fill(depthBin.begin(), depthBin.end(), 0.0);
+    }
+
     fNumEvents = 0;
 
     // Master thread: reset master arrays
     if (G4Threading::IsMasterThread()) {
         G4AutoLock lock(&arrayMergeMutex);
         std::fill(fMasterRadialProfile.begin(), fMasterRadialProfile.end(), 0.0);
+        for (auto& depthBin : fMaster2DProfile) {
+            std::fill(depthBin.begin(), depthBin.end(), 0.0);
+        }
 
         G4cout << "\n### BEAMER PSF Generation - Run " << run->GetRunID() << " ###" << G4endl;
         G4cout << "### Optimized for resist-only energy scoring" << G4endl;
         G4cout << "### Using logarithmic binning: "
-            << EBL::PSF::NUM_RADIAL_BINS << " bins from "
-            << G4BestUnit(EBL::PSF::MIN_RADIUS, "Length") << " to "
-            << G4BestUnit(EBL::PSF::MAX_RADIUS, "Length") << G4endl;
+               << EBL::PSF::NUM_RADIAL_BINS << " bins from "
+               << G4BestUnit(EBL::PSF::MIN_RADIUS, "Length") << " to "
+               << G4BestUnit(EBL::PSF::MAX_RADIUS, "Length") << G4endl;
 
         if (G4Threading::IsMultithreadedApplication()) {
             G4cout << "### Running with " << G4Threading::GetNumberOfRunningWorkerThreads()
-                << " worker threads" << G4endl;
+                   << " worker threads" << G4endl;
         }
     }
 }
@@ -138,11 +160,12 @@ void RunAction::EndOfRunAction(const G4Run* run)
             // Copy master arrays to local for saving
             G4AutoLock lock(&arrayMergeMutex);
             fRadialEnergyProfile = fMasterRadialProfile;
+            f2DEnergyProfile = fMaster2DProfile;
         }
 
         fNumEvents = nofEvents;
 
-        // Save only BEAMER-relevant results
+        // Save BEAMER-relevant results
         SaveResults();
 
         // Print performance summary
@@ -153,13 +176,14 @@ void RunAction::EndOfRunAction(const G4Run* run)
             G4cout << " Performance: " << nofEvents / duration.count() << " events/second" << G4endl;
         }
         G4cout << " Total energy in resist: "
-            << G4BestUnit(fResistEnergyTotal.GetValue(), "Energy") << G4endl;
+               << G4BestUnit(fResistEnergyTotal.GetValue(), "Energy") << G4endl;
 
         // Calculate percentage in resist (should be high for thin resists)
         if (fTotalEnergyDeposit.GetValue() > 0) {
             G4double resistFraction = fResistEnergyTotal.GetValue() / fTotalEnergyDeposit.GetValue();
             G4cout << " Fraction of energy in resist: " << resistFraction * 100 << "%" << G4endl;
         }
+        G4cout << "------------------------------------------------------------------------------\n" << G4endl;
     }
     else {
         // Worker thread in MT mode: merge local arrays to master
@@ -177,7 +201,12 @@ void RunAction::MergeLocalArrays()
         fMasterRadialProfile[i] += fRadialEnergyProfile[i];
     }
 
-    // Skip 2D profile merge for BEAMER mode
+    // Merge 2D profile
+    for (size_t i = 0; i < f2DEnergyProfile.size() && i < fMaster2DProfile.size(); ++i) {
+        for (size_t j = 0; j < f2DEnergyProfile[i].size() && j < fMaster2DProfile[i].size(); ++j) {
+            fMaster2DProfile[i][j] += f2DEnergyProfile[i][j];
+        }
+    }
 }
 
 void RunAction::AddRadialEnergyDeposit(const std::vector<G4double>& energyDeposit)
@@ -201,7 +230,12 @@ void RunAction::AddRadialEnergyDeposit(const std::vector<G4double>& energyDeposi
 
 void RunAction::Add2DEnergyDeposit(const std::vector<std::vector<G4double>>& energy2D)
 {
-    // Skip for BEAMER mode - we don't need 2D data
+    // Add 2D energy deposition data
+    for (size_t i = 0; i < energy2D.size() && i < f2DEnergyProfile.size(); ++i) {
+        for (size_t j = 0; j < energy2D[i].size() && j < f2DEnergyProfile[i].size(); ++j) {
+            f2DEnergyProfile[i][j] += energy2D[i][j];
+        }
+    }
 }
 
 void RunAction::AddRegionEnergy(G4double resist, G4double substrate, G4double above)
@@ -210,6 +244,36 @@ void RunAction::AddRegionEnergy(G4double resist, G4double substrate, G4double ab
     if (resist > 0) fResistEnergyTotal += resist;
     if (substrate > 0) fSubstrateEnergyTotal += substrate;
     if (above > 0) fAboveResistEnergyTotal += above;
+}
+
+void RunAction::AddEnergyDeposit(G4double edep, G4double x, G4double y, G4double z)
+{
+    if (edep > 0) {
+        fTotalEnergyDeposit += edep;
+
+        // Calculate radial distance and add to appropriate bin
+        G4double r = std::sqrt(x*x + y*y);
+
+        // Find the radial bin
+        G4int bin = -1;
+        if (EBL::PSF::USE_LOG_BINNING) {
+            if (r > 0 && r >= EBL::PSF::MIN_RADIUS && r < EBL::PSF::MAX_RADIUS) {
+                G4double logRatio = std::log(r / EBL::PSF::MIN_RADIUS) /
+                                   std::log(EBL::PSF::MAX_RADIUS / EBL::PSF::MIN_RADIUS);
+                bin = static_cast<G4int>(logRatio * (EBL::PSF::NUM_RADIAL_BINS - 1));
+            } else if (r > 0 && r < EBL::PSF::MIN_RADIUS) {
+                bin = 0;
+            }
+        } else {
+            G4double binWidth = EBL::PSF::MAX_RADIUS / EBL::PSF::NUM_RADIAL_BINS;
+            bin = static_cast<G4int>(r / binWidth);
+            if (bin >= EBL::PSF::NUM_RADIAL_BINS) bin = EBL::PSF::NUM_RADIAL_BINS - 1;
+        }
+
+        if (bin >= 0 && bin < static_cast<G4int>(fRadialEnergyProfile.size())) {
+            fRadialEnergyProfile[bin] += edep;
+        }
+    }
 }
 
 // Helper function to get radius for logarithmic bin
@@ -261,13 +325,6 @@ void RunAction::GetBinBoundaries(G4int bin, G4double& rInner, G4double& rOuter) 
     }
 }
 
-void RunAction::AddEnergyDeposit(G4double edep, G4double x, G4double y, G4double z)
-{
-    if (edep > 0) {
-        fTotalEnergyDeposit += edep;
-    }
-}
-
 void RunAction::SaveResults()
 {
     G4cout << "\n=== Saving BEAMER PSF Results ===" << G4endl;
@@ -286,15 +343,11 @@ void RunAction::SaveResults()
         }
     }
 
-    // Save only BEAMER-relevant files
+    // Save BEAMER-relevant files
     SaveCSVFormat(outputDir);      // Main PSF data
-    SaveBEAMERFormat(outputDir);    // Direct BEAMER format
-
-    // Optional: Save minimal summary
-    SaveSummary(outputDir);
-
-    // Skip 2D format for BEAMER mode
-    // Save2DFormat(outputDir);
+    SaveBEAMERFormat(outputDir);   // Direct BEAMER format
+    SaveSummary(outputDir);        // Minimal summary
+    Save2DFormat(outputDir);       // 2D format for visualization
 }
 
 void RunAction::SaveCSVFormat(const std::string& outputDir)
@@ -342,11 +395,11 @@ void RunAction::SaveCSVFormat(const std::string& outputDir)
 
         // Output with full precision for analysis
         psfFile << std::fixed << std::setprecision(3) << rCenter / CLHEP::nanometer << ","
-            << std::scientific << std::setprecision(6) << energyDensity / (CLHEP::eV / (CLHEP::nanometer * CLHEP::nanometer)) << ","
-            << std::fixed << std::setprecision(3) << rInner / CLHEP::nanometer << ","
-            << rOuter / CLHEP::nanometer << ","
-            << fNumEvents
-            << std::endl;
+                << std::scientific << std::setprecision(6) << energyDensity / (CLHEP::eV / (CLHEP::nanometer * CLHEP::nanometer)) << ","
+                << std::fixed << std::setprecision(3) << rInner / CLHEP::nanometer << ","
+                << rOuter / CLHEP::nanometer << ","
+                << fNumEvents
+                << std::endl;
     }
 
     psfFile.close();
@@ -435,7 +488,7 @@ void RunAction::SaveBEAMERFormat(const std::string& outputDir)
         if (normalizedPSF[i] > 1e-12) {
             // Convert to um for BEAMER
             beamerFile << rCenter / CLHEP::micrometer << " "
-                << normalizedPSF[i] << std::endl;
+                       << normalizedPSF[i] << std::endl;
         }
     }
 
@@ -448,18 +501,14 @@ void RunAction::SaveBEAMERFormat(const std::string& outputDir)
 
     // Calculate forward scattering fraction (< 1 μm)
     for (G4int i = 0; i < EBL::PSF::NUM_RADIAL_BINS; i++) {
+        G4double rInner, rOuter;
+        GetBinBoundaries(i, rInner, rOuter);
+        G4double area = CLHEP::pi * (rOuter * rOuter - rInner * rInner);
+
         if (GetBinRadius(i) < 1.0 * CLHEP::micrometer) {
-            G4double rInner, rOuter;
-            GetBinBoundaries(i, rInner, rOuter);
-            G4double area = CLHEP::pi * (rOuter * rOuter - rInner * rInner);
             forward_fraction += normalizedPSF[i] * area;
-            total_integral += normalizedPSF[i] * area;
-        } else {
-            G4double rInner, rOuter;
-            GetBinBoundaries(i, rInner, rOuter);
-            G4double area = CLHEP::pi * (rOuter * rOuter - rInner * rInner);
-            total_integral += normalizedPSF[i] * area;
         }
+        total_integral += normalizedPSF[i] * area;
     }
 
     if (total_integral > 0) {
@@ -474,8 +523,37 @@ void RunAction::SaveBEAMERFormat(const std::string& outputDir)
 
 void RunAction::Save2DFormat(const std::string& outputDir)
 {
-    // Skip for BEAMER-only mode
-    return;
+    std::string actualOutputDir = fOutputDirectory.empty() ? outputDir : std::string(fOutputDirectory);
+    std::string outputPath = actualOutputDir.empty() ?
+        std::string(fPSF2DFilename) :
+        actualOutputDir + "/" + std::string(fPSF2DFilename);
+
+    std::ofstream file(outputPath);
+    if (!file.is_open()) {
+        G4cerr << "Error: Could not open 2D file " << outputPath << G4endl;
+        return;
+    }
+
+    file << "DepthBin,RadialBin,Depth(nm),Radius(nm),Energy(eV)" << std::endl;
+
+    for (size_t i = 0; i < f2DEnergyProfile.size(); ++i) {
+        for (size_t j = 0; j < f2DEnergyProfile[i].size(); ++j) {
+            if (f2DEnergyProfile[i][j] > 0) {
+                // Calculate physical coordinates
+                G4double resistThickness = fDetConstruction ? fDetConstruction->GetActualResistThickness() : 30.0*CLHEP::nanometer;
+                G4double totalDepth = resistThickness + 50.0*CLHEP::nanometer;
+                G4double depth = -50.0 + (i + 0.5) * totalDepth / f2DEnergyProfile.size();
+                G4double radius = (j + 0.5) * 50.0*CLHEP::micrometer / f2DEnergyProfile[i].size();
+
+                file << i << "," << j << "," << depth/CLHEP::nanometer << ","
+                     << radius/CLHEP::nanometer << ","
+                     << f2DEnergyProfile[i][j]/CLHEP::eV << std::endl;
+            }
+        }
+    }
+
+    file.close();
+    G4cout << "2D data saved to: " << outputPath << G4endl;
 }
 
 void RunAction::SaveSummary(const std::string& outputDir)

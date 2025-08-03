@@ -1,4 +1,4 @@
-// StackingAction.cc - Track killing for BEAMER efficiency
+// StackingAction.cc - Track killing for BEAMER efficiency with optimized reporting
 #include "StackingAction.hh"
 #include "DetectorConstruction.hh"
 #include "G4Track.hh"
@@ -6,6 +6,7 @@
 #include "G4SystemOfUnits.hh"
 #include "G4UnitsTable.hh"
 #include "G4RunManager.hh"
+#include <cstdio>
 
 StackingAction::StackingAction(DetectorConstruction* detector)
     : G4UserStackingAction(),
@@ -26,13 +27,14 @@ StackingAction::StackingAction(DetectorConstruction* detector)
 
 StackingAction::~StackingAction()
 {
-    // Report statistics
+    // Report final statistics
     if (fTotalTracks > 0) {
-        G4cout << "\n=== StackingAction Statistics ===" << G4endl;
-        G4cout << "Total tracks: " << fTotalTracks << G4endl;
-        G4cout << "Killed tracks: " << fKilledTracks << G4endl;
-        G4cout << "Kill rate: " << (100.0 * fKilledTracks / fTotalTracks) << "%" << G4endl;
-        G4cout << "================================\n" << G4endl;
+        printf("\n=== StackingAction Final Statistics ===\n");
+        printf("Total tracks: %ld\n", fTotalTracks);
+        printf("Killed tracks: %ld\n", fKilledTracks);
+        printf("Kill rate: %.1f%%\n", (100.0 * fKilledTracks / fTotalTracks));
+        printf("======================================\n");
+        fflush(stdout);
     }
 }
 
@@ -103,11 +105,21 @@ G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* track
         }
     }
 
-    // Periodic statistics (every 10000 tracks)
-    if (fTotalTracks % 10000 == 0) {
+    // OPTIMIZED statistics reporting - much less frequent for large simulations
+    G4long reportInterval;
+    if (fTotalTracks < 1000000) {
+        reportInterval = 100000;      // Every 100k tracks initially
+    } else if (fTotalTracks < 10000000) {
+        reportInterval = 500000;      // Every 500k tracks for medium load
+    } else {
+        reportInterval = 1000000;     // Every 1M tracks for high load
+    }
+
+    if (fTotalTracks % reportInterval == 0) {
         G4double killRate = 100.0 * fKilledTracks / fTotalTracks;
-        G4cout << "StackingAction: Processed " << fTotalTracks
-               << " tracks, killed " << killRate << "%" << G4endl;
+        printf("StackingAction: Processed %ld tracks, killed %.1f%%\n",
+               fTotalTracks, killRate);
+        fflush(stdout);
     }
 
     // Track all others urgently
