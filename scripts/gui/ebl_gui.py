@@ -1759,10 +1759,12 @@ class EBLMainWindow(QMainWindow):
         # Create tabs (removed placeholder tabs)
         self.create_resist_tab()
         self.create_beam_tab()
+        self.create_pattern_tab()  # New pattern scanning tab
         self.create_simulation_tab()
         self.create_output_tab()
         self.create_1d_visualization_tab()
         self.create_2d_visualization_tab()
+        self.create_pattern_visualization_tab()  # New pattern visualization
         # Note: Removed analysis tab as it had placeholder functionality
 
         # Main layout
@@ -2096,6 +2098,178 @@ class EBLMainWindow(QMainWindow):
 
         widget.setLayout(layout)
         self.tab_widget.addTab(widget, "Beam Parameters")
+
+    def create_pattern_tab(self):
+        """Create pattern scanning tab for JEOL-like parameters"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # Pattern mode selection
+        mode_group = QGroupBox("Pattern Mode")
+        mode_layout = QHBoxLayout()
+        
+        self.spot_mode_radio = QRadioButton("Spot Mode")
+        self.pattern_mode_radio = QRadioButton("Pattern Mode")
+        self.spot_mode_radio.setChecked(True)
+        
+        mode_layout.addWidget(self.spot_mode_radio)
+        mode_layout.addWidget(self.pattern_mode_radio)
+        mode_group.setLayout(mode_layout)
+        
+        # Pattern Type group
+        pattern_group = QGroupBox("Pattern Configuration")
+        pattern_layout = QGridLayout()
+        
+        pattern_layout.addWidget(QLabel("Pattern Type:"), 0, 0)
+        self.pattern_type_combo = QComboBox()
+        self.pattern_type_combo.addItems(["square", "line", "rectangle", "circle", "array"])
+        pattern_layout.addWidget(self.pattern_type_combo, 0, 1)
+        
+        pattern_layout.addWidget(QLabel("Pattern Size:"), 1, 0)
+        self.pattern_size_spin = QDoubleSpinBox()
+        self.pattern_size_spin.setRange(0.01, 1000)
+        self.pattern_size_spin.setValue(1.0)
+        self.pattern_size_spin.setSuffix(" μm")
+        pattern_layout.addWidget(self.pattern_size_spin, 1, 1)
+        
+        pattern_layout.addWidget(QLabel("Center X:"), 2, 0)
+        self.pattern_center_x = QDoubleSpinBox()
+        self.pattern_center_x.setRange(-1000, 1000)
+        self.pattern_center_x.setValue(0.0)
+        self.pattern_center_x.setSuffix(" μm")
+        pattern_layout.addWidget(self.pattern_center_x, 2, 1)
+        
+        pattern_layout.addWidget(QLabel("Center Y:"), 3, 0)
+        self.pattern_center_y = QDoubleSpinBox()
+        self.pattern_center_y.setRange(-1000, 1000)
+        self.pattern_center_y.setValue(0.0)
+        self.pattern_center_y.setSuffix(" μm")
+        pattern_layout.addWidget(self.pattern_center_y, 3, 1)
+        
+        pattern_group.setLayout(pattern_layout)
+        
+        # JEOL Parameters group
+        jeol_group = QGroupBox("JEOL Parameters")
+        jeol_layout = QGridLayout()
+        
+        jeol_layout.addWidget(QLabel("EOS Mode:"), 0, 0)
+        self.eos_mode_combo = QComboBox()
+        self.eos_mode_combo.addItems(["Mode 3 (4th Lens, 500μm field)", "Mode 6 (5th Lens, 62.5μm field)"])
+        jeol_layout.addWidget(self.eos_mode_combo, 0, 1)
+        
+        jeol_layout.addWidget(QLabel("Shot Pitch:"), 1, 0)
+        self.shot_pitch_spin = QSpinBox()
+        self.shot_pitch_spin.setRange(1, 100)
+        self.shot_pitch_spin.setValue(4)
+        self.shot_pitch_spin.setSingleStep(2)  # Even multiples
+        jeol_layout.addWidget(self.shot_pitch_spin, 1, 1)
+        
+        jeol_layout.addWidget(QLabel("Beam Current:"), 2, 0)
+        self.jeol_current_spin = QDoubleSpinBox()
+        self.jeol_current_spin.setRange(0.1, 50)
+        self.jeol_current_spin.setValue(2.0)
+        self.jeol_current_spin.setSuffix(" nA")
+        jeol_layout.addWidget(self.jeol_current_spin, 2, 1)
+        
+        jeol_layout.addWidget(QLabel("Base Dose:"), 3, 0)
+        self.base_dose_spin = QDoubleSpinBox()
+        self.base_dose_spin.setRange(1, 10000)
+        self.base_dose_spin.setValue(400.0)
+        self.base_dose_spin.setSuffix(" μC/cm²")
+        jeol_layout.addWidget(self.base_dose_spin, 3, 1)
+        
+        jeol_layout.addWidget(QLabel("Scan Strategy:"), 4, 0)
+        self.scan_strategy_combo = QComboBox()
+        self.scan_strategy_combo.addItems(["serpentine", "raster", "spiral"])
+        self.scan_strategy_combo.setToolTip("Serpentine minimizes stage movement")
+        jeol_layout.addWidget(self.scan_strategy_combo, 4, 1)
+        
+        # Add info labels
+        self.machine_grid_label = QLabel("Machine Grid: 1.0 nm")
+        self.exposure_grid_label = QLabel("Exposure Grid: 4.0 nm")
+        self.field_size_label = QLabel("Field Size: 500 μm")
+        
+        jeol_layout.addWidget(self.machine_grid_label, 5, 0, 1, 2)
+        jeol_layout.addWidget(self.exposure_grid_label, 6, 0, 1, 2)
+        jeol_layout.addWidget(self.field_size_label, 7, 0, 1, 2)
+        
+        jeol_group.setLayout(jeol_layout)
+        
+        # Dose Modulation group
+        dose_group = QGroupBox("Dose Modulation (Proximity Correction)")
+        dose_layout = QGridLayout()
+        
+        dose_layout.addWidget(QLabel("Interior Dose:"), 0, 0)
+        self.interior_dose_spin = QDoubleSpinBox()
+        self.interior_dose_spin.setRange(0.1, 2.0)
+        self.interior_dose_spin.setValue(1.0)
+        self.interior_dose_spin.setSingleStep(0.05)
+        dose_layout.addWidget(self.interior_dose_spin, 0, 1)
+        
+        dose_layout.addWidget(QLabel("Edge Dose:"), 1, 0)
+        self.edge_dose_spin = QDoubleSpinBox()
+        self.edge_dose_spin.setRange(0.1, 2.0)
+        self.edge_dose_spin.setValue(0.9)
+        self.edge_dose_spin.setSingleStep(0.05)
+        dose_layout.addWidget(self.edge_dose_spin, 1, 1)
+        
+        dose_layout.addWidget(QLabel("Corner Dose:"), 2, 0)
+        self.corner_dose_spin = QDoubleSpinBox()
+        self.corner_dose_spin.setRange(0.1, 2.0)
+        self.corner_dose_spin.setValue(0.8)
+        self.corner_dose_spin.setSingleStep(0.05)
+        dose_layout.addWidget(self.corner_dose_spin, 2, 1)
+        
+        dose_group.setLayout(dose_layout)
+        
+        # Array parameters group (only shown for array patterns)
+        self.array_group = QGroupBox("Array Parameters")
+        array_layout = QGridLayout()
+        
+        array_layout.addWidget(QLabel("Array Size X:"), 0, 0)
+        self.array_nx_spin = QSpinBox()
+        self.array_nx_spin.setRange(1, 100)
+        self.array_nx_spin.setValue(3)
+        array_layout.addWidget(self.array_nx_spin, 0, 1)
+        
+        array_layout.addWidget(QLabel("Array Size Y:"), 1, 0)
+        self.array_ny_spin = QSpinBox()
+        self.array_ny_spin.setRange(1, 100)
+        self.array_ny_spin.setValue(3)
+        array_layout.addWidget(self.array_ny_spin, 1, 1)
+        
+        array_layout.addWidget(QLabel("Pitch X:"), 2, 0)
+        self.array_pitch_x_spin = QDoubleSpinBox()
+        self.array_pitch_x_spin.setRange(0.1, 1000)
+        self.array_pitch_x_spin.setValue(2.0)
+        self.array_pitch_x_spin.setSuffix(" μm")
+        array_layout.addWidget(self.array_pitch_x_spin, 2, 1)
+        
+        array_layout.addWidget(QLabel("Pitch Y:"), 3, 0)
+        self.array_pitch_y_spin = QDoubleSpinBox()
+        self.array_pitch_y_spin.setRange(0.1, 1000)
+        self.array_pitch_y_spin.setValue(2.0)
+        self.array_pitch_y_spin.setSuffix(" μm")
+        array_layout.addWidget(self.array_pitch_y_spin, 3, 1)
+        
+        self.array_group.setLayout(array_layout)
+        self.array_group.setVisible(False)  # Hidden by default
+        
+        # Connect signals
+        self.eos_mode_combo.currentIndexChanged.connect(self.update_jeol_info)
+        self.shot_pitch_spin.valueChanged.connect(self.update_jeol_info)
+        self.pattern_type_combo.currentTextChanged.connect(self.on_pattern_type_changed)
+        
+        # Add groups to layout
+        layout.addWidget(mode_group)
+        layout.addWidget(pattern_group)
+        layout.addWidget(jeol_group)
+        layout.addWidget(dose_group)
+        layout.addWidget(self.array_group)
+        layout.addStretch()
+        
+        widget.setLayout(layout)
+        self.tab_widget.addTab(widget, "Pattern Scanning")
 
     def create_simulation_tab(self):
         """Create simulation settings tab"""
@@ -2891,8 +3065,7 @@ class EBLMainWindow(QMainWindow):
                 f.write(f"/ebl/output/setDirectory {self.working_dir}\n")
                 f.write(f"/ebl/output/setPSFFile {psf_filename}\n")
                 f.write(f"/ebl/output/setPSF2DFile {psf2d_filename}\n")
-                f.write(f"/ebl/output/setSummaryFile {summary_filename}\n")
-                f.write(f"/ebl/output/setBeamerFile {beamer_filename}\n\n")
+                f.write(f"/ebl/output/setSummaryFile {summary_filename}\n\n")
 
                 # Optimized verbosity for large simulations
                 if num_events <= 10000:
@@ -2913,6 +3086,18 @@ class EBLMainWindow(QMainWindow):
                     f.write("/run/printProgress 0\n")
                     f.write("# Using custom progress reporting for better GUI integration\n\n")
 
+                # Material settings (MUST come before initialize)
+                f.write("# Material settings\n")
+                f.write(f'/det/setResistComposition "{self.composition_edit.text()}"\n')
+                f.write(f"/det/setResistThickness {self.thickness_spin.value()} nm\n")
+                f.write(f"/det/setResistDensity {self.density_spin.value()} g/cm3\n")
+                f.write("/det/update\n\n")
+
+                # Physics processes (MUST come before initialize)
+                f.write("# Physics processes\n")
+                f.write(f"/process/em/fluo {1 if self.fluorescence_check.isChecked() else 0}\n")
+                f.write(f"/process/em/auger {1 if self.auger_check.isChecked() else 0}\n\n")
+
                 # Random seed handling
                 if self.seed_spin.value() == -1:
                     random_seed = random.randint(1, 2147483647)
@@ -2922,21 +3107,9 @@ class EBLMainWindow(QMainWindow):
                 elif self.seed_spin.value() > 0:
                     f.write(f"/random/setSeeds {self.seed_spin.value()} {self.seed_spin.value()+1}\n\n")
 
-                # Initialize
+                # Initialize AFTER material and physics settings
                 f.write("# Initialize\n")
                 f.write("/run/initialize\n\n")
-
-                # Material settings
-                f.write("# Material settings\n")
-                f.write(f'/det/setResistComposition "{self.composition_edit.text()}"\n')
-                f.write(f"/det/setResistThickness {self.thickness_spin.value()} nm\n")
-                f.write(f"/det/setResistDensity {self.density_spin.value()} g/cm3\n")
-                f.write("/det/update\n\n")
-
-                # Physics processes
-                f.write("# Physics processes\n")
-                f.write(f"/process/em/fluo {1 if self.fluorescence_check.isChecked() else 0}\n")
-                f.write(f"/process/em/auger {1 if self.auger_check.isChecked() else 0}\n\n")
 
                 # Beam configuration
                 f.write("# Beam configuration\n")
@@ -2954,6 +3127,49 @@ class EBLMainWindow(QMainWindow):
 
                 f.write(f"/gun/direction {dx} {dy} {dz}\n")
                 f.write(f"/gun/beamSize {self.beam_size_spin.value()} nm\n\n")
+                
+                # Pattern scanning configuration (if enabled)
+                if self.pattern_mode_radio.isChecked():
+                    f.write("# Pattern scanning configuration\n")
+                    
+                    # JEOL parameters first
+                    eos_mode = 3 if self.eos_mode_combo.currentIndex() == 0 else 6
+                    f.write("# JEOL parameters\n")
+                    f.write(f"/pattern/jeol/eosMode {eos_mode}\n")
+                    f.write(f"/pattern/jeol/shotPitch {self.shot_pitch_spin.value()}\n")
+                    f.write(f"/pattern/jeol/beamCurrent {self.jeol_current_spin.value()}\n")
+                    f.write(f"/pattern/jeol/baseDose {self.base_dose_spin.value()}\n")
+                    # Note: scan_strategy not yet implemented in messenger
+                    f.write("# Scan strategy: {0} (not yet configurable via commands)\n\n".format(self.scan_strategy_combo.currentText()))
+                    
+                    # Dose modulation - set shot rank and modulation pairs
+                    f.write("# Dose modulation for proximity correction\n")
+                    f.write("/pattern/jeol/shotRank 0\n")
+                    f.write(f"/pattern/jeol/modulation {self.interior_dose_spin.value()}\n")
+                    f.write("/pattern/jeol/shotRank 1\n")
+                    f.write(f"/pattern/jeol/modulation {self.edge_dose_spin.value()}\n")
+                    f.write("/pattern/jeol/shotRank 2\n")
+                    f.write(f"/pattern/jeol/modulation {self.corner_dose_spin.value()}\n\n")
+                    
+                    # Pattern configuration
+                    f.write("# Pattern configuration\n")
+                    f.write(f"/pattern/type {self.pattern_type_combo.currentText()}\n")
+                    f.write(f"/pattern/size {self.pattern_size_spin.value()} um\n")
+                    f.write(f"/pattern/center {self.pattern_center_x.value()} {self.pattern_center_y.value()} 0 um\n")
+                    
+                    # Array parameters (if array pattern)
+                    if self.pattern_type_combo.currentText() == "array":
+                        f.write(f"/pattern/array/nx {self.array_nx_spin.value()}\n")
+                        f.write(f"/pattern/array/ny {self.array_ny_spin.value()}\n")
+                        f.write(f"/pattern/array/pitchX {self.array_pitch_x_spin.value()} um\n")
+                        f.write(f"/pattern/array/pitchY {self.array_pitch_y_spin.value()} um\n")
+                    
+                    f.write("\n# Generate pattern\n")
+                    f.write("/pattern/generate\n")
+                    f.write("/pattern/beamMode pattern\n\n")
+                    
+                    # In pattern mode, use -1 for automatic event calculation
+                    self.log_output("Pattern mode: Using automatic event calculation based on pattern shots")
 
                 # Visualization (only for small simulations)
                 if self.visualization_check.isChecked() and num_events <= 1000:
@@ -2966,7 +3182,10 @@ class EBLMainWindow(QMainWindow):
 
                 # Run simulation
                 f.write("# Run simulation\n")
-                f.write(f"/run/beamOn {num_events}\n")
+                if self.pattern_mode_radio.isChecked():
+                    f.write("/run/beamOn -1\n")  # Automatic calculation for pattern mode
+                else:
+                    f.write(f"/run/beamOn {num_events}\n")
 
             self.log_output(f"Enhanced macro generated: {macro_path}")
             self.log_output(f"Target events: {num_events:,}")
@@ -3584,6 +3803,1030 @@ study parameter dependencies (energy, material, thickness).</i></p>
                 self.stop_simulation()
 
         event.accept()
+
+    def update_jeol_info(self):
+        """Update JEOL info labels based on current settings"""
+        eos_mode = 3 if self.eos_mode_combo.currentIndex() == 0 else 6
+        shot_pitch = self.shot_pitch_spin.value()
+        
+        if eos_mode == 3:
+            machine_grid = 1.0  # nm
+            field_size = 500.0  # μm
+        else:
+            machine_grid = 0.125  # nm
+            field_size = 62.5  # μm
+            
+        exposure_grid = machine_grid * shot_pitch
+        
+        self.machine_grid_label.setText(f"Machine Grid: {machine_grid} nm")
+        self.exposure_grid_label.setText(f"Exposure Grid: {exposure_grid} nm")
+        self.field_size_label.setText(f"Field Size: {field_size} μm")
+        
+    def on_pattern_type_changed(self, pattern_type):
+        """Handle pattern type changes"""
+        # Show/hide array parameters
+        self.array_group.setVisible(pattern_type == "array")
+        
+    def create_pattern_visualization_tab(self):
+        """Create pattern visualization tab"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # Control panel
+        control_panel = QGroupBox("Pattern Preview Controls")
+        control_layout = QGridLayout()
+        
+        # Preview button
+        self.preview_pattern_button = QPushButton("Generate Pattern Preview")
+        self.preview_pattern_button.clicked.connect(self.generate_pattern_preview)
+        control_layout.addWidget(self.preview_pattern_button, 0, 0)
+        
+        # Load PSF from simulation button
+        self.load_psf_button = QPushButton("Load PSF from Simulation")
+        self.load_psf_button.clicked.connect(self.load_simulation_psf)
+        control_layout.addWidget(self.load_psf_button, 0, 1)
+        
+        # Display options
+        control_layout.addWidget(QLabel("Display:"), 1, 0)
+        self.pattern_display_combo = QComboBox()
+        self.pattern_display_combo.addItems(["Shot Positions", "Dose Map", "Effective Dose", 
+                                            "Field Layout", "Scan Path", "Dose Profile",
+                                            "Correction Comparison"])
+        self.pattern_display_combo.currentTextChanged.connect(self.update_pattern_display)
+        control_layout.addWidget(self.pattern_display_combo, 1, 1)
+        
+        # Zoom controls
+        control_layout.addWidget(QLabel("Show Shots:"), 2, 0)
+        self.show_shots_check = QCheckBox("Display individual shots")
+        self.show_shots_check.setChecked(True)
+        self.show_shots_check.stateChanged.connect(self.update_pattern_display)
+        control_layout.addWidget(self.show_shots_check, 2, 1)
+        
+        control_layout.addWidget(QLabel("Show Grid:"), 3, 0)
+        self.show_grid_check = QCheckBox("Display exposure grid")
+        self.show_grid_check.setChecked(False)
+        self.show_grid_check.stateChanged.connect(self.update_pattern_display)
+        control_layout.addWidget(self.show_grid_check, 3, 1)
+        
+        # View margin for effective dose
+        control_layout.addWidget(QLabel("View Margin:"), 4, 0)
+        self.view_margin_spin = QDoubleSpinBox()
+        self.view_margin_spin.setRange(0.0, 50.0)
+        self.view_margin_spin.setValue(5.0)
+        self.view_margin_spin.setSuffix(" μm")
+        self.view_margin_spin.valueChanged.connect(self.update_pattern_display)
+        control_layout.addWidget(self.view_margin_spin, 4, 1)
+        
+        control_panel.setLayout(control_layout)
+        
+        # Pattern info panel
+        info_panel = QGroupBox("Pattern Information")
+        info_layout = QVBoxLayout()
+        
+        self.pattern_info_text = QTextEdit()
+        self.pattern_info_text.setReadOnly(True)
+        self.pattern_info_text.setMaximumHeight(150)
+        self.pattern_info_text.setPlainText("Click 'Generate Pattern Preview' to see pattern details")
+        info_layout.addWidget(self.pattern_info_text)
+        
+        info_panel.setLayout(info_layout)
+        
+        # PSF Parameters panel
+        psf_panel = QGroupBox("Proximity Effect Parameters")
+        psf_layout = QGridLayout()
+        
+        # Forward scatter
+        psf_layout.addWidget(QLabel("Forward Scatter:"), 0, 0, 1, 2)
+        psf_layout.addWidget(QLabel("α (ratio):"), 1, 0)
+        self.alpha_spin = QDoubleSpinBox()
+        self.alpha_spin.setRange(0.1, 1.0)
+        self.alpha_spin.setValue(0.3)  # Typical forward scatter fraction
+        self.alpha_spin.setSingleStep(0.05)
+        self.alpha_spin.setDecimals(2)
+        self.alpha_spin.valueChanged.connect(self.update_pattern_display)
+        psf_layout.addWidget(self.alpha_spin, 1, 1)
+        
+        psf_layout.addWidget(QLabel("σf (nm):"), 2, 0)
+        self.sigma_f_spin = QDoubleSpinBox()
+        self.sigma_f_spin.setRange(1.0, 100.0)
+        self.sigma_f_spin.setValue(20.0)  # Typical for 100keV on Si
+        self.sigma_f_spin.setSuffix(" nm")
+        self.sigma_f_spin.valueChanged.connect(self.update_pattern_display)
+        psf_layout.addWidget(self.sigma_f_spin, 2, 1)
+        
+        # Backscatter
+        psf_layout.addWidget(QLabel("Backscatter:"), 3, 0, 1, 2)
+        psf_layout.addWidget(QLabel("β (ratio):"), 4, 0)
+        self.beta_spin = QDoubleSpinBox()
+        self.beta_spin.setRange(0.1, 1.0)
+        self.beta_spin.setValue(0.7)  # Typical backscatter fraction
+        self.beta_spin.setSingleStep(0.05)
+        self.beta_spin.setDecimals(2)
+        self.beta_spin.valueChanged.connect(self.update_pattern_display)
+        psf_layout.addWidget(self.beta_spin, 4, 1)
+        
+        psf_layout.addWidget(QLabel("σb (μm):"), 5, 0)
+        self.sigma_b_spin = QDoubleSpinBox()
+        self.sigma_b_spin.setRange(0.1, 50.0)
+        self.sigma_b_spin.setValue(5.0)
+        self.sigma_b_spin.setSuffix(" μm")
+        self.sigma_b_spin.valueChanged.connect(self.update_pattern_display)
+        psf_layout.addWidget(self.sigma_b_spin, 5, 1)
+        
+        # Dose threshold
+        psf_layout.addWidget(QLabel("Dose Threshold:"), 6, 0)
+        self.dose_threshold_spin = QDoubleSpinBox()
+        self.dose_threshold_spin.setRange(0.1, 2.0)
+        self.dose_threshold_spin.setValue(1.0)
+        self.dose_threshold_spin.setSingleStep(0.05)
+        self.dose_threshold_spin.valueChanged.connect(self.update_pattern_display)
+        psf_layout.addWidget(self.dose_threshold_spin, 6, 1)
+        
+        # Enable proximity correction
+        self.enable_pec_check = QCheckBox("Calculate Proximity Correction")
+        self.enable_pec_check.setToolTip("Calculate dose corrections to achieve uniform exposure")
+        self.enable_pec_check.stateChanged.connect(self.update_pattern_display)
+        psf_layout.addWidget(self.enable_pec_check, 7, 0, 1, 2)
+        
+        # PEC iterations
+        psf_layout.addWidget(QLabel("PEC Iterations:"), 8, 0)
+        self.pec_iterations_spin = QSpinBox()
+        self.pec_iterations_spin.setRange(1, 10)
+        self.pec_iterations_spin.setValue(3)
+        self.pec_iterations_spin.valueChanged.connect(self.update_pattern_display)
+        psf_layout.addWidget(self.pec_iterations_spin, 8, 1)
+        
+        psf_panel.setLayout(psf_layout)
+        
+        # Create horizontal layout for control and PSF panels
+        controls_layout = QHBoxLayout()
+        controls_layout.addWidget(control_panel)
+        controls_layout.addWidget(psf_panel)
+        
+        # Matplotlib canvas for pattern display
+        self.pattern_figure = Figure(figsize=(8, 6))
+        self.pattern_canvas = FigureCanvas(self.pattern_figure)
+        self.pattern_toolbar = NavigationToolbar(self.pattern_canvas, widget)
+        
+        # Layout
+        layout.addLayout(controls_layout)
+        layout.addWidget(info_panel)
+        layout.addWidget(self.pattern_toolbar)
+        layout.addWidget(self.pattern_canvas, 1)  # Stretch factor 1
+        
+        widget.setLayout(layout)
+        self.tab_widget.addTab(widget, "Pattern Visualization")
+        
+        # Initialize
+        self.pattern_data = None
+        self.draw_empty_pattern_plot()
+        
+    def draw_empty_pattern_plot(self):
+        """Draw empty pattern plot"""
+        self.pattern_figure.clear()
+        ax = self.pattern_figure.add_subplot(111)
+        ax.text(0.5, 0.5, 'Generate a pattern preview to visualize', 
+                ha='center', va='center', transform=ax.transAxes,
+                fontsize=14, color='gray')
+        ax.set_xlabel('X Position (μm)')
+        ax.set_ylabel('Y Position (μm)')
+        ax.set_title('Pattern Preview')
+        ax.grid(True, alpha=0.3)
+        self.pattern_canvas.draw()
+        
+    def generate_pattern_preview(self):
+        """Generate pattern preview based on current settings"""
+        try:
+            # Get pattern parameters
+            pattern_type = self.pattern_type_combo.currentText()
+            pattern_size = self.pattern_size_spin.value()
+            center_x = self.pattern_center_x.value()
+            center_y = self.pattern_center_y.value()
+            
+            # Get JEOL parameters
+            eos_mode = 3 if self.eos_mode_combo.currentIndex() == 0 else 6
+            shot_pitch = self.shot_pitch_spin.value()
+            machine_grid = 1.0 if eos_mode == 3 else 0.125  # nm
+            exposure_grid = machine_grid * shot_pitch  # nm
+            field_size = 500.0 if eos_mode == 3 else 62.5  # μm
+            
+            # Calculate pattern
+            if pattern_type == "square":
+                self.pattern_data = self.calculate_square_pattern(
+                    pattern_size, center_x, center_y, exposure_grid/1000)  # Convert to μm
+            elif pattern_type == "array":
+                nx = self.array_nx_spin.value()
+                ny = self.array_ny_spin.value()
+                pitch_x = self.array_pitch_x_spin.value()
+                pitch_y = self.array_pitch_y_spin.value()
+                self.pattern_data = self.calculate_array_pattern(
+                    pattern_size, center_x, center_y, nx, ny, pitch_x, pitch_y, exposure_grid/1000)
+            else:
+                QMessageBox.information(self, "Info", f"Pattern type '{pattern_type}' visualization not yet implemented")
+                return
+            
+            # Update info
+            total_shots = len(self.pattern_data['shots'])
+            n_fields = len(self.pattern_data['fields'])
+            
+            info_text = f"Pattern Type: {pattern_type}\n"
+            info_text += f"Pattern Size: {pattern_size} μm\n"
+            info_text += f"Center: ({center_x}, {center_y}) μm\n"
+            info_text += f"EOS Mode: {eos_mode} (Field size: {field_size} μm)\n"
+            info_text += f"Exposure Grid: {exposure_grid} nm\n"
+            info_text += f"Total Shots: {total_shots:,}\n"
+            info_text += f"Number of Fields: {n_fields}\n"
+            info_text += f"Estimated Time: {total_shots * 0.02 / 1000:.1f} seconds (at 50 MHz)"
+            
+            self.pattern_info_text.setPlainText(info_text)
+            
+            # Update display
+            self.update_pattern_display()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate pattern preview: {str(e)}")
+            
+    def calculate_square_pattern(self, size, center_x, center_y, exposure_grid):
+        """Calculate shot positions for square pattern"""
+        half_size = size / 2.0
+        n_shots = int(size / exposure_grid) + 1
+        
+        shots = []
+        for iy in range(n_shots):
+            y = center_y - half_size + iy * exposure_grid
+            if abs(y - center_y) > half_size:
+                continue
+                
+            for ix in range(n_shots):
+                x = center_x - half_size + ix * exposure_grid
+                if abs(x - center_x) > half_size:
+                    continue
+                
+                # Determine shot rank (dose modulation)
+                is_edge_x = abs(abs(x - center_x) - half_size) < exposure_grid
+                is_edge_y = abs(abs(y - center_y) - half_size) < exposure_grid
+                
+                if is_edge_x and is_edge_y:
+                    rank = 2  # Corner
+                elif is_edge_x or is_edge_y:
+                    rank = 1  # Edge
+                else:
+                    rank = 0  # Interior
+                    
+                shots.append({'x': x, 'y': y, 'rank': rank})
+        
+        # Calculate fields
+        eos_mode = 3 if self.eos_mode_combo.currentIndex() == 0 else 6
+        field_size = 500.0 if eos_mode == 3 else 62.5
+        
+        fields = self.calculate_fields(shots, field_size)
+        
+        return {'shots': shots, 'fields': fields, 'size': size, 'exposure_grid': exposure_grid}
+        
+    def calculate_array_pattern(self, size, center_x, center_y, nx, ny, pitch_x, pitch_y, exposure_grid):
+        """Calculate shot positions for array pattern"""
+        all_shots = []
+        
+        for iy in range(ny):
+            for ix in range(nx):
+                # Calculate center of this array element
+                elem_x = center_x + (ix - (nx-1)/2.0) * pitch_x
+                elem_y = center_y + (iy - (ny-1)/2.0) * pitch_y
+                
+                # Get shots for this square
+                square_data = self.calculate_square_pattern(size, elem_x, elem_y, exposure_grid)
+                all_shots.extend(square_data['shots'])
+        
+        # Calculate fields for entire array
+        eos_mode = 3 if self.eos_mode_combo.currentIndex() == 0 else 6
+        field_size = 500.0 if eos_mode == 3 else 62.5
+        fields = self.calculate_fields(all_shots, field_size)
+        
+        return {'shots': all_shots, 'fields': fields, 'size': size, 'exposure_grid': exposure_grid}
+        
+    def calculate_fields(self, shots, field_size):
+        """Calculate field layout for shots"""
+        if not shots:
+            return []
+            
+        # Find bounding box
+        x_coords = [s['x'] for s in shots]
+        y_coords = [s['y'] for s in shots]
+        min_x, max_x = min(x_coords), max(x_coords)
+        min_y, max_y = min(y_coords), max(y_coords)
+        
+        # Calculate field grid
+        n_fields_x = int(np.ceil((max_x - min_x) / field_size)) + 1
+        n_fields_y = int(np.ceil((max_y - min_y) / field_size)) + 1
+        
+        fields = []
+        for iy in range(n_fields_y):
+            for ix in range(n_fields_x):
+                field_x = min_x + (ix + 0.5) * field_size
+                field_y = min_y + (iy + 0.5) * field_size
+                fields.append({'x': field_x, 'y': field_y, 'size': field_size})
+                
+        return fields
+        
+    def update_pattern_display(self):
+        """Update pattern display based on selected view"""
+        if not self.pattern_data:
+            return
+            
+        self.pattern_figure.clear()
+        ax = self.pattern_figure.add_subplot(111)
+        
+        display_mode = self.pattern_display_combo.currentText()
+        
+        if display_mode == "Shot Positions":
+            self.draw_shot_positions(ax)
+        elif display_mode == "Dose Map":
+            self.draw_dose_map(ax)
+        elif display_mode == "Effective Dose":
+            self.draw_effective_dose(ax)
+        elif display_mode == "Field Layout":
+            self.draw_field_layout(ax)
+        elif display_mode == "Scan Path":
+            self.draw_scan_path(ax)
+        elif display_mode == "Dose Profile":
+            self.draw_dose_profile(ax)
+        elif display_mode == "Correction Comparison":
+            self.draw_correction_comparison()
+            return  # This method handles its own subplot creation
+            
+        ax.set_xlabel('X Position (μm)')
+        ax.set_ylabel('Y Position (μm)')
+        ax.set_aspect('equal')
+        ax.grid(True, alpha=0.3)
+        
+        self.pattern_canvas.draw()
+        
+    def draw_shot_positions(self, ax):
+        """Draw individual shot positions with dose coloring"""
+        shots = self.pattern_data['shots']
+        
+        if not shots:
+            return
+            
+        # Group shots by rank
+        interior = [(s['x'], s['y']) for s in shots if s['rank'] == 0]
+        edge = [(s['x'], s['y']) for s in shots if s['rank'] == 1]
+        corner = [(s['x'], s['y']) for s in shots if s['rank'] == 2]
+        
+        # Get dose modulation values
+        interior_dose = self.interior_dose_spin.value()
+        edge_dose = self.edge_dose_spin.value()
+        corner_dose = self.corner_dose_spin.value()
+        
+        # Plot shots
+        if self.show_shots_check.isChecked():
+            if interior:
+                ix, iy = zip(*interior)
+                ax.scatter(ix, iy, c='blue', s=1, alpha=0.5, 
+                          label=f'Interior ({interior_dose:.0%})')
+            if edge:
+                ex, ey = zip(*edge)
+                ax.scatter(ex, ey, c='orange', s=2, alpha=0.7,
+                          label=f'Edge ({edge_dose:.0%})')
+            if corner:
+                cx, cy = zip(*corner)
+                ax.scatter(cx, cy, c='red', s=4, alpha=0.9,
+                          label=f'Corner ({corner_dose:.0%})')
+        
+        # Draw fields
+        if self.show_grid_check.isChecked():
+            for field in self.pattern_data['fields']:
+                rect = plt.Rectangle((field['x'] - field['size']/2, 
+                                     field['y'] - field['size']/2),
+                                    field['size'], field['size'],
+                                    fill=False, edgecolor='gray', 
+                                    linestyle='--', alpha=0.5)
+                ax.add_patch(rect)
+        
+        ax.set_title(f'Shot Positions ({len(shots):,} total shots)')
+        if self.show_shots_check.isChecked():
+            ax.legend()
+            
+    def draw_dose_map(self, ax):
+        """Draw dose distribution as heatmap with surrounding area"""
+        shots = self.pattern_data['shots']
+        
+        if not shots:
+            return
+            
+        # Get parameters
+        margin = self.view_margin_spin.value()  # μm
+        exposure_grid = self.pattern_data.get('exposure_grid', 0.004)  # default 4nm in μm
+        
+        # Get dose values
+        dose_map = {0: self.interior_dose_spin.value(),
+                   1: self.edge_dose_spin.value(),
+                   2: self.corner_dose_spin.value()}
+        
+        # Find pattern bounds and extend by margin
+        x_coords = [s['x'] for s in shots]
+        y_coords = [s['y'] for s in shots]
+        min_x, max_x = min(x_coords) - margin, max(x_coords) + margin
+        min_y, max_y = min(y_coords) - margin, max(y_coords) + margin
+        
+        # Create grid at exposure grid resolution
+        x_grid = np.arange(min_x, max_x + exposure_grid, exposure_grid)
+        y_grid = np.arange(min_y, max_y + exposure_grid, exposure_grid)
+        X, Y = np.meshgrid(x_grid, y_grid)
+        
+        # Initialize dose grid with zeros (background)
+        dose_grid = np.zeros_like(X)
+        
+        # Place shots on grid
+        for shot in shots:
+            # Find nearest grid point
+            ix = int(round((shot['x'] - min_x) / exposure_grid))
+            iy = int(round((shot['y'] - min_y) / exposure_grid))
+            
+            if 0 <= ix < len(x_grid) and 0 <= iy < len(y_grid):
+                dose_grid[iy, ix] = dose_map[shot['rank']]
+        
+        # Plot dose map
+        im = ax.imshow(dose_grid, extent=[min_x, max_x, min_y, max_y], 
+                      origin='lower', cmap='hot', vmin=0, vmax=1.2, 
+                      interpolation='nearest', aspect='equal')
+        
+        # Add colorbar
+        cbar = self.pattern_figure.colorbar(im, ax=ax)
+        cbar.set_label('Dose Modulation Factor')
+        
+        # Show pattern boundary
+        pattern_x = [s['x'] for s in shots]
+        pattern_y = [s['y'] for s in shots]
+        min_px, max_px = min(pattern_x), max(pattern_x)
+        min_py, max_py = min(pattern_y), max(pattern_y)
+        
+        from matplotlib.patches import Rectangle
+        rect = Rectangle((min_px, min_py), max_px - min_px, max_py - min_py,
+                       fill=False, edgecolor='white', linewidth=1, linestyle='--')
+        ax.add_patch(rect)
+        
+        ax.set_title(f'Dose Distribution Map (Grid: {exposure_grid*1000:.1f} nm)')
+        
+    def draw_field_layout(self, ax):
+        """Draw field boundaries and stitching"""
+        fields = self.pattern_data['fields']
+        shots = self.pattern_data['shots']
+        
+        # Draw fields
+        for i, field in enumerate(fields):
+            rect = plt.Rectangle((field['x'] - field['size']/2, 
+                                 field['y'] - field['size']/2),
+                                field['size'], field['size'],
+                                fill=False, edgecolor='blue', 
+                                linewidth=2, alpha=0.8)
+            ax.add_patch(rect)
+            
+            # Label fields
+            ax.text(field['x'], field['y'], f'F{i+1}', 
+                   ha='center', va='center', fontsize=12, 
+                   color='blue', weight='bold')
+        
+        # Show pattern outline
+        if shots:
+            x_coords = [s['x'] for s in shots]
+            y_coords = [s['y'] for s in shots]
+            
+            # Draw bounding box
+            min_x, max_x = min(x_coords), max(x_coords)
+            min_y, max_y = min(y_coords), max(y_coords)
+            
+            pattern_rect = plt.Rectangle((min_x, min_y), 
+                                       max_x - min_x, max_y - min_y,
+                                       fill=False, edgecolor='red', 
+                                       linewidth=1, linestyle='-')
+            ax.add_patch(pattern_rect)
+        
+        ax.set_title(f'Field Layout ({len(fields)} fields)')
+        
+    def draw_scan_path(self, ax):
+        """Draw scanning path (first 100 shots)"""
+        shots = self.pattern_data['shots'][:100]  # Limit to first 100 for clarity
+        
+        if len(shots) < 2:
+            return
+            
+        # Draw path
+        x_coords = [s['x'] for s in shots]
+        y_coords = [s['y'] for s in shots]
+        
+        ax.plot(x_coords, y_coords, 'b-', alpha=0.5, linewidth=0.5)
+        ax.scatter(x_coords[0], y_coords[0], c='green', s=50, 
+                  marker='o', label='Start', zorder=5)
+        ax.scatter(x_coords[-1], y_coords[-1], c='red', s=50, 
+                  marker='s', label='End (of first 100)', zorder=5)
+        
+        # Draw shot points
+        ax.scatter(x_coords, y_coords, c='blue', s=10, alpha=0.7, zorder=4)
+        
+        ax.set_title('Scan Path (First 100 shots)')
+        ax.legend()
+        
+    def calculate_psf(self, r, alpha, beta, sigma_f, sigma_b):
+        """Calculate Point Spread Function value at radius r
+        
+        Uses two-Gaussian model where alpha + beta should ≈ 1 for energy conservation
+        """
+        # Convert sigma_f from nm to μm for consistent units
+        sigma_f_um = sigma_f / 1000.0
+        
+        # Properly normalized two-Gaussian model
+        # Each term includes normalization factor
+        forward = (alpha / (2 * np.pi * sigma_f_um**2)) * np.exp(-r**2 / (2 * sigma_f_um**2))
+        backscatter = (beta / (2 * np.pi * sigma_b**2)) * np.exp(-r**2 / (2 * sigma_b**2))
+        
+        return forward + backscatter
+        
+    def draw_effective_dose(self, ax):
+        """Draw effective dose map including proximity effects"""
+        shots = self.pattern_data['shots']
+        
+        if not shots:
+            return
+            
+        # Get parameters
+        alpha = self.alpha_spin.value()
+        beta = self.beta_spin.value()
+        sigma_f = self.sigma_f_spin.value()  # nm
+        sigma_b = self.sigma_b_spin.value()  # μm
+        margin = self.view_margin_spin.value()  # μm
+        
+        # Get dose values
+        dose_map = {0: self.interior_dose_spin.value(),
+                   1: self.edge_dose_spin.value(),
+                   2: self.corner_dose_spin.value()}
+        
+        # Find pattern bounds and extend by margin
+        x_coords = [s['x'] for s in shots]
+        y_coords = [s['y'] for s in shots]
+        min_x, max_x = min(x_coords) - margin, max(x_coords) + margin
+        min_y, max_y = min(y_coords) - margin, max(y_coords) + margin
+        
+        # Create dose calculation grid
+        grid_resolution = 0.05  # μm (50 nm resolution)
+        x_grid = np.arange(min_x, max_x, grid_resolution)
+        y_grid = np.arange(min_y, max_y, grid_resolution)
+        X, Y = np.meshgrid(x_grid, y_grid)
+        
+        # Initialize dose grid
+        dose_grid = np.zeros_like(X)
+        
+        # Calculate dose contribution from each shot
+        total_shots = len(shots)
+        for i, shot in enumerate(shots):
+            if i % 100 == 0:
+                self.pattern_info_text.append(f"Calculating proximity effects... {i}/{total_shots}")
+                QApplication.processEvents()
+                
+            # Get shot dose
+            shot_dose = dose_map[shot['rank']]
+            
+            # Calculate distance from this shot to all grid points
+            R = np.sqrt((X - shot['x'])**2 + (Y - shot['y'])**2)
+            
+            # Add PSF contribution
+            # Only calculate within reasonable range (e.g., 3*sigma_b)
+            mask = R < 3 * sigma_b
+            dose_grid[mask] += shot_dose * self.calculate_psf(R[mask], alpha, beta, sigma_f, sigma_b)
+        
+        # Plot effective dose
+        im = ax.contourf(X, Y, dose_grid, levels=50, cmap='hot')
+        
+        # Add colorbar
+        cbar = self.pattern_figure.colorbar(im, ax=ax)
+        cbar.set_label('Effective Dose (normalized)')
+        
+        # Add dose threshold contour
+        threshold = self.dose_threshold_spin.value()
+        contour = ax.contour(X, Y, dose_grid, levels=[threshold], colors='cyan', linewidths=2)
+        ax.clabel(contour, inline=True, fontsize=10, fmt='Threshold')
+        
+        # Show pattern outline
+        if shots:
+            # Draw pattern boundary
+            pattern_x = [s['x'] for s in shots]
+            pattern_y = [s['y'] for s in shots]
+            
+            # Get convex hull for outline
+            from matplotlib.patches import Rectangle
+            min_px, max_px = min(pattern_x), max(pattern_x)
+            min_py, max_py = min(pattern_y), max(pattern_y)
+            
+            rect = Rectangle((min_px, min_py), max_px - min_px, max_py - min_py,
+                           fill=False, edgecolor='white', linewidth=1, linestyle='--')
+            ax.add_patch(rect)
+        
+        ax.set_title(f'Effective Dose Map (α={alpha}, β={beta}, σf={sigma_f}nm, σb={sigma_b}μm)')
+        
+    def draw_dose_profile(self, ax):
+        """Draw dose profile cross-section through pattern center"""
+        shots = self.pattern_data['shots']
+        
+        if not shots:
+            return
+            
+        # Get parameters
+        alpha = self.alpha_spin.value()
+        beta = self.beta_spin.value()
+        sigma_f = self.sigma_f_spin.value()  # nm
+        sigma_b = self.sigma_b_spin.value()  # μm
+        margin = self.view_margin_spin.value()  # μm
+        
+        # Get dose values
+        dose_map = {0: self.interior_dose_spin.value(),
+                   1: self.edge_dose_spin.value(),
+                   2: self.corner_dose_spin.value()}
+        
+        # Find pattern center
+        x_coords = [s['x'] for s in shots]
+        y_coords = [s['y'] for s in shots]
+        center_x = (min(x_coords) + max(x_coords)) / 2
+        center_y = (min(y_coords) + max(y_coords)) / 2
+        
+        # Create profile lines
+        x_profile = np.linspace(center_x - margin, center_x + margin, 1000)
+        y_profile_pos = np.full_like(x_profile, center_y)
+        
+        y_profile = np.linspace(center_y - margin, center_y + margin, 1000)
+        x_profile_pos = np.full_like(y_profile, center_x)
+        
+        # Calculate dose along profiles
+        x_dose = np.zeros_like(x_profile)
+        y_dose = np.zeros_like(y_profile)
+        
+        for shot in shots:
+            shot_dose = dose_map[shot['rank']]
+            
+            # X profile
+            r_x = np.sqrt((x_profile - shot['x'])**2 + (center_y - shot['y'])**2)
+            x_dose += shot_dose * self.calculate_psf(r_x, alpha, beta, sigma_f, sigma_b)
+            
+            # Y profile  
+            r_y = np.sqrt((center_x - shot['x'])**2 + (y_profile - shot['y'])**2)
+            y_dose += shot_dose * self.calculate_psf(r_y, alpha, beta, sigma_f, sigma_b)
+        
+        # Plot profiles
+        ax.plot(x_profile, x_dose, 'b-', linewidth=2, label='X profile')
+        ax.plot(y_profile, y_dose, 'r-', linewidth=2, label='Y profile')
+        
+        # Add threshold line
+        threshold = self.dose_threshold_spin.value()
+        ax.axhline(y=threshold, color='cyan', linestyle='--', label=f'Threshold = {threshold}')
+        
+        # Mark pattern boundaries
+        min_x, max_x = min(x_coords), max(x_coords)
+        min_y, max_y = min(y_coords), max(y_coords)
+        
+        ax.axvline(x=min_x, color='gray', linestyle=':', alpha=0.5)
+        ax.axvline(x=max_x, color='gray', linestyle=':', alpha=0.5)
+        ax.axvline(x=min_y, color='gray', linestyle=':', alpha=0.5)
+        ax.axvline(x=max_y, color='gray', linestyle=':', alpha=0.5)
+        
+        ax.set_xlabel('Position (μm)')
+        ax.set_ylabel('Effective Dose (normalized)')
+        ax.set_title('Dose Profile Through Pattern Center')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        
+    def load_simulation_psf(self):
+        """Load PSF data from simulation and extract parameters"""
+        try:
+            # Open file dialog in output directory
+            output_dir = Path(self.working_dir) / "output"
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Select PSF Data File",
+                str(output_dir),
+                "CSV Files (*.csv);;All Files (*)"
+            )
+            
+            if not file_path:
+                return
+                
+            # Load PSF data
+            df = pd.read_csv(file_path)
+            
+            if 'Radius(nm)' not in df.columns or 'Dose(normalized)' not in df.columns:
+                QMessageBox.warning(self, "Invalid File", 
+                                  "Selected file does not contain PSF data")
+                return
+                
+            # Extract PSF parameters by fitting
+            radius_um = df['Radius(nm)'].values / 1000.0  # Convert to μm
+            dose = df['Dose(normalized)'].values
+            
+            # Find approximate parameters
+            # Peak dose (at smallest radius)
+            peak_dose = dose[0]
+            
+            # Find where dose drops to ~50% in first 100nm (forward scatter)
+            forward_region = radius_um < 0.1  # First 100nm
+            if np.any(forward_region):
+                forward_dose = dose[forward_region]
+                forward_r = radius_um[forward_region]
+                
+                # Estimate forward scatter range
+                half_dose_idx = np.where(forward_dose < peak_dose * 0.5)[0]
+                if len(half_dose_idx) > 0:
+                    sigma_f_estimate = forward_r[half_dose_idx[0]] * 1000 / 1.5  # nm
+                else:
+                    sigma_f_estimate = 20.0  # Default
+            else:
+                sigma_f_estimate = 20.0
+                
+            # Estimate backscatter from tail (1-10 μm region)
+            back_region = (radius_um > 1.0) & (radius_um < 10.0)
+            if np.any(back_region):
+                back_dose = dose[back_region]
+                back_r = radius_um[back_region]
+                
+                # Fit exponential to tail
+                if len(back_dose) > 5 and np.all(back_dose > 0):
+                    log_dose = np.log(back_dose)
+                    # Linear fit to log(dose) vs r^2
+                    r_squared = back_r ** 2
+                    coeffs = np.polyfit(r_squared, log_dose, 1)
+                    sigma_b_estimate = np.sqrt(-1 / (2 * coeffs[0]))
+                    
+                    # Estimate beta from dose level
+                    beta_estimate = np.mean(back_dose) * 50  # Rough estimate
+                else:
+                    sigma_b_estimate = 5.0
+                    beta_estimate = 3.0
+            else:
+                sigma_b_estimate = 5.0
+                beta_estimate = 3.0
+                
+            # Update GUI parameters
+            self.sigma_f_spin.setValue(min(max(sigma_f_estimate, 1), 100))
+            self.sigma_b_spin.setValue(min(max(sigma_b_estimate, 0.1), 50))
+            self.beta_spin.setValue(min(max(beta_estimate, 0.1), 10))
+            
+            # Update info
+            info_text = f"Loaded PSF from: {Path(file_path).name}\n"
+            info_text += f"Estimated parameters:\n"
+            info_text += f"  σf ≈ {sigma_f_estimate:.1f} nm\n"
+            info_text += f"  σb ≈ {sigma_b_estimate:.1f} μm\n"
+            info_text += f"  β ≈ {beta_estimate:.1f}\n"
+            info_text += "\nThese are estimates - fine-tune as needed"
+            
+            self.pattern_info_text.setPlainText(info_text)
+            
+            # Store PSF data for comparison
+            self.loaded_psf_data = {'radius': radius_um, 'dose': dose}
+            
+            # Refresh display
+            if hasattr(self, 'pattern_data') and self.pattern_data:
+                self.update_pattern_display()
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load PSF data: {str(e)}")
+            
+    def calculate_proximity_correction(self, shots, target_dose=1.0):
+        """Calculate dose corrections using iterative deconvolution"""
+        # Get parameters
+        alpha = self.alpha_spin.value()
+        beta = self.beta_spin.value()
+        sigma_f = self.sigma_f_spin.value()  # nm
+        sigma_b = self.sigma_b_spin.value()  # μm
+        iterations = self.pec_iterations_spin.value()
+        
+        # Get current dose modulation
+        dose_map = {0: self.interior_dose_spin.value(),
+                   1: self.edge_dose_spin.value(),
+                   2: self.corner_dose_spin.value()}
+        
+        # Initialize corrected doses
+        corrected_doses = {}
+        for rank in [0, 1, 2]:
+            corrected_doses[rank] = dose_map[rank]
+            
+        # Build shot position arrays
+        shot_positions = [(s['x'], s['y']) for s in shots]
+        shot_ranks = [s['rank'] for s in shots]
+        
+        # Iterative correction
+        for iteration in range(iterations):
+            # Calculate effective dose at each shot position
+            effective_doses = []
+            
+            for i, (x_i, y_i) in enumerate(shot_positions):
+                effective_dose = 0
+                
+                # Sum contributions from all shots
+                for j, (x_j, y_j) in enumerate(shot_positions):
+                    r = np.sqrt((x_i - x_j)**2 + (y_i - y_j)**2)
+                    psf_value = self.calculate_psf(r, alpha, beta, sigma_f, sigma_b)
+                    shot_dose = corrected_doses[shot_ranks[j]]
+                    effective_dose += shot_dose * psf_value
+                    
+                effective_doses.append(effective_dose)
+            
+            # Update doses based on error
+            for rank in [0, 1, 2]:
+                rank_shots = [i for i, r in enumerate(shot_ranks) if r == rank]
+                if rank_shots:
+                    avg_effective = np.mean([effective_doses[i] for i in rank_shots])
+                    if avg_effective > 0:
+                        # Adjust dose to achieve target
+                        correction_factor = target_dose / avg_effective
+                        corrected_doses[rank] *= correction_factor
+                        
+        return corrected_doses
+        
+    def draw_correction_comparison(self):
+        """Draw side-by-side comparison of uncorrected vs corrected patterns"""
+        shots = self.pattern_data['shots']
+        
+        if not shots:
+            return
+            
+        # Clear figure and create subplots
+        self.pattern_figure.clear()
+        
+        # Create 2x2 subplot layout
+        gs = self.pattern_figure.add_gridspec(2, 2, hspace=0.3, wspace=0.3)
+        ax1 = self.pattern_figure.add_subplot(gs[0, 0])
+        ax2 = self.pattern_figure.add_subplot(gs[0, 1])
+        ax3 = self.pattern_figure.add_subplot(gs[1, 0])
+        ax4 = self.pattern_figure.add_subplot(gs[1, 1])
+        
+        # Get parameters
+        margin = self.view_margin_spin.value()
+        
+        # 1. Original dose assignments
+        self.draw_dose_map_on_axis(ax1, shots, "Original Dose Assignment")
+        
+        # 2. Effective dose without correction
+        dose_grid_uncorrected = self.calculate_effective_dose_grid(shots, use_correction=False)
+        self.draw_effective_dose_on_axis(ax2, dose_grid_uncorrected, 
+                                        "Effective Dose (No Correction)")
+        
+        if self.enable_pec_check.isChecked():
+            # Calculate proximity correction
+            corrected_doses = self.calculate_proximity_correction(shots)
+            
+            # Update pattern info
+            info_text = self.pattern_info_text.toPlainText()
+            info_text += f"\n\nProximity Correction Results:\n"
+            info_text += f"Interior: {self.interior_dose_spin.value():.3f} → {corrected_doses[0]:.3f}\n"
+            info_text += f"Edge: {self.edge_dose_spin.value():.3f} → {corrected_doses[1]:.3f}\n"
+            info_text += f"Corner: {self.corner_dose_spin.value():.3f} → {corrected_doses[2]:.3f}"
+            self.pattern_info_text.setPlainText(info_text)
+            
+            # 3. Corrected dose assignments
+            self.draw_corrected_dose_map(ax3, shots, corrected_doses, 
+                                       "Corrected Dose Assignment")
+            
+            # 4. Effective dose with correction
+            dose_grid_corrected = self.calculate_effective_dose_grid(shots, 
+                                                                   use_correction=True,
+                                                                   corrected_doses=corrected_doses)
+            self.draw_effective_dose_on_axis(ax4, dose_grid_corrected, 
+                                           "Effective Dose (With Correction)")
+        else:
+            # Just show info if correction not enabled
+            ax3.text(0.5, 0.5, 'Enable "Calculate Proximity\nCorrection" to see\ncorrected doses', 
+                    ha='center', va='center', transform=ax3.transAxes,
+                    fontsize=12, color='gray')
+            ax3.set_title("Corrected Dose Assignment")
+            ax3.grid(True, alpha=0.3)
+            
+            ax4.text(0.5, 0.5, 'Enable "Calculate Proximity\nCorrection" to see\ncorrected result', 
+                    ha='center', va='center', transform=ax4.transAxes,
+                    fontsize=12, color='gray')
+            ax4.set_title("Effective Dose (With Correction)")
+            ax4.grid(True, alpha=0.3)
+        
+        self.pattern_canvas.draw()
+        
+    def draw_dose_map_on_axis(self, ax, shots, title):
+        """Draw dose map on specific axis"""
+        # Similar to draw_dose_map but on specific axis
+        margin = self.view_margin_spin.value()
+        exposure_grid = self.pattern_data.get('exposure_grid', 0.004)
+        
+        dose_map = {0: self.interior_dose_spin.value(),
+                   1: self.edge_dose_spin.value(),
+                   2: self.corner_dose_spin.value()}
+        
+        x_coords = [s['x'] for s in shots]
+        y_coords = [s['y'] for s in shots]
+        min_x, max_x = min(x_coords) - margin, max(x_coords) + margin
+        min_y, max_y = min(y_coords) - margin, max(y_coords) + margin
+        
+        x_grid = np.arange(min_x, max_x + exposure_grid, exposure_grid)
+        y_grid = np.arange(min_y, max_y + exposure_grid, exposure_grid)
+        X, Y = np.meshgrid(x_grid, y_grid)
+        
+        dose_grid = np.zeros_like(X)
+        
+        for shot in shots:
+            ix = int(round((shot['x'] - min_x) / exposure_grid))
+            iy = int(round((shot['y'] - min_y) / exposure_grid))
+            
+            if 0 <= ix < len(x_grid) and 0 <= iy < len(y_grid):
+                dose_grid[iy, ix] = dose_map[shot['rank']]
+        
+        im = ax.imshow(dose_grid, extent=[min_x, max_x, min_y, max_y], 
+                      origin='lower', cmap='hot', vmin=0, vmax=1.2, 
+                      interpolation='nearest', aspect='equal')
+        
+        ax.set_title(title)
+        ax.set_xlabel('X (μm)')
+        ax.set_ylabel('Y (μm)')
+        
+    def draw_corrected_dose_map(self, ax, shots, corrected_doses, title):
+        """Draw corrected dose map"""
+        margin = self.view_margin_spin.value()
+        exposure_grid = self.pattern_data.get('exposure_grid', 0.004)
+        
+        x_coords = [s['x'] for s in shots]
+        y_coords = [s['y'] for s in shots]
+        min_x, max_x = min(x_coords) - margin, max(x_coords) + margin
+        min_y, max_y = min(y_coords) - margin, max(y_coords) + margin
+        
+        x_grid = np.arange(min_x, max_x + exposure_grid, exposure_grid)
+        y_grid = np.arange(min_y, max_y + exposure_grid, exposure_grid)
+        X, Y = np.meshgrid(x_grid, y_grid)
+        
+        dose_grid = np.zeros_like(X)
+        
+        for shot in shots:
+            ix = int(round((shot['x'] - min_x) / exposure_grid))
+            iy = int(round((shot['y'] - min_y) / exposure_grid))
+            
+            if 0 <= ix < len(x_grid) and 0 <= iy < len(y_grid):
+                dose_grid[iy, ix] = corrected_doses[shot['rank']]
+        
+        # Use different colormap range for corrected doses
+        vmax = max(corrected_doses.values()) * 1.1
+        im = ax.imshow(dose_grid, extent=[min_x, max_x, min_y, max_y], 
+                      origin='lower', cmap='hot', vmin=0, vmax=vmax, 
+                      interpolation='nearest', aspect='equal')
+        
+        ax.set_title(title)
+        ax.set_xlabel('X (μm)')
+        ax.set_ylabel('Y (μm)')
+        
+    def draw_effective_dose_on_axis(self, ax, dose_grid_data, title):
+        """Draw effective dose on specific axis"""
+        X, Y, dose_grid = dose_grid_data
+        
+        im = ax.contourf(X, Y, dose_grid, levels=50, cmap='hot')
+        
+        # Add threshold contour
+        threshold = self.dose_threshold_spin.value()
+        ax.contour(X, Y, dose_grid, levels=[threshold], colors='cyan', linewidths=2)
+        
+        ax.set_title(title)
+        ax.set_xlabel('X (μm)')
+        ax.set_ylabel('Y (μm)')
+        ax.set_aspect('equal')
+        
+    def calculate_effective_dose_grid(self, shots, use_correction=False, corrected_doses=None):
+        """Calculate effective dose grid for comparison"""
+        # Get parameters
+        alpha = self.alpha_spin.value()
+        beta = self.beta_spin.value()
+        sigma_f = self.sigma_f_spin.value()
+        sigma_b = self.sigma_b_spin.value()
+        margin = self.view_margin_spin.value()
+        
+        # Dose values
+        if use_correction and corrected_doses:
+            dose_map = corrected_doses
+        else:
+            dose_map = {0: self.interior_dose_spin.value(),
+                       1: self.edge_dose_spin.value(),
+                       2: self.corner_dose_spin.value()}
+        
+        # Create grid
+        x_coords = [s['x'] for s in shots]
+        y_coords = [s['y'] for s in shots]
+        min_x, max_x = min(x_coords) - margin, max(x_coords) + margin
+        min_y, max_y = min(y_coords) - margin, max(y_coords) + margin
+        
+        grid_resolution = 0.05
+        x_grid = np.arange(min_x, max_x, grid_resolution)
+        y_grid = np.arange(min_y, max_y, grid_resolution)
+        X, Y = np.meshgrid(x_grid, y_grid)
+        
+        dose_grid = np.zeros_like(X)
+        
+        # Calculate dose from all shots
+        for shot in shots:
+            shot_dose = dose_map[shot['rank']]
+            R = np.sqrt((X - shot['x'])**2 + (Y - shot['y'])**2)
+            mask = R < 3 * sigma_b
+            dose_grid[mask] += shot_dose * self.calculate_psf(R[mask], alpha, beta, sigma_f, sigma_b)
+            
+        return X, Y, dose_grid
 
 
 def main():

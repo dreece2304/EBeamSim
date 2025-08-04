@@ -1,0 +1,101 @@
+# Pattern scanning demonstration macro
+# Shows how to use JEOL-like pattern scanning for proximity effect analysis
+
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+# Initialize
+/run/initialize
+
+# Set resist (30nm HSQ)
+/det/setResistMaterial HSQ
+/det/setResistThickness 30 nm
+/det/update
+
+# Configure JEOL parameters
+# Use 4th lens mode (EOS Mode 3)
+/pattern/jeol/eosMode 3
+/pattern/jeol/shotPitch 4      # 4nm exposure grid
+/pattern/jeol/beamCurrent 2.0  # 2 nA
+/pattern/jeol/baseDose 400.0   # 400 uC/cm^2 (typical for HSQ)
+
+# Set up dose modulation for proximity effect testing
+# Shot rank 0: Interior (100% dose)
+/pattern/jeol/shotRank 0
+/pattern/jeol/modulation 1.0
+
+# Shot rank 1: Edge (90% dose due to less backscatter)
+/pattern/jeol/shotRank 1
+/pattern/jeol/modulation 0.9
+
+# Shot rank 2: Corner (80% dose due to even less backscatter)
+/pattern/jeol/shotRank 2
+/pattern/jeol/modulation 0.8
+
+# Configure pattern - 1um square
+/pattern/type square
+/pattern/size 1 um
+/pattern/center 0 0 0  # Center at origin
+
+# Set beam parameters
+/gun/particle e-
+/gun/energy 100 keV
+/gun/beamSize 2 nm
+/gun/direction 0 0 -1
+
+# Generate the pattern
+/pattern/generate
+
+# Switch to pattern mode
+/pattern/beamMode pattern
+
+# Run the simulation
+# Number of events = number of shots in pattern
+/run/beamOn 65536  # Approximately for 1um square with 4nm pitch
+
+# Example 2: Array of squares for proximity effect study
+# Reset to spot mode first
+/pattern/clear
+/pattern/beamMode spot
+
+# Configure array pattern
+/pattern/type square
+/pattern/size 500 nm
+/pattern/array/nx 3
+/pattern/array/ny 3
+/pattern/array/pitchX 2 um
+/pattern/array/pitchY 2 um
+
+# Different modulation for testing
+/pattern/jeol/shotRank 0
+/pattern/jeol/modulation 1.0
+/pattern/jeol/shotRank 1  
+/pattern/jeol/modulation 0.85
+/pattern/jeol/shotRank 2
+/pattern/jeol/modulation 0.75
+
+# Generate array pattern
+/pattern/generate
+/pattern/beamMode pattern
+
+# Run array exposure
+/run/beamOn 147456  # Approximately for 3x3 array
+
+# Example 3: Large pattern requiring field stitching
+/pattern/clear
+
+# 600um square - will require multiple fields in Mode 3 (500um fields)
+/pattern/type square
+/pattern/size 600 um
+/pattern/center 0 0 0
+
+# Use coarser pitch for large pattern
+/pattern/jeol/shotPitch 20  # 20nm exposure grid
+
+# Generate and run
+/pattern/generate
+/pattern/beamMode pattern
+
+# This will show field transitions during exposure
+/run/beamOn 900000  # Approximately for 600um square with 20nm pitch

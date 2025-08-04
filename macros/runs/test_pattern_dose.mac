@@ -1,0 +1,51 @@
+# test_pattern_dose.mac
+# Simple test of pattern dose modeling
+
+# Set up the sample
+/EBL/detector/resistThickness 30 nm
+/EBL/detector/resistMaterial HSQ
+/EBL/detector/substrateMaterial Silicon
+
+# Configure beam
+/EBL/beam/energy 100 keV
+/EBL/beam/size 2 nm
+
+# Enable pattern mode
+/EBL/pattern/mode true
+
+# Configure pattern - simple 1 micron square
+/EBL/pattern/type square
+/EBL/pattern/size 1.0 um
+/EBL/pattern/center 0 0 nm
+
+# JEOL parameters
+/EBL/pattern/eos_mode 3
+/EBL/pattern/shot_pitch 4
+/EBL/pattern/beam_current 2.0 nA
+/EBL/pattern/base_dose 400 uC/cm2
+/EBL/pattern/scan_strategy serpentine
+
+# Test dose modulation
+# Start with uniform dose
+/EBL/pattern/dose_interior 1.0
+/EBL/pattern/dose_edge 1.0
+/EBL/pattern/dose_corner 1.0
+
+# Enable output
+/EBL/output/collectPSF true
+/EBL/output/setPSFFilename test_pattern_uniform_dose.csv
+
+# Initialize and run
+/run/initialize
+
+# The -1 tells it to calculate events automatically based on pattern
+/run/beamOn -1
+
+# Now test with dose modulation
+/EBL/pattern/dose_interior 1.0
+/EBL/pattern/dose_edge 0.85
+/EBL/pattern/dose_corner 0.75
+
+/EBL/output/setPSFFilename test_pattern_modulated_dose.csv
+
+/run/beamOn -1

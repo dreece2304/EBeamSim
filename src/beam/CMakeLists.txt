@@ -2,6 +2,9 @@
 add_library(ebl_beam STATIC
     src/PrimaryGeneratorAction.cc
     src/PrimaryGeneratorMessenger.cc
+    src/PatternGenerator.cc
+    src/SquarePatternGenerator.cc
+    src/PatternMessenger.cc
 )
 
 target_include_directories(ebl_beam
