@@ -1,0 +1,28 @@
+# verify_pattern_basics.mac - Check if pattern commands work
+
+# Minimal setup
+/det/setResistThickness 30 nm
+/det/update
+
+/run/initialize
+
+# Try to set pattern parameters
+/pattern/jeol/eosMode 3
+/pattern/jeol/shotPitch 10
+/pattern/jeol/beamCurrent 2.0
+/pattern/jeol/baseDose 400
+
+# Try to create a pattern
+/pattern/type square
+/pattern/size 0.1 um
+/pattern/center 0 0 0 um
+
+# Try to generate
+/pattern/generate
+
+# Check what happened
+/pattern/beamMode pattern
+
+# Just run 10 events to test
+/run/verbose 2
+/run/beamOn 10

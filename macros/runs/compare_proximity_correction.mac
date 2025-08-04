@@ -1,0 +1,69 @@
+# compare_proximity_correction.mac
+# Compare patterns with and without proximity effect correction
+
+# Set up the sample
+/det/setResistThickness 30 nm
+/det/setResistComposition "Si:1,O:1,H:1"  # HSQ
+/det/setResistDensity 1.4 g/cm3
+/det/update
+
+# Configure beam
+/gun/particle e-
+/gun/energy 100 keV
+/gun/beamSize 2 nm
+
+# Initialize before pattern setup
+/run/initialize
+
+# JEOL parameters
+/pattern/jeol/eosMode 3
+/pattern/jeol/shotPitch 4
+/pattern/jeol/beamCurrent 2.0
+/pattern/jeol/baseDose 400
+
+# TEST 1: No proximity correction (uniform dose)
+/pattern/jeol/shotRank 0
+/pattern/jeol/modulation 1.0
+/pattern/jeol/shotRank 1
+/pattern/jeol/modulation 1.0
+/pattern/jeol/shotRank 2
+/pattern/jeol/modulation 1.0
+
+# Pattern configuration
+/pattern/type square
+/pattern/size 1.0 um
+/pattern/center 0 0 0 um
+
+# Generate and run
+/pattern/generate
+/pattern/beamMode pattern
+
+# Output files for uncorrected pattern
+/ebl/output/setPSFFile psf_no_correction.csv
+/ebl/output/setSummaryFile summary_no_correction.txt
+/ebl/output/collectPSF true
+
+/run/beamOn -1
+
+# TEST 2: With proximity correction
+/pattern/clear
+
+/pattern/jeol/shotRank 0
+/pattern/jeol/modulation 1.0
+/pattern/jeol/shotRank 1
+/pattern/jeol/modulation 0.85
+/pattern/jeol/shotRank 2
+/pattern/jeol/modulation 0.75
+
+# Same pattern
+/pattern/generate
+
+# Output files for corrected pattern
+/ebl/output/setPSFFile psf_with_correction.csv
+/ebl/output/setSummaryFile summary_with_correction.txt
+
+/run/beamOn -1
+
+# Results will show:
+# 1. psf_no_correction.csv - Higher dose at edges/corners
+# 2. psf_with_correction.csv - More uniform dose distribution

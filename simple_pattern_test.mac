@@ -1,0 +1,53 @@
+# simple_pattern_test.mac - Minimal pattern test
+
+# Material settings FIRST
+/det/setResistComposition "Si:1,O:1,H:1"
+/det/setResistThickness 30 nm
+/det/setResistDensity 1.4 g/cm3
+/det/update
+
+# Physics
+/process/em/fluo 1
+/process/em/auger 1
+
+# MUST initialize after material/physics
+/run/initialize
+
+# Beam settings
+/gun/particle e-
+/gun/energy 100 keV
+/gun/beamSize 2 nm
+
+# Pattern settings - small test pattern
+/pattern/jeol/eosMode 3
+/pattern/jeol/shotPitch 10
+/pattern/jeol/beamCurrent 2.0
+/pattern/jeol/baseDose 400
+
+# No correction - uniform dose
+/pattern/jeol/shotRank 0
+/pattern/jeol/modulation 1.0
+/pattern/jeol/shotRank 1
+/pattern/jeol/modulation 1.0
+/pattern/jeol/shotRank 2
+/pattern/jeol/modulation 1.0
+
+# Small 100nm square pattern (only 100 shots)
+/pattern/type square
+/pattern/size 0.1 um
+/pattern/center 0 0 0 um
+
+# Generate pattern
+/pattern/generate
+/pattern/beamMode pattern
+
+# Output
+/ebl/output/setPSFFile test_pattern.csv
+
+# Run with verbose output to see events
+/run/verbose 2
+/event/verbose 1
+/tracking/verbose 0
+
+# This should run 100 events (10x10 grid)
+/run/beamOn -1

@@ -1,0 +1,44 @@
+# Quick test of pattern scanning functionality
+
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+# Initialize
+/run/initialize
+
+# Set resist
+/det/setResistMaterial HSQ
+/det/setResistThickness 30 nm
+/det/update
+
+# Configure a small test pattern
+/pattern/jeol/eosMode 3
+/pattern/jeol/shotPitch 4
+/pattern/jeol/beamCurrent 2.0
+/pattern/jeol/baseDose 400.0
+
+# Simple dose modulation
+/pattern/jeol/shotRank 0
+/pattern/jeol/modulation 1.0
+/pattern/jeol/shotRank 1
+/pattern/jeol/modulation 0.9
+/pattern/jeol/shotRank 2
+/pattern/jeol/modulation 0.8
+
+# Small square pattern for testing
+/pattern/type square
+/pattern/size 0.1 um  # 100 nm square
+/pattern/center 0 0 0
+
+# Set beam parameters
+/gun/particle e-
+/gun/energy 100 keV
+/gun/beamSize 2 nm
+
+# Generate and run pattern
+/pattern/generate
+/pattern/beamMode pattern
+
+# Run simulation (about 625 shots for 100nm square with 4nm pitch)
+/run/beamOn 1000

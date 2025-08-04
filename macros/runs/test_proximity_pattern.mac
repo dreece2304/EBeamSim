@@ -1,0 +1,87 @@
+# test_proximity_pattern.mac
+# Comprehensive test of pattern scanning with proximity effect analysis
+# This macro demonstrates the full workflow from pattern generation to PSF extraction
+
+# Initialize visualization (optional - comment out for batch mode)
+/control/execute macros/runs/init_vis.mac
+
+# Set up the sample geometry
+/EBL/detector/resistThickness 30 nm
+/EBL/detector/resistMaterial HSQ
+/EBL/detector/substrateMaterial Silicon
+
+# Configure beam parameters
+/EBL/beam/energy 100 keV
+/EBL/beam/size 2 nm
+/EBL/beam/sigmaToFWHM 2.355
+
+# Configure pattern scanning for proximity effect analysis
+/EBL/pattern/mode true
+/EBL/pattern/type square
+/EBL/pattern/size 1.0 um
+/EBL/pattern/center 0 0 nm
+
+# JEOL parameters
+/EBL/pattern/eos_mode 3
+/EBL/pattern/shot_pitch 4
+/EBL/pattern/beam_current 2.0 nA
+/EBL/pattern/scan_strategy serpentine
+
+# Initial uniform dose (no proximity correction)
+/EBL/pattern/base_dose 400 uC/cm2
+/EBL/pattern/dose_interior 1.0
+/EBL/pattern/dose_edge 1.0
+/EBL/pattern/dose_corner 1.0
+
+# Ensure PSF collection is enabled
+/EBL/output/collectPSF true
+/EBL/output/collect2D true
+
+# Set output file names with descriptive pattern info
+/EBL/output/setPSFFilename psf_pattern_square_1um_uniform.csv
+/EBL/output/setSummaryFilename summary_pattern_square_1um_uniform.txt
+
+# Initialize and run
+/run/initialize
+
+# The number of events is automatically calculated based on the pattern
+# For a 1μm square with 4nm pitch, this is (1000/4)² = 62,500 shots
+/run/beamOn -1
+
+# Now test with proximity correction applied
+/EBL/pattern/dose_interior 1.0
+/EBL/pattern/dose_edge 0.85
+/EBL/pattern/dose_corner 0.75
+
+/EBL/output/setPSFFilename psf_pattern_square_1um_corrected.csv
+/EBL/output/setSummaryFilename summary_pattern_square_1um_corrected.txt
+
+/run/beamOn -1
+
+# Test array pattern for spacing analysis
+/EBL/pattern/type array
+/EBL/pattern/size 0.5 um
+/EBL/pattern/array_size 3 3
+/EBL/pattern/array_pitch 2.0 2.0 um
+
+# Reset to uniform dose for array
+/EBL/pattern/dose_interior 1.0
+/EBL/pattern/dose_edge 1.0
+/EBL/pattern/dose_corner 1.0
+
+/EBL/output/setPSFFilename psf_pattern_array_3x3_2um_pitch.csv
+/EBL/output/setSummaryFilename summary_pattern_array_3x3_2um_pitch.txt
+
+/run/beamOn -1
+
+# Summary of outputs:
+# 1. psf_pattern_square_1um_uniform.csv - PSF from uniform dose square
+# 2. psf_pattern_square_1um_corrected.csv - PSF with proximity correction
+# 3. psf_pattern_array_3x3_2um_pitch.csv - PSF from array pattern
+# 4. psf_beamer.txt - BEAMER-compatible PSF file
+# 5. simulation_summary.txt files - Statistics for each run
+#
+# Use these files with the GUI's Pattern Visualization tab to:
+# - Load PSF parameters from simulation
+# - Compare corrected vs uncorrected effective dose
+# - Optimize array spacing
