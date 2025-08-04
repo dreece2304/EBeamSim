@@ -459,9 +459,9 @@ class EBLSimulationGUI(QMainWindow):
         for file in output_files:
             file_path = exe_dir / file
             if file_path.exists():
-                self.log_output(f"  ✓ {file} ({file_path.stat().st_size} bytes)")
+                self.log_output(f"  [OK] {file} ({file_path.stat().st_size} bytes)")
             else:
-                self.log_output(f"  ✗ {file} not found")
+                self.log_output(f"  [MISSING] {file} not found")
                 
     def log_output(self, message):
         """Add message to output log"""

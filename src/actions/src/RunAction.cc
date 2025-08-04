@@ -202,8 +202,10 @@ void RunAction::MergeLocalArrays()
     }
 
     // Merge 2D profile
-    for (size_t i = 0; i < f2DEnergyProfile.size() && i < fMaster2DProfile.size(); ++i) {
-        for (size_t j = 0; j < f2DEnergyProfile[i].size() && j < fMaster2DProfile[i].size(); ++j) {
+    const size_t profileDepth = std::min(f2DEnergyProfile.size(), fMaster2DProfile.size());
+    for (size_t i = 0; i < profileDepth; ++i) {
+        const size_t profileWidth = std::min(f2DEnergyProfile[i].size(), fMaster2DProfile[i].size());
+        for (size_t j = 0; j < profileWidth; ++j) {
             fMaster2DProfile[i][j] += f2DEnergyProfile[i][j];
         }
     }
@@ -516,8 +518,8 @@ void RunAction::SaveBEAMERFormat(const std::string& outputDir)
         G4double beta = 1.0 - alpha;
 
         G4cout << "\nPSF Parameters for BEAMER:" << G4endl;
-        G4cout << "  Forward scatter fraction (α): " << alpha << G4endl;
-        G4cout << "  Backscatter fraction (β): " << beta << G4endl;
+        G4cout << "  Forward scatter fraction (alpha): " << alpha << G4endl;
+        G4cout << "  Backscatter fraction (beta): " << beta << G4endl;
     }
 }
 
@@ -551,8 +553,11 @@ void RunAction::Save2DFormat(const std::string& outputDir)
     // Count non-zero entries for verification
     G4int nonZeroCount = 0;
     G4double totalEnergy2D = 0.0;
-    for (size_t i = 0; i < f2DEnergyProfile.size(); ++i) {
-        for (size_t j = 0; j < f2DEnergyProfile[i].size(); ++j) {
+    const size_t depthBins = f2DEnergyProfile.size();
+    const size_t radiusBins = depthBins > 0 ? f2DEnergyProfile[0].size() : 0;
+    
+    for (size_t i = 0; i < depthBins; ++i) {
+        for (size_t j = 0; j < radiusBins; ++j) {
             if (f2DEnergyProfile[i][j] > 0) {
                 nonZeroCount++;
                 totalEnergy2D += f2DEnergyProfile[i][j];
@@ -591,7 +596,7 @@ void RunAction::Save2DFormat(const std::string& outputDir)
     // Additional verification
     G4cout << "Depth range: " << (-50.0) << " to "
            << (-50.0 + totalDepth/CLHEP::nanometer) << " nm" << G4endl;
-    G4cout << "Radius range: 0 to " << (50.0) << " μm" << G4endl;
+    G4cout << "Radius range: 0 to " << (50.0) << " um" << G4endl;
 }
 
 void RunAction::SaveSummary(const std::string& outputDir)

@@ -88,7 +88,7 @@ G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* track
     // 5. Range-based killing: estimate if particle can reach resist
     if (particleName == "e-") {
         // Rough estimate of electron range in silicon
-        // R ≈ 0.4 * E^1.75 (R in μm, E in keV)
+        // R ~= 0.4 * E^1.75 (R in um, E in keV)
         G4double energyKeV = energy / keV;
         G4double estimatedRange = 0.4 * std::pow(energyKeV, 1.75) * micrometer;
 

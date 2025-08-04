@@ -46,6 +46,9 @@ from PySide6.QtGui import QFont, QIcon, QAction, QPalette, QColor
 # Scientific computing
 import numpy as np
 import pandas as pd
+
+# Import consolidated BEAMER converter
+from beamer_converter import BEAMERConverter
 import scipy.interpolate
 
 # Matplotlib for Qt
@@ -181,7 +184,7 @@ class StatusButton(QPushButton):
         """Set button status with helpful tooltip"""
         self.setEnabled(enabled)
         if not enabled and tooltip_message:
-            self.setToolTip(f"❌ {tooltip_message}")
+            self.setToolTip(f"[ERROR] {tooltip_message}")
         else:
             self.setToolTip("")
 
@@ -189,7 +192,7 @@ class StatusButton(QPushButton):
         """Show working state with spinner effect"""
         self.is_working = working
         if working:
-            self.setText(f"🔄 {message}")
+            self.setText(f"[WORKING] {message}")
             self.setEnabled(False)
         else:
             self.setText(self.default_text)
@@ -376,9 +379,9 @@ class SimulationWorker(QObject):
 
                     # Highlight warnings and errors
                     if "WARNING" in line or "Warning" in line:
-                        self.output.emit(f"⚠️ {line}")
+                        self.output.emit(f"[WARNING] {line}")
                     elif "ERROR" in line or "Error" in line:
-                        self.output.emit(f"❌ {line}")
+                        self.output.emit(f"[ERROR] {line}")
 
                     line_count += 1
 
@@ -509,7 +512,7 @@ class Enhanced2DPlotWidget(QWidget):
                 # Use file manager for consistent loading
                 df, message = self.file_manager.load_csv_with_validation(
                     file_path,
-                    progress_callback=lambda msg: self.load_2d_button.setText(f"🔄 {msg}")
+                    progress_callback=lambda msg: self.load_2d_button.setText(f"[LOADING] {msg}")
                 )
 
                 if df is None:
@@ -592,10 +595,10 @@ class Enhanced2DPlotWidget(QWidget):
         if self.log_scale_check.isChecked():
             # Add small value to avoid log(0)
             energy_plot = np.log10(np.maximum(energy, 1e-10))
-            label = 'Log10(Energy Deposition) [eV/nm²]'
+            label = 'Log10(Energy Deposition) [eV/nm^2]'
         else:
             energy_plot = energy
-            label = 'Energy Deposition [eV/nm²]'
+            label = 'Energy Deposition [eV/nm^2]'
 
         # Create heatmap
         cmap = self.colormap_combo.currentText()
@@ -672,7 +675,7 @@ class Enhanced2DPlotWidget(QWidget):
             # Create levels that make sense for log scale
             vmin, vmax = energy_plot.min(), energy_plot.max()
             levels = np.linspace(vmin, vmax, 15)
-            label = 'Log10(Energy Deposition) [eV/nm²]'
+            label = 'Log10(Energy Deposition) [eV/nm^2]'
         else:
             energy_plot = energy
             # Create levels for linear scale
@@ -681,7 +684,7 @@ class Enhanced2DPlotWidget(QWidget):
                 levels = np.linspace(vmin, vmax, 15)
             else:
                 levels = 10  # Default number of levels
-            label = 'Energy Deposition [eV/nm²]'
+            label = 'Energy Deposition [eV/nm^2]'
 
         # Create contour plot
         cmap = self.colormap_combo.currentText()
@@ -1209,8 +1212,8 @@ class PlotWidget(QWidget):
                         QMessageBox.information(self, "BEAMER Conversion Complete",
                                                 f"PSF saved to: {Path(file_path).name}\n\n"
                                                 f"Proximity parameters:\n"
-                                                f"α (forward): {alpha:.3f}\n"
-                                                f"β (backscatter): {beta:.3f}\n\n"
+                                                f"alpha (forward): {alpha:.3f}\n"
+                                                f"beta (backscatter): {beta:.3f}\n\n"
                                                 f"Data points: {len(output_radius)}")
 
                         # Offer to visualize BEAMER format
@@ -1262,7 +1265,7 @@ class PlotWidget(QWidget):
             if apply_smoothing and len(psf_normalized) > 7:
                 from scipy.signal import savgol_filter
 
-                # Smooth only the tail region (r > 10 μm)
+                # Smooth only the tail region (r > 10 um)
                 smooth_start = np.where(radius_um > 10.0)[0]
                 if len(smooth_start) > 0:
                     start_idx = smooth_start[0]
@@ -1278,7 +1281,7 @@ class PlotWidget(QWidget):
             output_radius = []
             output_psf = []
 
-            # Add point at 0.01 μm if needed
+            # Add point at 0.01 um if needed
             if radius_um[0] > 0.02:
                 output_radius.append(0.01)
                 output_psf.append(psf_normalized[0])
@@ -1366,7 +1369,7 @@ class PlotWidget(QWidget):
         ax.loglog(radius_um, psf_norm, 'b-', linewidth=2, label='BEAMER PSF')
 
         # Formatting to match BEAMER standard
-        ax.set_xlabel('radius, μm', fontsize=12)
+        ax.set_xlabel('radius, um', fontsize=12)
         ax.set_ylabel('relative energy deposition', fontsize=12)
         ax.set_title('Electron energy deposition point spread function', fontsize=14)
 
@@ -1760,9 +1763,12 @@ class EBLMainWindow(QMainWindow):
         self.create_resist_tab()
         self.create_beam_tab()
         self.create_simulation_tab()
+        self.create_pattern_tab()
         self.create_output_tab()
         self.create_1d_visualization_tab()
         self.create_2d_visualization_tab()
+        self.create_pattern_heatmap_tab()
+        self.create_proximity_correction_tab()
         # Note: Removed analysis tab as it had placeholder functionality
 
         # Main layout
@@ -2183,6 +2189,232 @@ class EBLMainWindow(QMainWindow):
         widget.setLayout(layout)
         self.tab_widget.addTab(widget, "Simulation")
 
+    def create_pattern_tab(self):
+        """Create pattern exposure tab"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # JEOL Mode Selection
+        mode_group = QGroupBox("JEOL Operating Mode")
+        mode_layout = QVBoxLayout()
+        
+        self.mode_group = QButtonGroup()
+        self.mode3_radio = QRadioButton("Mode 3 (4th Lens) - 500 um field, 1.0 nm grid")
+        self.mode6_radio = QRadioButton("Mode 6 (5th Lens) - 62.5 um field, 0.125 nm grid")
+        self.mode3_radio.setChecked(True)
+        
+        self.mode_group.addButton(self.mode3_radio, 0)
+        self.mode_group.addButton(self.mode6_radio, 1)
+        
+        mode_layout.addWidget(self.mode3_radio)
+        mode_layout.addWidget(self.mode6_radio)
+        mode_group.setLayout(mode_layout)
+        
+        # Pattern Parameters
+        pattern_group = QGroupBox("Pattern Parameters")
+        pattern_layout = QGridLayout()
+        
+        pattern_layout.addWidget(QLabel("Pattern Type:"), 0, 0)
+        self.pattern_type_combo = QComboBox()
+        self.pattern_type_combo.addItems(["Square", "Single Spot", "Line", "Custom"])
+        pattern_layout.addWidget(self.pattern_type_combo, 0, 1)
+        
+        pattern_layout.addWidget(QLabel("Pattern Size (nm):"), 1, 0)
+        self.pattern_size_spin = QDoubleSpinBox()
+        self.pattern_size_spin.setRange(1, 50000)
+        self.pattern_size_spin.setValue(1000)
+        self.pattern_size_spin.setSuffix(" nm")
+        pattern_layout.addWidget(self.pattern_size_spin, 1, 1)
+        
+        pattern_layout.addWidget(QLabel("Center X (nm):"), 2, 0)
+        self.pattern_x_spin = QDoubleSpinBox()
+        self.pattern_x_spin.setRange(-250000, 250000)
+        self.pattern_x_spin.setValue(0)
+        self.pattern_x_spin.setSuffix(" nm")
+        pattern_layout.addWidget(self.pattern_x_spin, 2, 1)
+        
+        pattern_layout.addWidget(QLabel("Center Y (nm):"), 3, 0)
+        self.pattern_y_spin = QDoubleSpinBox()
+        self.pattern_y_spin.setRange(-250000, 250000)
+        self.pattern_y_spin.setValue(0)
+        self.pattern_y_spin.setSuffix(" nm")
+        pattern_layout.addWidget(self.pattern_y_spin, 3, 1)
+        
+        pattern_group.setLayout(pattern_layout)
+        
+        # Exposure Parameters
+        exposure_group = QGroupBox("Exposure Parameters")
+        exposure_layout = QGridLayout()
+        
+        exposure_layout.addWidget(QLabel("Beam Current:"), 0, 0)
+        self.beam_current_combo = QComboBox()
+        # JEOL available currents from documentation
+        jeol_currents = ["0.5 nA", "1 nA", "2 nA", "5 nA", "8 nA", "10 nA", "20 nA"]
+        self.beam_current_combo.addItems(jeol_currents)
+        self.beam_current_combo.setCurrentText("2 nA")
+        exposure_layout.addWidget(self.beam_current_combo, 0, 1)
+        
+        exposure_layout.addWidget(QLabel("Dose (uC/cm^2):"), 1, 0)
+        self.dose_spin = QDoubleSpinBox()
+        self.dose_spin.setRange(10, 2000)
+        self.dose_spin.setValue(300)
+        self.dose_spin.setSuffix(" uC/cm^2")
+        exposure_layout.addWidget(self.dose_spin, 1, 1)
+        
+        exposure_layout.addWidget(QLabel("Shot Pitch:"), 2, 0)
+        self.shot_pitch_spin = QSpinBox()
+        self.shot_pitch_spin.setRange(1, 20)
+        self.shot_pitch_spin.setValue(4)
+        self.shot_pitch_spin.setSingleStep(1)  # Allow 1 as well as even numbers
+        exposure_layout.addWidget(self.shot_pitch_spin, 2, 1)
+        
+        # Add tooltip to explain constraint
+        self.shot_pitch_spin.setToolTip("Must be 1 or even number (2, 4, 6, ...)")
+        
+        # Calculate and display dwell time
+        self.dwell_time_label = QLabel("Dwell Time: calculating...")
+        exposure_layout.addWidget(self.dwell_time_label, 3, 0, 1, 2)
+        
+        self.clock_freq_label = QLabel("Clock Frequency: calculating...")
+        exposure_layout.addWidget(self.clock_freq_label, 4, 0, 1, 2)
+        
+        self.electrons_per_point_label = QLabel("Electrons/point: calculating...")
+        exposure_layout.addWidget(self.electrons_per_point_label, 5, 0, 1, 2)
+        
+        exposure_group.setLayout(exposure_layout)
+        
+        # Connect signals to update calculations
+        self.beam_current_combo.currentTextChanged.connect(self.update_dwell_time)
+        self.dose_spin.valueChanged.connect(self.update_dwell_time)
+        self.shot_pitch_spin.valueChanged.connect(self.update_dwell_time)
+        self.mode_group.buttonClicked.connect(self.update_dwell_time)
+        
+        # Dose Grid Parameters
+        grid_group = QGroupBox("Dose Grid Settings")
+        grid_layout = QGridLayout()
+        
+        grid_layout.addWidget(QLabel("Grid Resolution X:"), 0, 0)
+        self.grid_nx_spin = QSpinBox()
+        self.grid_nx_spin.setRange(10, 1000)
+        self.grid_nx_spin.setValue(200)
+        grid_layout.addWidget(self.grid_nx_spin, 0, 1)
+        
+        grid_layout.addWidget(QLabel("Grid Resolution Y:"), 1, 0)
+        self.grid_ny_spin = QSpinBox()
+        self.grid_ny_spin.setRange(10, 1000)
+        self.grid_ny_spin.setValue(200)
+        grid_layout.addWidget(self.grid_ny_spin, 1, 1)
+        
+        grid_layout.addWidget(QLabel("Grid Resolution Z:"), 2, 0)
+        self.grid_nz_spin = QSpinBox()
+        self.grid_nz_spin.setRange(10, 100)
+        self.grid_nz_spin.setValue(20)
+        grid_layout.addWidget(self.grid_nz_spin, 2, 1)
+        
+        grid_group.setLayout(grid_layout)
+        
+        # Control buttons
+        button_layout = QHBoxLayout()
+        
+        self.pattern_mode_check = QCheckBox("Enable Pattern Mode")
+        self.pattern_mode_check.setChecked(False)
+        button_layout.addWidget(self.pattern_mode_check)
+        
+        button_layout.addStretch()
+        
+        self.validate_pattern_btn = StatusButton("Validate Settings")
+        self.validate_pattern_btn.clicked.connect(self.validate_pattern_settings)
+        button_layout.addWidget(self.validate_pattern_btn)
+        
+        # Add all groups to layout
+        layout.addWidget(mode_group)
+        layout.addWidget(pattern_group)
+        layout.addWidget(exposure_group)
+        layout.addWidget(grid_group)
+        layout.addLayout(button_layout)
+        layout.addStretch()
+        
+        widget.setLayout(layout)
+        self.tab_widget.addTab(widget, "Pattern Exposure")
+        
+        # Initial calculation
+        self.update_dwell_time()
+
+    def update_dwell_time(self):
+        """Calculate and display dwell time based on JEOL parameters"""
+        # Get mode-specific parameters
+        if self.mode3_radio.isChecked():
+            machine_grid = 1.0  # nm
+        else:
+            machine_grid = 0.125  # nm
+        
+        # Calculate exposure grid
+        exposure_grid = self.shot_pitch_spin.value() * machine_grid
+        
+        # Calculate clock frequency (MHz)
+        beam_current_text = self.beam_current_combo.currentText()
+        beam_current = float(beam_current_text.split()[0])  # Extract number from "X nA"
+        dose = self.dose_spin.value()  # uC/cm^2
+        
+        clock_freq = (beam_current * 1000.0 * 100.0) / (dose * exposure_grid * exposure_grid)
+        
+        # Check 50 MHz limit
+        if clock_freq > 50:
+            clock_freq = 50
+            actual_dose = (beam_current * 1000.0 * 100.0) / (50.0 * exposure_grid * exposure_grid)
+            self.dwell_time_label.setText(f"Dwell Time: {1.0/clock_freq:.3f} us (Dose limited to {actual_dose:.1f} uC/cm^2)")
+            self.dwell_time_label.setStyleSheet("color: orange;")
+        else:
+            dwell_time = 1.0 / clock_freq  # microseconds
+            self.dwell_time_label.setText(f"Dwell Time: {dwell_time:.3f} us")
+            self.dwell_time_label.setStyleSheet("")
+        
+        self.clock_freq_label.setText(f"Clock Frequency: {clock_freq:.2f} MHz")
+        
+        # Calculate electrons per point
+        dwell_time_seconds = 1.0 / (clock_freq * 1e6)  # Convert MHz to Hz
+        electrons_per_second = beam_current * 1e-9 / 1.602176634e-19  # nA to electrons/s
+        electrons_per_point = int(electrons_per_second * dwell_time_seconds)
+        
+        # Update electrons per point label if it exists
+        if hasattr(self, 'electrons_per_point_label'):
+            self.electrons_per_point_label.setText(f"Electrons/point: {electrons_per_point}")
+    
+    def validate_pattern_settings(self):
+        """Validate pattern exposure settings"""
+        # Check shot pitch
+        shot_pitch = self.shot_pitch_spin.value()
+        if shot_pitch != 1 and shot_pitch % 2 != 0:
+            QMessageBox.warning(self, "Invalid Settings", 
+                               f"Shot pitch must be 1 or an even number. Current value: {shot_pitch}")
+            return
+        
+        # Check if pattern fits within field
+        pattern_size = self.pattern_size_spin.value()
+        
+        if self.mode3_radio.isChecked():
+            field_size = 500000  # nm
+        else:
+            field_size = 62500  # nm
+        
+        if pattern_size > field_size:
+            QMessageBox.warning(self, "Invalid Settings", 
+                               f"Pattern size ({pattern_size} nm) exceeds field size ({field_size} nm)")
+            return
+        
+        # Check pattern position
+        pattern_x = abs(self.pattern_x_spin.value())
+        pattern_y = abs(self.pattern_y_spin.value())
+        max_coord = max(pattern_x, pattern_y) + pattern_size/2
+        
+        if max_coord > field_size/2:
+            QMessageBox.warning(self, "Invalid Settings", 
+                               "Pattern extends beyond field boundaries")
+            return
+        
+        QMessageBox.information(self, "Valid Settings", 
+                               "Pattern settings are valid for the selected mode")
+
     def create_output_tab(self):
         """Create output log tab"""
         widget = QWidget()
@@ -2228,6 +2460,18 @@ class EBLMainWindow(QMainWindow):
         """Create 2D depth-radius visualization tab with enhanced features"""
         self.plot_2d_widget = Enhanced2DPlotWidget(self.file_manager)
         self.tab_widget.addTab(self.plot_2d_widget, "2D Visualization")
+        
+    def create_proximity_correction_tab(self):
+        """Create proximity effect correction tab"""
+        from widgets.proximity_correction_widget import ProximityCorrectionWidget
+        self.proximity_correction_widget = ProximityCorrectionWidget()
+        self.tab_widget.addTab(self.proximity_correction_widget, "Proximity Correction")
+        
+    def create_pattern_heatmap_tab(self):
+        """Create improved pattern heatmap visualization tab"""
+        from widgets.pattern_heatmap_widget import PatternHeatmapWidget
+        self.pattern_heatmap_widget = PatternHeatmapWidget()
+        self.tab_widget.addTab(self.pattern_heatmap_widget, "Pattern Heatmap")
 
     def setup_defaults(self):
         """Setup default values"""
@@ -2857,18 +3101,35 @@ class EBLMainWindow(QMainWindow):
             use_timestamp = self.timestamp_check.isChecked()
 
             # Generate output filenames
-            psf_filename = self.generate_output_filename("psf", ".csv",
-                                                         include_timestamp=use_timestamp,
-                                                         run_number=run_number)
-            psf2d_filename = self.generate_output_filename("psf2d", ".csv",
-                                                           include_timestamp=use_timestamp,
-                                                           run_number=run_number)
-            summary_filename = self.generate_output_filename("summary", ".txt",
+            if hasattr(self, 'pattern_mode_check') and self.pattern_mode_check.isChecked():
+                # Pattern mode uses different output files
+                dose_filename = self.generate_output_filename("pattern_dose", ".csv",
                                                              include_timestamp=use_timestamp,
                                                              run_number=run_number)
-            beamer_filename = self.generate_output_filename("beamer", ".dat",
-                                                            include_timestamp=use_timestamp,
-                                                            run_number=run_number)
+                dose2d_filename = self.generate_output_filename("pattern_dose_2d", ".csv",
+                                                               include_timestamp=use_timestamp,
+                                                               run_number=run_number)
+                summary_filename = self.generate_output_filename("pattern_summary", ".txt",
+                                                                include_timestamp=use_timestamp,
+                                                                run_number=run_number)
+                # No BEAMER format for pattern mode
+                psf_filename = dose_filename  # For compatibility
+                psf2d_filename = dose2d_filename
+                beamer_filename = ""
+            else:
+                # PSF mode filenames
+                psf_filename = self.generate_output_filename("psf", ".csv",
+                                                             include_timestamp=use_timestamp,
+                                                             run_number=run_number)
+                psf2d_filename = self.generate_output_filename("psf2d", ".csv",
+                                                               include_timestamp=use_timestamp,
+                                                               run_number=run_number)
+                summary_filename = self.generate_output_filename("summary", ".txt",
+                                                                 include_timestamp=use_timestamp,
+                                                                 run_number=run_number)
+                beamer_filename = self.generate_output_filename("beamer", ".dat",
+                                                                include_timestamp=use_timestamp,
+                                                                run_number=run_number)
 
             # Store filenames for later use
             self.current_output_files = {
@@ -2879,7 +3140,32 @@ class EBLMainWindow(QMainWindow):
             }
 
             macro_path = Path(self.working_dir) / "gui_generated.mac"
-            num_events = self.events_spin.value()
+            
+            # Calculate number of events
+            if hasattr(self, 'pattern_mode_check') and self.pattern_mode_check.isChecked():
+                # For pattern mode, calculate total events needed
+                pattern_size = self.pattern_size_spin.value()  # nm
+                shot_pitch = self.shot_pitch_spin.value()  # nm
+                
+                # Number of points in pattern
+                points_per_side = int(pattern_size / shot_pitch)
+                total_points = points_per_side * points_per_side
+                
+                # Get electrons per point from dwell time display
+                if hasattr(self, 'electrons_per_point_label'):
+                    # Extract number from label like "Electrons/point: 1234"
+                    epd_text = self.electrons_per_point_label.text()
+                    if ":" in epd_text:
+                        electrons_per_point = int(epd_text.split(":")[1].strip())
+                    else:
+                        electrons_per_point = 1000  # Default
+                else:
+                    electrons_per_point = 1000  # Default
+                
+                num_events = total_points * electrons_per_point
+                self.log_output(f"Pattern mode: {total_points} points × {electrons_per_point} e⁻/point = {num_events:,} events")
+            else:
+                num_events = self.events_spin.value()
 
             with open(macro_path, 'w') as f:
                 f.write("# EBL Simulation Macro - Generated by Enhanced GUI v3.1\n")
@@ -2892,7 +3178,10 @@ class EBLMainWindow(QMainWindow):
                 f.write(f"/ebl/output/setPSFFile {psf_filename}\n")
                 f.write(f"/ebl/output/setPSF2DFile {psf2d_filename}\n")
                 f.write(f"/ebl/output/setSummaryFile {summary_filename}\n")
-                f.write(f"/ebl/output/setBeamerFile {beamer_filename}\n\n")
+                # Only write BEAMER file command if filename is not empty
+                if beamer_filename:
+                    f.write(f"/ebl/output/setBeamerFile {beamer_filename}\n")
+                f.write("\n")
 
                 # Optimized verbosity for large simulations
                 if num_events <= 10000:
@@ -2938,11 +3227,60 @@ class EBLMainWindow(QMainWindow):
                 f.write(f"/process/em/fluo {1 if self.fluorescence_check.isChecked() else 0}\n")
                 f.write(f"/process/em/auger {1 if self.auger_check.isChecked() else 0}\n\n")
 
+                # Check if pattern mode is enabled
+                if hasattr(self, 'pattern_mode_check') and self.pattern_mode_check.isChecked():
+                    # Pattern mode configuration
+                    f.write("# Pattern exposure mode\n")
+                    f.write("/pattern/enable true\n")
+                    
+                    # Pattern type
+                    pattern_type = self.pattern_type_combo.currentText().lower().replace(" ", "_")
+                    f.write(f"/pattern/type {pattern_type}\n")
+                    
+                    # JEOL mode
+                    jeol_mode = "mode3" if self.mode3_radio.isChecked() else "mode6"
+                    f.write(f"/pattern/jeolMode {jeol_mode}\n")
+                    
+                    # Pattern parameters
+                    f.write(f"/pattern/shotPitch {self.shot_pitch_spin.value()}\n")
+                    f.write(f"/pattern/size {self.pattern_size_spin.value()} nm\n")
+                    f.write(f"/pattern/center {self.pattern_x_spin.value()} {self.pattern_y_spin.value()} 0 nm\n")
+                    
+                    # Extract beam current value from combo box (e.g., "2 nA" -> 2.0)
+                    beam_current_text = self.beam_current_combo.currentText()
+                    beam_current = float(beam_current_text.split()[0])
+                    f.write(f"/pattern/beamCurrent {beam_current} nA\n")
+                    
+                    f.write(f"/pattern/dose {self.dose_spin.value()}\n")
+                    f.write("/pattern/generate\n\n")
+                    
+                    # Initialize dose grid based on pattern size and resolution
+                    pattern_size = self.pattern_size_spin.value()
+                    grid_nx = self.grid_nx_spin.value()
+                    grid_ny = self.grid_ny_spin.value()
+                    grid_nz = self.grid_nz_spin.value()
+                    
+                    # Grid bounds: pattern size + margin for scattering
+                    margin = pattern_size * 0.5  # 50% margin
+                    x_min = self.pattern_x_spin.value() - pattern_size/2 - margin
+                    x_max = self.pattern_x_spin.value() + pattern_size/2 + margin
+                    y_min = self.pattern_y_spin.value() - pattern_size/2 - margin
+                    y_max = self.pattern_y_spin.value() + pattern_size/2 + margin
+                    z_min = 0
+                    z_max = self.thickness_spin.value()  # Resist thickness
+                    
+                    f.write("# Dose grid initialization\n")
+                    f.write(f"/data/initDoseGrid {grid_nx} {grid_ny} {grid_nz} "
+                           f"{x_min} {x_max} {y_min} {y_max} {z_min} {z_max} nm\n\n")
+                
                 # Beam configuration
                 f.write("# Beam configuration\n")
                 f.write("/gun/particle e-\n")
                 f.write(f"/gun/energy {self.energy_spin.value()} keV\n")
-                f.write(f"/gun/position {self.pos_x_spin.value()} {self.pos_y_spin.value()} {self.pos_z_spin.value()} nm\n")
+                
+                # For pattern mode, position is set by pattern generator
+                if not (hasattr(self, 'pattern_mode_check') and self.pattern_mode_check.isChecked()):
+                    f.write(f"/gun/position {self.pos_x_spin.value()} {self.pos_y_spin.value()} {self.pos_z_spin.value()} nm\n")
 
                 # Normalize direction
                 dx, dy, dz = self.dir_x_spin.value(), self.dir_y_spin.value(), self.dir_z_spin.value()
