@@ -2,6 +2,7 @@
 #include "EventAction.hh"
 #include "RunAction.hh"
 #include "DetectorConstruction.hh"
+#include "DataManager.hh"
 #include "EBLConstants.hh"
 #include "G4UnitsTable.hh"
 #include "G4Event.hh"
@@ -83,15 +84,38 @@ void EventAction::BeginOfEventAction(const G4Event* event)
         if (eventID % reportInterval == 0 && eventID > 0) {
             G4double percent = 100.0 * eventID / totalEvents;
 
-            // Use printf for faster output (no C++ stream overhead)
-            printf("Processing event %d - %.1f%% complete\n", eventID, percent);
+            // Check if this is pattern mode for enhanced reporting
+            DataManager* dm = DataManager::Instance();
+            if (dm->IsPatternMode()) {
+                // Calculate pattern-specific progress
+                G4int totalPoints = dm->GetTotalPatternPoints();
+                G4int completedPoints = eventID / dm->GetElectronsPerPoint();
+                G4int currentPoint = completedPoints + 1;
+                
+                // Use printf for faster output (no C++ stream overhead)
+                printf("Pattern exposure: Point %d/%d (%.1f%%) - Event %d/%.0e (%.1f%%)\n", 
+                       currentPoint, totalPoints, 100.0 * completedPoints / totalPoints,
+                       eventID, (double)totalEvents, percent);
+            } else {
+                // Standard PSF mode reporting
+                printf("Processing event %d - %.1f%% complete\n", eventID, percent);
+            }
             fflush(stdout);  // Immediate flush only when needed
         }
 
         // Emergency progress report for very long gaps
         if (totalEvents > 1000000 && eventID % 500000 == 0 && eventID > 0) {
-            printf(">>> Milestone: %d/%d events (%.1f%%)\n",
-                   eventID, totalEvents, 100.0 * eventID / totalEvents);
+            DataManager* dm = DataManager::Instance();
+            if (dm->IsPatternMode()) {
+                G4int totalPoints = dm->GetTotalPatternPoints();
+                G4int completedPoints = eventID / dm->GetElectronsPerPoint();
+                printf(">>> Pattern milestone: %d/%d points complete (%.1f%%) - Event %d/%d\n",
+                       completedPoints, totalPoints, 100.0 * completedPoints / totalPoints,
+                       eventID, totalEvents);
+            } else {
+                printf(">>> Milestone: %d/%d events (%.1f%%)\n",
+                       eventID, totalEvents, 100.0 * eventID / totalEvents);
+            }
             fflush(stdout);
         }
     }

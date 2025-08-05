@@ -1,0 +1,36 @@
+# Multi-Pattern Exposure Template
+# For studying proximity effects between patterns
+
+# Verbose settings
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+# Initialize
+/run/initialize
+
+# Material settings
+/det/setResistThickness {THICKNESS} nm
+/det/setResistDensity 1.35 g/cm3
+/det/update
+
+# Physics processes
+/process/em/fluo 1
+/process/em/auger 1
+
+# Beam configuration
+/gun/particle e-
+/gun/energy 100 keV
+/gun/beamSize 2 nm
+
+# Initialize dose grid for entire field
+# Grid should cover all patterns with margin
+/data/initDoseGrid 400 400 50 {XMIN} {XMAX} {YMIN} {YMAX} 0 {THICKNESS} nm
+
+# Pattern exposure sequence
+# Each pattern is exposed separately to simulate actual e-beam writing
+
+{PATTERN_SEQUENCE}
+
+# The simulation will automatically accumulate dose from all exposures
+# Output files will show combined dose distribution

@@ -1,4 +1,5 @@
 ﻿#include "DataManager.hh"
+#include "DataMessenger.hh"
 #include "EBLConstants.hh"
 #include "G4UnitsTable.hh"
 #include "G4SystemOfUnits.hh"
@@ -22,9 +23,18 @@ DataManager::DataManager()
     fRunID(0),
     fTotalEvents(0),
     fProcessedEvents(0),
-    fLiveMonitoring(false) {
+    fLiveMonitoring(false),
+    fPatternMode(false),
+    fNx(0), fNy(0), fNz(0),
+    fXMin(0), fXMax(0), fYMin(0), fYMax(0), fZMin(0), fZMax(0),
+    fDx(0), fDy(0), fDz(0),
+    fBeamCurrent(2.0), fElectronsPerPoint(1), fTotalPatternPoints(0),
+    fMessenger(nullptr) {
     // Initialize with default number of bins
     InitializePSFBins(EBL::PSF::NUM_RADIAL_BINS);
+    
+    // Create messenger
+    fMessenger = new DataMessenger(this);
 }
 
 DataManager::~DataManager() {
@@ -32,6 +42,7 @@ DataManager::~DataManager() {
     if (fLiveDataStream && fLiveDataStream->is_open()) {
         fLiveDataStream->close();
     }
+    delete fMessenger;
 }
 
 void DataManager::InitializePSFBins(G4int nBins) {
@@ -217,8 +228,12 @@ void DataManager::SavePSFData() {
 }
 
 void DataManager::SaveAllData() {
-    SavePSFData();
-    SaveBEAMERFormat();
+    if (fPatternMode) {
+        SaveDoseDistribution();
+    } else {
+        SavePSFData();
+        SaveBEAMERFormat();
+    }
     SaveSummary();
 }
 
@@ -239,4 +254,120 @@ void DataManager::AddPSFData(G4double radius, G4double energy) {
     // Wrapper function for PSF data collection
     // Simply delegates to AddRadialDeposit
     this->AddRadialDeposit(radius, energy);
+}
+
+// Pattern exposure methods
+void DataManager::InitializeDoseGrid(G4int nx, G4int ny, G4int nz,
+                                    G4double xMin, G4double xMax,
+                                    G4double yMin, G4double yMax,
+                                    G4double zMin, G4double zMax) {
+    fNx = nx; fNy = ny; fNz = nz;
+    fXMin = xMin; fXMax = xMax;
+    fYMin = yMin; fYMax = yMax;
+    fZMin = zMin; fZMax = zMax;
+    
+    // Calculate grid spacing
+    fDx = (xMax - xMin) / nx;
+    fDy = (yMax - yMin) / ny;
+    fDz = (zMax - zMin) / nz;
+    
+    // Initialize 3D dose grid
+    fDoseGrid.clear();
+    fDoseGrid.resize(nx, std::vector<std::vector<G4double>>(ny, std::vector<G4double>(nz, 0.0)));
+    
+    G4cout << "Initialized dose grid: " << nx << "x" << ny << "x" << nz 
+           << " cells, spacing: " << fDx/nm << "x" << fDy/nm << "x" << fDz/nm << " nm" << G4endl;
+}
+
+void DataManager::AddDoseDeposit(const G4ThreeVector& position, G4double energy) {
+    // Find grid indices
+    G4int ix = static_cast<G4int>(std::floor((position.x() - fXMin) / fDx));
+    G4int iy = static_cast<G4int>(std::floor((position.y() - fYMin) / fDy));
+    G4int iz = static_cast<G4int>(std::floor((position.z() - fZMin) / fDz));
+    
+    // Check bounds
+    if (ix >= 0 && ix < fNx && iy >= 0 && iy < fNy && iz >= 0 && iz < fNz) {
+        // Accumulate dose (energy deposited in this voxel)
+        // Using atomic operations would be better for thread safety if using MT
+        fDoseGrid[ix][iy][iz] += energy;
+    }
+}
+
+void DataManager::SaveDoseDistribution() {
+    std::string filename = fOutputDir + "/pattern_dose_distribution.csv";
+    std::ofstream file(filename);
+    
+    if (!file.is_open()) {
+        G4cerr << "Error: Could not open file " << filename << G4endl;
+        return;
+    }
+    
+    // Calculate dose conversion factor
+    // Energy (keV) to dose (μC/cm²) conversion
+    // Total charge = beam current × time = I × (n_points × dwell_time)
+    // For normalization: dose per voxel = energy_deposited / (electrons_per_voxel × elementary_charge)
+    // Then convert to μC/cm²
+    G4double voxelArea = (fDx * fDy) / (cm * cm);  // Convert nm² to cm²
+    G4double eCharge = 1.602176634e-19;  // Coulombs
+    G4double keVToJoules = 1.602176634e-16;  // J/keV
+    
+    // Write header
+    file << "# Pattern Dose Distribution" << std::endl;
+    file << "# Grid: " << fNx << "x" << fNy << "x" << fNz << std::endl;
+    file << "# Bounds: X[" << fXMin/nm << "," << fXMax/nm << "] Y[" 
+         << fYMin/nm << "," << fYMax/nm << "] Z[" << fZMin/nm << "," << fZMax/nm << "] nm" << std::endl;
+    file << "# Beam current: " << fBeamCurrent << " nA" << std::endl;
+    file << "# Electrons per point: " << fElectronsPerPoint << std::endl;
+    file << "X[nm],Y[nm],Z[nm],Energy[keV],Dose[uC/cm^2]" << std::endl;
+    
+    // Write dose data (only non-zero values to save space)
+    for (G4int ix = 0; ix < fNx; ix++) {
+        for (G4int iy = 0; iy < fNy; iy++) {
+            for (G4int iz = 0; iz < fNz; iz++) {
+                if (fDoseGrid[ix][iy][iz] > 0) {
+                    G4double x = fXMin + (ix + 0.5) * fDx;
+                    G4double y = fYMin + (iy + 0.5) * fDy;
+                    G4double z = fZMin + (iz + 0.5) * fDz;
+                    G4double energyKeV = fDoseGrid[ix][iy][iz]/keV;
+                    
+                    // Convert energy to dose
+                    // The energy deposited represents the total from all electrons
+                    // Dose (uC/cm^2) = (Energy deposited / Energy per electron) x (e charge / area)
+                    // This is a simplified conversion - in reality need to track actual electrons
+                    G4double dose = (energyKeV * eCharge * 1e6) / (voxelArea * fElectronsPerPoint * 100.0 * keV);
+                    
+                    file << x/nm << "," << y/nm << "," << z/nm << "," 
+                         << energyKeV << "," << dose << std::endl;
+                }
+            }
+        }
+    }
+    
+    // Also save 2D projection (XY plane at resist surface)
+    std::string filename2d = fOutputDir + "/pattern_dose_2d.csv";
+    std::ofstream file2d(filename2d);
+    file2d << "# 2D Dose Distribution (XY projection)" << std::endl;
+    file2d << "# Integrated through Z-direction" << std::endl;
+    file2d << "X[nm],Y[nm],Energy[keV],Dose[uC/cm^2]" << std::endl;
+    
+    // Sum dose through Z for 2D projection
+    for (G4int ix = 0; ix < fNx; ix++) {
+        for (G4int iy = 0; iy < fNy; iy++) {
+            G4double totalDose = 0;
+            for (G4int iz = 0; iz < fNz; iz++) {
+                totalDose += fDoseGrid[ix][iy][iz];
+            }
+            if (totalDose > 0) {
+                G4double x = fXMin + (ix + 0.5) * fDx;
+                G4double y = fYMin + (iy + 0.5) * fDy;
+                G4double energyKeV = totalDose/keV;
+                G4double dose = (energyKeV * eCharge * 1e6) / (voxelArea * fElectronsPerPoint * 100.0 * keV);
+                file2d << x/nm << "," << y/nm << "," << energyKeV << "," << dose << std::endl;
+            }
+        }
+    }
+    
+    file.close();
+    file2d.close();
+    G4cout << "Pattern dose data saved to: " << filename << " and " << filename2d << G4endl;
 }

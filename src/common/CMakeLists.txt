@@ -1,6 +1,8 @@
 # Common module - shared utilities and constants
 add_library(ebl_common STATIC
     src/DataManager.cc
+    src/DataMessenger.cc
+    src/VerbosityManager.cc
 )
 
 # Generate export header

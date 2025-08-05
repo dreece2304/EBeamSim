@@ -18,7 +18,7 @@ namespace EBL {
         constexpr G4bool USE_LOG_BINNING = true;
         constexpr G4int NUM_RADIAL_BINS = 150;  // Reduced from 200 for efficiency
         constexpr G4double MIN_RADIUS = 0.5 * nm;  // Slightly larger minimum
-        constexpr G4double MAX_RADIUS = 100.0 * micrometer;  // 100 μm is sufficient
+        constexpr G4double MAX_RADIUS = 100.0 * micrometer;  // 100 um is sufficient
 
         // Additional parameters for improved calculation
         constexpr G4double OVERFLOW_RADIUS = 200.0 * micrometer;  // For tracking beyond PSF
@@ -61,7 +61,7 @@ namespace EBL {
 
     // Geometry namespace
     namespace Geometry {
-        constexpr G4double WORLD_SIZE = 1.0 * mm;
+        constexpr G4double WORLD_SIZE = 200.0 * mm;  // Large enough to contain substrate
         constexpr G4double SUBSTRATE_THICKNESS = 500.0 * micrometer;
         constexpr G4double SUBSTRATE_RADIUS = 50.0 * mm;
     }

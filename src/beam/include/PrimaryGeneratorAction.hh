@@ -12,6 +12,8 @@ class G4Event;
 class DetectorConstruction;
 class G4ParticleDefinition;
 class PrimaryGeneratorMessenger;
+class PatternGenerator;
+class PatternMessenger;
 
 class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction {
 public:
@@ -29,6 +31,11 @@ public:
     void SetBeamSize(G4double size); // Beam diameter in nm
     void SetBeamPosition(const G4ThreeVector& position);
     void SetBeamDirection(const G4ThreeVector& direction);
+    
+    // Pattern exposure mode
+    void SetPatternMode(G4bool enable) { fPatternMode = enable; }
+    G4bool GetPatternMode() const { return fPatternMode; }
+    PatternGenerator* GetPatternGenerator() { return fPatternGenerator; }
 
 private:
     G4ParticleGun* fParticleGun;
@@ -40,9 +47,27 @@ private:
     G4double fBeamSize;  // Beam diameter (FWHM)
     G4ThreeVector fBeamPosition;
     G4ThreeVector fBeamDirection;
+    
+    // Pattern exposure
+    G4bool fPatternMode;
+    PatternGenerator* fPatternGenerator;
+    G4int fCurrentPatternPoint;
+    G4int fElectronsAtCurrentPoint;  // Track electrons fired at current point
+    G4int fElectronsPerPoint;         // Total electrons needed per point
+    G4double fPatternStartTime;
 
     // Messenger for UI commands
     PrimaryGeneratorMessenger* fMessenger;
+    PatternMessenger* fPatternMessenger;
+    
+    // Helper methods to reduce code duplication
+    G4double CalculateBeamSigma() const;
+    G4double GetBeamZPosition() const;
+    
+    // Refactored generation methods
+    void GeneratePatternPrimary(G4Event* anEvent);
+    void GeneratePSFPrimary(G4Event* anEvent);
+    void ValidateBeamPosition() const;
 };
 
 #endif

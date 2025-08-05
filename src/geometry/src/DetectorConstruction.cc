@@ -25,30 +25,37 @@ namespace {
         std::map<G4String, G4int>& elements) {
         elements.clear();
 
-        // Remove spaces
-        G4String cleanComp = composition;
-        cleanComp.erase(std::remove(cleanComp.begin(), cleanComp.end(), ' '),
-            cleanComp.end());
-
-        // Split by comma
-        size_t pos = 0;
-        while (pos < cleanComp.length()) {
-            size_t colonPos = cleanComp.find(':', pos);
-            if (colonPos == std::string::npos) break;
-
-            size_t commaPos = cleanComp.find(',', colonPos);
-            if (commaPos == std::string::npos) {
-                commaPos = cleanComp.length();
+        // Single pass parsing without creating temporary strings
+        const char* str = composition.c_str();
+        const char* end = str + composition.length();
+        
+        while (str < end) {
+            // Skip whitespace
+            while (str < end && *str == ' ') ++str;
+            if (str >= end) break;
+            
+            // Find element name end
+            const char* elemStart = str;
+            while (str < end && *str != ':' && *str != ' ') ++str;
+            if (str >= end || *str != ':') break;
+            
+            G4String element(elemStart, static_cast<size_t>(str - elemStart));
+            
+            // Skip colon and whitespace
+            ++str;
+            while (str < end && *str == ' ') ++str;
+            
+            // Parse number
+            G4int count = 0;
+            while (str < end && *str >= '0' && *str <= '9') {
+                count = count * 10 + (*str - '0');
+                ++str;
             }
-
-            G4String element = cleanComp.substr(pos, colonPos - pos);
-            G4String countStr = cleanComp.substr(colonPos + 1, commaPos - colonPos - 1);
-
-            // Convert string to int safely
-            G4int count = std::atoi(countStr.c_str());
+            
             elements[element] = count;
-
-            pos = commaPos + 1;
+            
+            // Skip to next element (past comma)
+            while (str < end && (*str == ' ' || *str == ',')) ++str;
         }
     }
 }
@@ -224,7 +231,7 @@ G4Material* DetectorConstruction::CreateResistMaterial()
 
     // Create new material
     G4Material* resist = new G4Material(materialName, fResistDensity,
-        fResistElements.size());
+        static_cast<G4int>(fResistElements.size()));
 
     // Calculate molecular weight for mass fractions
     G4double molecularWeight = 0.0;

@@ -2,6 +2,7 @@
 #include "SteppingAction.hh"
 #include "EventAction.hh"
 #include "DetectorConstruction.hh"
+#include "DataManager.hh"
 
 #include "G4Step.hh"
 #include "G4RunManager.hh"
@@ -88,6 +89,13 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
 
     // Add energy deposit to event action
     fEventAction->AddEnergyDeposit(edep, pos.x(), pos.y(), pos.z());
+    
+    // If in pattern mode, also accumulate dose in grid
+    DataManager* dataManager = DataManager::Instance();
+    // Pattern mode is indicated by having a dose grid initialized (fNx > 0)
+    if (dataManager->GetNx() > 0) {
+        dataManager->AddDoseDeposit(pos, edep);
+    }
 
     // Track length is not needed for BEAMER PSF
     // fEventAction->AddTrackLength(step->GetStepLength());
