@@ -59,18 +59,26 @@ for i in "${!MATERIALS[@]}"; do
     if "$EXECUTABLE" "$MACRO_DIR/$MACRO" > simulation.log 2>&1; then
         echo -e "${GREEN}  ✓ Simulation complete${NC}"
 
-        # Rename output files with standard naming
-        if [ -f "ebl_psf_data.csv" ]; then
+        # Rename output files with standard naming (check output/ subdirectory)
+        if [ -f "output/ebl_psf_data.csv" ]; then
+            mv output/ebl_psf_data.csv "$OUTPUT_DIR/ref_${MATERIAL}_${THICKNESS}nm_data.csv"
+            echo -e "${GREEN}  ✓ Saved CSV data${NC}"
+        elif [ -f "ebl_psf_data.csv" ]; then
             mv ebl_psf_data.csv "$OUTPUT_DIR/ref_${MATERIAL}_${THICKNESS}nm_data.csv"
             echo -e "${GREEN}  ✓ Saved CSV data${NC}"
         fi
 
-        if [ -f "beamer_psf.dat" ]; then
+        if [ -f "output/beamer_psf.dat" ]; then
+            mv output/beamer_psf.dat "$OUTPUT_DIR/ref_${MATERIAL}_${THICKNESS}nm_beamer.dat"
+            echo -e "${GREEN}  ✓ Saved BEAMER format${NC}"
+        elif [ -f "beamer_psf.dat" ]; then
             mv beamer_psf.dat "$OUTPUT_DIR/ref_${MATERIAL}_${THICKNESS}nm_beamer.dat"
             echo -e "${GREEN}  ✓ Saved BEAMER format${NC}"
         fi
 
-        if [ -f "simulation_summary.txt" ]; then
+        if [ -f "output/simulation_summary.txt" ]; then
+            mv output/simulation_summary.txt "$OUTPUT_DIR/ref_${MATERIAL}_${THICKNESS}nm_summary.txt"
+        elif [ -f "simulation_summary.txt" ]; then
             mv simulation_summary.txt "$OUTPUT_DIR/ref_${MATERIAL}_${THICKNESS}nm_summary.txt"
         fi
 

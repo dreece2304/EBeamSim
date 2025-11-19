@@ -26,5 +26,5 @@
 /gun/direction 0 0 -1
 /gun/beamSize 2 nm
 
-# 200k events for good statistics on reference PSF (high-Z needs more)
-/run/beamOn 200000
+# 1M events for excellent statistics on reference PSF (high-Z needs more)
+/run/beamOn 1000000
