@@ -479,6 +479,12 @@ class Enhanced2DPlotWidget(QWidget):
         self.log_scale_check.setChecked(True)
         self.log_scale_check.stateChanged.connect(self.update_plot)
 
+        # Smooth interpolation option
+        self.smooth_check = QCheckBox("Smooth Interpolation")
+        self.smooth_check.setChecked(True)
+        self.smooth_check.setToolTip("Apply Gaussian smoothing and high-resolution interpolation")
+        self.smooth_check.stateChanged.connect(self.update_plot)
+
         # Depth slice slider (for cross sections)
         self.depth_slider = QSlider(Qt.Horizontal)
         self.depth_slider.setMinimum(0)
@@ -491,6 +497,7 @@ class Enhanced2DPlotWidget(QWidget):
         controls.addWidget(QLabel("Colormap:"))
         controls.addWidget(self.colormap_combo)
         controls.addWidget(self.log_scale_check)
+        controls.addWidget(self.smooth_check)
         controls.addStretch()
         controls.addWidget(QLabel("Depth Slice:"))
         controls.addWidget(self.depth_slider)
@@ -667,28 +674,57 @@ class Enhanced2DPlotWidget(QWidget):
             return radii[-1]  # Show all data if threshold not reached
 
     def plot_heatmap(self):
-        """Create 2D heatmap visualization with intelligent axis limits"""
+        """Create 2D heatmap visualization with optional smoothing and intelligent axis limits"""
         ax = self.figure.add_subplot(111)
 
         depths = self.current_data['depths']
         radii = self.current_data['radii']
         energy = self.current_data['energy']
 
-        # Create meshgrid
-        R, D = np.meshgrid(radii, depths)
+        # Apply smoothing if requested
+        if self.smooth_check.isChecked():
+            try:
+                from scipy.ndimage import gaussian_filter
+                from scipy.interpolate import RectBivariateSpline
+
+                # Apply Gaussian smoothing to reduce noise
+                sigma = 1.5  # Smoothing parameter
+                energy_smoothed = gaussian_filter(energy, sigma=sigma)
+
+                # Create high-resolution grid (3× upsampling)
+                depths_hr = np.linspace(depths.min(), depths.max(), len(depths) * 3)
+                radii_hr = np.linspace(radii.min(), radii.max(), len(radii) * 3)
+
+                # Interpolate to high-resolution grid
+                interp = RectBivariateSpline(depths, radii, energy_smoothed)
+                energy_hr = interp(depths_hr, radii_hr)
+
+                # Use high-resolution data
+                R, D = np.meshgrid(radii_hr, depths_hr)
+                energy_plot_data = energy_hr
+
+            except ImportError:
+                # Fallback if scipy not available
+                R, D = np.meshgrid(radii, depths)
+                energy_plot_data = energy
+        else:
+            # No smoothing
+            R, D = np.meshgrid(radii, depths)
+            energy_plot_data = energy
 
         # Apply log scale if selected
         if self.log_scale_check.isChecked():
             # Add small value to avoid log(0)
-            energy_plot = np.log10(np.maximum(energy, 1e-10))
+            energy_plot = np.log10(np.maximum(energy_plot_data, 1e-10))
             label = 'Log10(Energy Deposition) [eV/nm^2]'
         else:
-            energy_plot = energy
+            energy_plot = energy_plot_data
             label = 'Energy Deposition [eV/nm^2]'
 
-        # Create heatmap
+        # Create heatmap with improved shading
         cmap = self.colormap_combo.currentText()
-        im = ax.pcolormesh(R, D, energy_plot, cmap=cmap, shading='auto')
+        shading_method = 'gouraud' if self.smooth_check.isChecked() else 'auto'
+        im = ax.pcolormesh(R, D, energy_plot, cmap=cmap, shading=shading_method)
 
         # Add colorbar
         cbar = self.figure.colorbar(im, ax=ax)
@@ -1238,8 +1274,81 @@ class PlotWidget(QWidget):
 
         return radii, energies
 
+    def _calculate_fwhm(self, radii, energies):
+        """
+        Calculate Full Width at Half Maximum
+
+        Args:
+            radii: Array of radius values
+            energies: Array of energy values
+
+        Returns:
+            Tuple of (fwhm_value, peak_index) or (None, None) if cannot calculate
+        """
+        if len(radii) < 3 or len(energies) < 3:
+            return None, None
+
+        # Find peak
+        peak_idx = np.argmax(energies)
+        peak_energy = energies[peak_idx]
+        half_max = peak_energy / 2.0
+
+        # Find indices where energy > half_max
+        above_half = np.array(energies) > half_max
+
+        if np.sum(above_half) < 2:
+            return None, peak_idx
+
+        # Find first and last crossing points
+        indices_above = np.where(above_half)[0]
+
+        if len(indices_above) >= 2:
+            r_left = radii[indices_above[0]]
+            r_right = radii[indices_above[-1]]
+            fwhm = r_right - r_left
+            return fwhm, peak_idx
+
+        return None, peak_idx
+
+    def _calculate_containment_radius(self, radii, energies, fraction):
+        """
+        Calculate radius containing specified fraction of total dose
+
+        Args:
+            radii: Array of radius values
+            energies: Array of energy deposition values
+            fraction: Fraction of total energy (e.g., 0.5 for R50, 0.9 for R90)
+
+        Returns:
+            Radius value containing specified fraction
+        """
+        radii = np.array(radii)
+        energies = np.array(energies)
+
+        # Calculate annular energy (2πr × E × dr)
+        dr = np.diff(radii, prepend=0)
+        annular_energy = 2 * np.pi * radii * energies * dr
+
+        # Calculate cumulative energy
+        cumulative = np.cumsum(annular_energy)
+        total_energy = cumulative[-1]
+
+        if total_energy == 0:
+            return radii[-1]
+
+        # Normalize to fraction
+        cumulative_fraction = cumulative / total_energy
+
+        # Find radius at specified fraction
+        idx = np.argmax(cumulative_fraction >= fraction)
+
+        if idx > 0:
+            return radii[idx]
+        else:
+            return radii[-1]
+
     def plot_all_datasets(self):
-        """Plot all loaded datasets with current settings"""
+        """Plot all loaded datasets with FWHM markers and dose metrics"""
         if not self.datasets:
             return
 
@@ -1248,11 +1357,15 @@ class PlotWidget(QWidget):
 
         plot_type = self.plot_type_combo.currentText()
 
+        # Track statistics for display
+        stats_list = []
+
         for dataset in self.datasets:
             radii = dataset['radii']
             energies = dataset['energies']
             label = dataset['label']
             style = dataset['style']
+            color = style.get('color', 'blue')
 
             if plot_type == "Log-Log":
                 valid = [(r > 0 and e > 0) for r, e in zip(radii, energies)]
@@ -1261,18 +1374,79 @@ class PlotWidget(QWidget):
 
                 if r_filt and e_filt:
                     ax.loglog(r_filt, e_filt, label=label, **style)
+                    # Use filtered data for metrics
+                    radii_calc = r_filt
+                    energies_calc = e_filt
+                else:
+                    continue
             elif plot_type == "Semi-Log":
                 ax.semilogy(radii, energies, label=label, **style)
+                radii_calc = radii
+                energies_calc = energies
             else:
                 ax.plot(radii, energies, label=label, **style)
+                radii_calc = radii
+                energies_calc = energies
 
-        ax.set_xlabel('Radius (nm)')
-        ax.set_ylabel('Energy Deposition (eV/nm²)')
-        ax.set_title(f'PSF Comparison - {plot_type} Scale')
-        ax.grid(True, alpha=0.3)
+            # Calculate and display FWHM
+            fwhm, peak_idx = self._calculate_fwhm(radii_calc, energies_calc)
+
+            if fwhm is not None and peak_idx is not None:
+                # Add vertical line at FWHM
+                ax.axvline(x=fwhm, color=color, linestyle=':', alpha=0.4, linewidth=1.5)
+
+                # Add annotation (avoid clutter - only if first 3 datasets)
+                if len(stats_list) < 3:
+                    peak_energy = energies_calc[peak_idx]
+                    if plot_type == "Linear":
+                        y_pos = peak_energy / 2
+                    else:
+                        y_pos = peak_energy / 2  # Works for log scale too
+
+                    ax.annotate(f'FWHM: {fwhm:.1f} nm',
+                               xy=(fwhm, y_pos),
+                               xytext=(fwhm * 1.3, y_pos),
+                               color=color,
+                               fontsize=8,
+                               arrowprops=dict(arrowstyle='->', color=color, lw=0.8, alpha=0.6))
+
+            # Calculate dose metrics
+            r50 = self._calculate_containment_radius(radii_calc, energies_calc, 0.5)
+            r90 = self._calculate_containment_radius(radii_calc, energies_calc, 0.9)
+
+            # Store statistics
+            stats_list.append({
+                'label': label,
+                'fwhm': fwhm if fwhm else np.nan,
+                'r50': r50,
+                'r90': r90,
+                'peak': np.max(energies_calc) if len(energies_calc) > 0 else 0
+            })
+
+        ax.set_xlabel('Radius (nm)', fontsize=11)
+        ax.set_ylabel('Energy Deposition (eV/nm²)', fontsize=11)
+        ax.set_title(f'PSF Comparison - {plot_type} Scale', fontsize=12, fontweight='bold')
+        ax.grid(True, alpha=0.3, which='both')
 
         if len(self.datasets) > 1:
-            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9)
+        elif len(self.datasets) == 1:
+            ax.legend(loc='best', fontsize=9)
+
+        # Add statistics text box (if we have stats)
+        if stats_list and len(stats_list) <= 4:  # Only show for up to 4 datasets
+            stats_text = 'PSF Metrics:\n'
+            for stat in stats_list:
+                stats_text += f"\n{stat['label']}:\n"
+                if not np.isnan(stat['fwhm']):
+                    stats_text += f"  FWHM: {stat['fwhm']:.1f} nm\n"
+                stats_text += f"  R50: {stat['r50']:.1f} nm\n"
+                stats_text += f"  R90: {stat['r90']:.1f} nm\n"
+
+            # Position text box
+            ax.text(0.02, 0.02, stats_text, transform=ax.transAxes,
+                   fontsize=8, verticalalignment='bottom',
+                   bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.7, pad=0.5))
 
         self.figure.tight_layout()
         self.canvas.draw()
