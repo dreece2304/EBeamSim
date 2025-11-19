@@ -1,0 +1,265 @@
+# physics_validation_comprehensive.mac
+# Comprehensive EBL physics validation against literature data and analytical models
+# Tests: Electron ranges, backscatter coefficients, forward scatter, proximity effects
+
+# ==================================
+# PHYSICS VALIDATION CONFIGURATION
+# ==================================
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+# Enable all EM physics processes for complete validation
+/process/em/fluo true
+/process/em/auger true
+/process/em/pixe true
+/process/em/deexcitationIgnoreCut true
+
+# Set ultra-fine cuts for maximum accuracy
+/run/setCut 0.01 nm
+/run/setCutForAGivenParticle e- 0.01 nm
+/run/setCutForAGivenParticle e+ 0.01 nm
+/run/setCutForAGivenParticle gamma 0.01 nm
+
+/run/initialize
+
+# ==================================
+# TEST 1: ELECTRON RANGE VALIDATION
+# Validate against Grün model for PMMA
+# ==================================
+
+# Configure for PMMA
+/det/setResistComposition "C:5,H:8,O:2"
+/det/setResistThickness 1000 nm
+/det/setResistDensity 1.18 g/cm3
+/det/update
+
+# Test various energies for range measurements
+# Expected ranges (Grün model for PMMA):
+# 20 keV: ~3.2 nm, 50 keV: ~15.8 nm, 100 keV: ~50.0 nm
+# 200 keV: ~154 nm, 300 keV: ~294 nm
+
+/gun/particle e-
+/gun/position 0 0 100 nm
+/gun/direction 0 0 -1
+/gun/beamSize 0.1 nm
+
+/analysis/setFileName range_validation_20keV
+/gun/energy 20 keV
+/run/beamOn 10000
+
+/analysis/setFileName range_validation_50keV
+/gun/energy 50 keV
+/run/beamOn 10000
+
+/analysis/setFileName range_validation_100keV
+/gun/energy 100 keV
+/run/beamOn 10000
+
+/analysis/setFileName range_validation_200keV
+/gun/energy 200 keV
+/run/beamOn 10000
+
+/analysis/setFileName range_validation_300keV
+/gun/energy 300 keV
+/run/beamOn 10000
+
+# ==================================
+# TEST 2: BACKSCATTER COEFFICIENT VALIDATION
+# Validate against experimental data for Si and GaAs
+# ==================================
+
+# Configure for Silicon substrate study
+/det/setResistComposition "Si:1"
+/det/setResistThickness 500000 nm  # Thick for backscatter study
+/det/setResistDensity 2.33 g/cm3
+/det/update
+
+# Expected backscatter coefficients for Si:
+# 20 keV: η ≈ 0.11, 50 keV: η ≈ 0.14, 100 keV: η ≈ 0.16
+# 200 keV: η ≈ 0.17, 300 keV: η ≈ 0.18
+
+/analysis/setFileName backscatter_Si_20keV
+/gun/energy 20 keV
+/run/beamOn 20000
+
+/analysis/setFileName backscatter_Si_50keV
+/gun/energy 50 keV
+/run/beamOn 20000
+
+/analysis/setFileName backscatter_Si_100keV
+/gun/energy 100 keV
+/run/beamOn 20000
+
+/analysis/setFileName backscatter_Si_200keV
+/gun/energy 200 keV
+/run/beamOn 20000
+
+/analysis/setFileName backscatter_Si_300keV
+/gun/energy 300 keV
+/run/beamOn 20000
+
+# GaAs substrate validation
+/det/setResistComposition "Ga:1,As:1"
+/det/setResistThickness 500000 nm
+/det/setResistDensity 5.32 g/cm3
+/det/update
+
+# Expected backscatter coefficients for GaAs:
+# 20 keV: η ≈ 0.32, 50 keV: η ≈ 0.35, 100 keV: η ≈ 0.37
+# 200 keV: η ≈ 0.38, 300 keV: η ≈ 0.39
+
+/analysis/setFileName backscatter_GaAs_100keV
+/gun/energy 100 keV
+/run/beamOn 20000
+
+/analysis/setFileName backscatter_GaAs_200keV
+/gun/energy 200 keV
+/run/beamOn 20000
+
+/analysis/setFileName backscatter_GaAs_300keV
+/gun/energy 300 keV
+/run/beamOn 20000
+
+# ==================================
+# TEST 3: FORWARD SCATTER VALIDATION
+# Validate Gaussian approximation for small-angle scattering
+# ==================================
+
+# Configure for HSQ resist (common EBL resist)
+/det/setResistComposition "H:8,Si:8,O:12"
+/det/setResistThickness 30 nm
+/det/setResistDensity 1.4 g/cm3
+/det/update
+
+# Test forward scatter widths for various energies
+# Expected σ_f (forward scatter width):
+# 20 keV: ~1.5 nm, 50 keV: ~0.8 nm, 100 keV: ~0.5 nm
+# 200 keV: ~0.3 nm, 300 keV: ~0.25 nm
+
+/analysis/setFileName forward_scatter_HSQ_20keV
+/gun/energy 20 keV
+/run/beamOn 50000
+
+/analysis/setFileName forward_scatter_HSQ_50keV
+/gun/energy 50 keV
+/run/beamOn 50000
+
+/analysis/setFileName forward_scatter_HSQ_100keV
+/gun/energy 100 keV
+/run/beamOn 50000
+
+/analysis/setFileName forward_scatter_HSQ_200keV
+/gun/energy 200 keV
+/run/beamOn 50000
+
+/analysis/setFileName forward_scatter_HSQ_300keV
+/gun/energy 300 keV
+/run/beamOn 50000
+
+# ==================================
+# TEST 4: PROXIMITY EFFECT PARAMETERS
+# Validate α, β, η parameters for proximity correction
+# ==================================
+
+# Test with PMMA on Silicon (common system)
+/det/setResistComposition "C:5,H:8,O:2"
+/det/setResistThickness 100 nm
+/det/setResistDensity 1.18 g/cm3
+/det/update
+
+# Proximity parameters for 100 keV e-beam in PMMA/Si:
+# Expected: α ≈ 0.7-0.9, β ≈ 3-10 μm, η ≈ 0.5-0.8
+
+/analysis/setFileName proximity_PMMA_Si_100keV
+/gun/energy 100 keV
+/run/beamOn 100000
+
+# Test with HSQ on Silicon
+/det/setResistComposition "H:8,Si:8,O:12"
+/det/setResistThickness 50 nm
+/det/setResistDensity 1.4 g/cm3
+/det/update
+
+/analysis/setFileName proximity_HSQ_Si_100keV
+/gun/energy 100 keV
+/run/beamOn 100000
+
+# ==================================
+# TEST 5: ENERGY DEPOSITION PROFILES
+# Validate depth-dose distributions in thin resist films
+# ==================================
+
+# AR-P series resist validation (common high-resolution resist)
+/det/setResistComposition "C:3,H:4,O:1"  # Simplified AR-P composition
+/det/setResistThickness 50 nm
+/det/setResistDensity 1.25 g/cm3
+/det/update
+
+/analysis/setFileName energy_profile_ARP_50keV
+/gun/energy 50 keV
+/run/beamOn 50000
+
+/analysis/setFileName energy_profile_ARP_100keV
+/gun/energy 100 keV
+/run/beamOn 50000
+
+/analysis/setFileName energy_profile_ARP_200keV
+/gun/energy 200 keV
+/run/beamOn 50000
+
+# ==================================
+# TEST 6: AUGER ELECTRON VALIDATION
+# Test secondary electron generation from K and L shells
+# ==================================
+
+# Aluminum test (K-edge at 1.56 keV)
+/det/setResistComposition "Al:1"
+/det/setResistThickness 10 nm
+/det/setResistDensity 2.7 g/cm3
+/det/update
+
+# Below Al K-edge
+/analysis/setFileName auger_Al_1keV
+/gun/energy 1 keV
+/run/beamOn 10000
+
+# Above Al K-edge - should see K-shell fluorescence and Auger
+/analysis/setFileName auger_Al_5keV
+/gun/energy 5 keV
+/run/beamOn 10000
+
+/analysis/setFileName auger_Al_10keV
+/gun/energy 10 keV
+/run/beamOn 10000
+
+# ==================================
+# TEST 7: ANGULAR DISTRIBUTION VALIDATION
+# Test multiple scattering angular distributions
+# ==================================
+
+# Thick resist for multiple scattering study
+/det/setResistComposition "C:5,H:8,O:2"
+/det/setResistThickness 200 nm
+/det/setResistDensity 1.18 g/cm3
+/det/update
+
+/analysis/setFileName angular_distribution_100keV
+/gun/energy 100 keV
+/run/beamOn 100000
+
+# ==================================
+# VALIDATION COMPLETE
+# ==================================
+/run/verbose 1
+/analysis/verbose 1
+
+# Print physics list information for validation report
+/particle/select e-
+/particle/process/dump
+
+/particle/select gamma
+/particle/process/dump
+
+# Final validation message
+/run/verbose 2

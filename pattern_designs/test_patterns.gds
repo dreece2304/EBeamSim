@@ -1,0 +1,4489 @@
+{
+  "library_name": "EBL_PATTERNS",
+  "cell_name": "MAIN_CELL",
+  "patterns": [
+    {
+      "id": 0,
+      "type": "rectangle",
+      "position": [
+        0,
+        0
+      ],
+      "size": [
+        100,
+        200
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 1,
+      "type": "circle",
+      "position": [
+        500,
+        0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 2,
+      "type": "rectangle",
+      "position": [
+        -950.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 0,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 3,
+      "type": "rectangle",
+      "position": [
+        -850.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 1,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 4,
+      "type": "rectangle",
+      "position": [
+        -750.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 2,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 5,
+      "type": "rectangle",
+      "position": [
+        -650.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 3,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 6,
+      "type": "rectangle",
+      "position": [
+        -550.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 4,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 7,
+      "type": "rectangle",
+      "position": [
+        -450.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 5,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 8,
+      "type": "rectangle",
+      "position": [
+        -350.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 6,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 9,
+      "type": "rectangle",
+      "position": [
+        -250.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 7,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 10,
+      "type": "rectangle",
+      "position": [
+        -150.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 8,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 11,
+      "type": "rectangle",
+      "position": [
+        -50.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 9,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 12,
+      "type": "rectangle",
+      "position": [
+        50.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 10,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 13,
+      "type": "rectangle",
+      "position": [
+        150.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 11,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 14,
+      "type": "rectangle",
+      "position": [
+        250.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 12,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 15,
+      "type": "rectangle",
+      "position": [
+        350.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 13,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 16,
+      "type": "rectangle",
+      "position": [
+        450.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 14,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 17,
+      "type": "rectangle",
+      "position": [
+        550.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 15,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 18,
+      "type": "rectangle",
+      "position": [
+        650.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 16,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 19,
+      "type": "rectangle",
+      "position": [
+        750.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 17,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 20,
+      "type": "rectangle",
+      "position": [
+        850.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 18,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 21,
+      "type": "rectangle",
+      "position": [
+        950.0,
+        500
+      ],
+      "size": [
+        50.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 19,
+        "period": 100,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 22,
+      "type": "rectangle",
+      "position": [
+        -1400.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 0,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 23,
+      "type": "rectangle",
+      "position": [
+        -1200.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 1,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 24,
+      "type": "rectangle",
+      "position": [
+        -1000.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 2,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 25,
+      "type": "rectangle",
+      "position": [
+        -800.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 3,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 26,
+      "type": "rectangle",
+      "position": [
+        -600.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 4,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 27,
+      "type": "rectangle",
+      "position": [
+        -400.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 5,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 28,
+      "type": "rectangle",
+      "position": [
+        -200.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 6,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 29,
+      "type": "rectangle",
+      "position": [
+        0.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 7,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 30,
+      "type": "rectangle",
+      "position": [
+        200.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 8,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 31,
+      "type": "rectangle",
+      "position": [
+        400.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 9,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 32,
+      "type": "rectangle",
+      "position": [
+        600.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 10,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 33,
+      "type": "rectangle",
+      "position": [
+        800.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 11,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 34,
+      "type": "rectangle",
+      "position": [
+        1000.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 12,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 35,
+      "type": "rectangle",
+      "position": [
+        1200.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 13,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 36,
+      "type": "rectangle",
+      "position": [
+        1400.0,
+        -500
+      ],
+      "size": [
+        60.0,
+        1000
+      ],
+      "layer": 0,
+      "dose_factor": 0.9,
+      "properties": {
+        "grating_index": 14,
+        "period": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 37,
+      "type": "circle",
+      "position": [
+        580.0,
+        80.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          0,
+          0
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 38,
+      "type": "circle",
+      "position": [
+        580.0,
+        200.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          0,
+          1
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 39,
+      "type": "circle",
+      "position": [
+        580.0,
+        320.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          0,
+          2
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 40,
+      "type": "circle",
+      "position": [
+        580.0,
+        440.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          0,
+          3
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 41,
+      "type": "circle",
+      "position": [
+        580.0,
+        560.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          0,
+          4
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 42,
+      "type": "circle",
+      "position": [
+        580.0,
+        680.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          0,
+          5
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 43,
+      "type": "circle",
+      "position": [
+        580.0,
+        800.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          0,
+          6
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 44,
+      "type": "circle",
+      "position": [
+        580.0,
+        920.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          0,
+          7
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 45,
+      "type": "circle",
+      "position": [
+        700.0,
+        80.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          1,
+          0
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 46,
+      "type": "circle",
+      "position": [
+        700.0,
+        200.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          1,
+          1
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 47,
+      "type": "circle",
+      "position": [
+        700.0,
+        320.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          1,
+          2
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 48,
+      "type": "circle",
+      "position": [
+        700.0,
+        440.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          1,
+          3
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 49,
+      "type": "circle",
+      "position": [
+        700.0,
+        560.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          1,
+          4
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 50,
+      "type": "circle",
+      "position": [
+        700.0,
+        680.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          1,
+          5
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 51,
+      "type": "circle",
+      "position": [
+        700.0,
+        800.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          1,
+          6
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 52,
+      "type": "circle",
+      "position": [
+        700.0,
+        920.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          1,
+          7
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 53,
+      "type": "circle",
+      "position": [
+        820.0,
+        80.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          2,
+          0
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 54,
+      "type": "circle",
+      "position": [
+        820.0,
+        200.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          2,
+          1
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 55,
+      "type": "circle",
+      "position": [
+        820.0,
+        320.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          2,
+          2
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 56,
+      "type": "circle",
+      "position": [
+        820.0,
+        440.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          2,
+          3
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 57,
+      "type": "circle",
+      "position": [
+        820.0,
+        560.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          2,
+          4
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 58,
+      "type": "circle",
+      "position": [
+        820.0,
+        680.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          2,
+          5
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 59,
+      "type": "circle",
+      "position": [
+        820.0,
+        800.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          2,
+          6
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 60,
+      "type": "circle",
+      "position": [
+        820.0,
+        920.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          2,
+          7
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 61,
+      "type": "circle",
+      "position": [
+        940.0,
+        80.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          3,
+          0
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 62,
+      "type": "circle",
+      "position": [
+        940.0,
+        200.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          3,
+          1
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 63,
+      "type": "circle",
+      "position": [
+        940.0,
+        320.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          3,
+          2
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 64,
+      "type": "circle",
+      "position": [
+        940.0,
+        440.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          3,
+          3
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 65,
+      "type": "circle",
+      "position": [
+        940.0,
+        560.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          3,
+          4
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 66,
+      "type": "circle",
+      "position": [
+        940.0,
+        680.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          3,
+          5
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 67,
+      "type": "circle",
+      "position": [
+        940.0,
+        800.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          3,
+          6
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 68,
+      "type": "circle",
+      "position": [
+        940.0,
+        920.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          3,
+          7
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 69,
+      "type": "circle",
+      "position": [
+        1060.0,
+        80.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          4,
+          0
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 70,
+      "type": "circle",
+      "position": [
+        1060.0,
+        200.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          4,
+          1
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 71,
+      "type": "circle",
+      "position": [
+        1060.0,
+        320.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          4,
+          2
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 72,
+      "type": "circle",
+      "position": [
+        1060.0,
+        440.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          4,
+          3
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 73,
+      "type": "circle",
+      "position": [
+        1060.0,
+        560.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          4,
+          4
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 74,
+      "type": "circle",
+      "position": [
+        1060.0,
+        680.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          4,
+          5
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 75,
+      "type": "circle",
+      "position": [
+        1060.0,
+        800.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          4,
+          6
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 76,
+      "type": "circle",
+      "position": [
+        1060.0,
+        920.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          4,
+          7
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 77,
+      "type": "circle",
+      "position": [
+        1180.0,
+        80.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          5,
+          0
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 78,
+      "type": "circle",
+      "position": [
+        1180.0,
+        200.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          5,
+          1
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 79,
+      "type": "circle",
+      "position": [
+        1180.0,
+        320.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          5,
+          2
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 80,
+      "type": "circle",
+      "position": [
+        1180.0,
+        440.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          5,
+          3
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 81,
+      "type": "circle",
+      "position": [
+        1180.0,
+        560.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          5,
+          4
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 82,
+      "type": "circle",
+      "position": [
+        1180.0,
+        680.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          5,
+          5
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 83,
+      "type": "circle",
+      "position": [
+        1180.0,
+        800.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          5,
+          6
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 84,
+      "type": "circle",
+      "position": [
+        1180.0,
+        920.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          5,
+          7
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 85,
+      "type": "circle",
+      "position": [
+        1300.0,
+        80.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          6,
+          0
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 86,
+      "type": "circle",
+      "position": [
+        1300.0,
+        200.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          6,
+          1
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 87,
+      "type": "circle",
+      "position": [
+        1300.0,
+        320.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          6,
+          2
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 88,
+      "type": "circle",
+      "position": [
+        1300.0,
+        440.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          6,
+          3
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 89,
+      "type": "circle",
+      "position": [
+        1300.0,
+        560.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          6,
+          4
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 90,
+      "type": "circle",
+      "position": [
+        1300.0,
+        680.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          6,
+          5
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 91,
+      "type": "circle",
+      "position": [
+        1300.0,
+        800.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          6,
+          6
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 92,
+      "type": "circle",
+      "position": [
+        1300.0,
+        920.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          6,
+          7
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 93,
+      "type": "circle",
+      "position": [
+        1420.0,
+        80.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          7,
+          0
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 94,
+      "type": "circle",
+      "position": [
+        1420.0,
+        200.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          7,
+          1
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 95,
+      "type": "circle",
+      "position": [
+        1420.0,
+        320.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          7,
+          2
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 96,
+      "type": "circle",
+      "position": [
+        1420.0,
+        440.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          7,
+          3
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 97,
+      "type": "circle",
+      "position": [
+        1420.0,
+        560.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          7,
+          4
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 98,
+      "type": "circle",
+      "position": [
+        1420.0,
+        680.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          7,
+          5
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 99,
+      "type": "circle",
+      "position": [
+        1420.0,
+        800.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          7,
+          6
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 100,
+      "type": "circle",
+      "position": [
+        1420.0,
+        920.0
+      ],
+      "size": [
+        80,
+        80
+      ],
+      "layer": 0,
+      "dose_factor": 1.1,
+      "properties": {
+        "hole_index": [
+          7,
+          7
+        ],
+        "pitch": 120,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 101,
+      "type": "circle",
+      "position": [
+        500.0,
+        -1000.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          0,
+          0
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 102,
+      "type": "circle",
+      "position": [
+        500.0,
+        -800.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          0,
+          1
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 103,
+      "type": "circle",
+      "position": [
+        500.0,
+        -600.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          0,
+          2
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 104,
+      "type": "circle",
+      "position": [
+        500.0,
+        -400.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          0,
+          3
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 105,
+      "type": "circle",
+      "position": [
+        500.0,
+        -200.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          0,
+          4
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 106,
+      "type": "circle",
+      "position": [
+        500.0,
+        0.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          0,
+          5
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 107,
+      "type": "circle",
+      "position": [
+        700.0,
+        -1000.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          1,
+          0
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 108,
+      "type": "circle",
+      "position": [
+        700.0,
+        -800.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          1,
+          1
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 109,
+      "type": "circle",
+      "position": [
+        700.0,
+        -600.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          1,
+          2
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 110,
+      "type": "circle",
+      "position": [
+        700.0,
+        -400.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          1,
+          3
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 111,
+      "type": "circle",
+      "position": [
+        700.0,
+        -200.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          1,
+          4
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 112,
+      "type": "circle",
+      "position": [
+        700.0,
+        0.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          1,
+          5
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 113,
+      "type": "circle",
+      "position": [
+        900.0,
+        -1000.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          2,
+          0
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 114,
+      "type": "circle",
+      "position": [
+        900.0,
+        -800.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          2,
+          1
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 115,
+      "type": "circle",
+      "position": [
+        900.0,
+        -600.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          2,
+          2
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 116,
+      "type": "circle",
+      "position": [
+        900.0,
+        -400.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          2,
+          3
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 117,
+      "type": "circle",
+      "position": [
+        900.0,
+        -200.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          2,
+          4
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 118,
+      "type": "circle",
+      "position": [
+        900.0,
+        0.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          2,
+          5
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 119,
+      "type": "circle",
+      "position": [
+        1100.0,
+        -1000.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          3,
+          0
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 120,
+      "type": "circle",
+      "position": [
+        1100.0,
+        -800.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          3,
+          1
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 121,
+      "type": "circle",
+      "position": [
+        1100.0,
+        -600.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          3,
+          2
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 122,
+      "type": "circle",
+      "position": [
+        1100.0,
+        -400.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          3,
+          3
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 123,
+      "type": "circle",
+      "position": [
+        1100.0,
+        -200.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          3,
+          4
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 124,
+      "type": "circle",
+      "position": [
+        1100.0,
+        0.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          3,
+          5
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 125,
+      "type": "circle",
+      "position": [
+        1300.0,
+        -1000.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          4,
+          0
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 126,
+      "type": "circle",
+      "position": [
+        1300.0,
+        -800.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          4,
+          1
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 127,
+      "type": "circle",
+      "position": [
+        1300.0,
+        -600.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          4,
+          2
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 128,
+      "type": "circle",
+      "position": [
+        1300.0,
+        -400.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          4,
+          3
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 129,
+      "type": "circle",
+      "position": [
+        1300.0,
+        -200.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          4,
+          4
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 130,
+      "type": "circle",
+      "position": [
+        1300.0,
+        0.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          4,
+          5
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 131,
+      "type": "circle",
+      "position": [
+        1500.0,
+        -1000.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          5,
+          0
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 132,
+      "type": "circle",
+      "position": [
+        1500.0,
+        -800.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          5,
+          1
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 133,
+      "type": "circle",
+      "position": [
+        1500.0,
+        -600.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          5,
+          2
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 134,
+      "type": "circle",
+      "position": [
+        1500.0,
+        -400.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          5,
+          3
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 135,
+      "type": "circle",
+      "position": [
+        1500.0,
+        -200.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          5,
+          4
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 136,
+      "type": "circle",
+      "position": [
+        1500.0,
+        0.0
+      ],
+      "size": [
+        100,
+        100
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "hole_index": [
+          5,
+          5
+        ],
+        "pitch": 200,
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 137,
+      "type": "circle",
+      "position": [
+        -1750.0,
+        -250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          0
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 138,
+      "type": "circle",
+      "position": [
+        -1750.0,
+        50.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          1
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 139,
+      "type": "circle",
+      "position": [
+        -1750.0,
+        350.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          2
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 140,
+      "type": "circle",
+      "position": [
+        -1750.0,
+        650.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          3
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 141,
+      "type": "circle",
+      "position": [
+        -1750.0,
+        950.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          4
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 142,
+      "type": "circle",
+      "position": [
+        -1750.0,
+        1250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          5
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 143,
+      "type": "circle",
+      "position": [
+        -1450.0,
+        -250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          0
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 144,
+      "type": "circle",
+      "position": [
+        -1450.0,
+        50.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          1
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 145,
+      "type": "circle",
+      "position": [
+        -1450.0,
+        350.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          2
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 146,
+      "type": "circle",
+      "position": [
+        -1450.0,
+        650.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          3
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 147,
+      "type": "circle",
+      "position": [
+        -1450.0,
+        950.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          4
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 148,
+      "type": "circle",
+      "position": [
+        -1450.0,
+        1250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          5
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 149,
+      "type": "circle",
+      "position": [
+        -1150.0,
+        -250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          0
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 150,
+      "type": "circle",
+      "position": [
+        -1150.0,
+        50.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          1
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 151,
+      "type": "circle",
+      "position": [
+        -1150.0,
+        350.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          2
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 152,
+      "type": "circle",
+      "position": [
+        -1150.0,
+        650.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          3
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 153,
+      "type": "circle",
+      "position": [
+        -1150.0,
+        950.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          4
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 154,
+      "type": "circle",
+      "position": [
+        -1150.0,
+        1250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          5
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 155,
+      "type": "circle",
+      "position": [
+        -850.0,
+        -250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          0
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 156,
+      "type": "circle",
+      "position": [
+        -850.0,
+        50.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          1
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 157,
+      "type": "circle",
+      "position": [
+        -850.0,
+        350.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          2
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 158,
+      "type": "circle",
+      "position": [
+        -850.0,
+        650.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          3
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 159,
+      "type": "circle",
+      "position": [
+        -850.0,
+        950.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          4
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 160,
+      "type": "circle",
+      "position": [
+        -850.0,
+        1250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          5
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 161,
+      "type": "circle",
+      "position": [
+        -550.0,
+        -250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          0
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 162,
+      "type": "circle",
+      "position": [
+        -550.0,
+        50.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          1
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 163,
+      "type": "circle",
+      "position": [
+        -550.0,
+        350.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          2
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 164,
+      "type": "circle",
+      "position": [
+        -550.0,
+        650.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          3
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 165,
+      "type": "circle",
+      "position": [
+        -550.0,
+        950.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          4
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 166,
+      "type": "circle",
+      "position": [
+        -550.0,
+        1250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          5
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 167,
+      "type": "circle",
+      "position": [
+        -250.0,
+        -250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          0
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 168,
+      "type": "circle",
+      "position": [
+        -250.0,
+        50.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          1
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 169,
+      "type": "circle",
+      "position": [
+        -250.0,
+        350.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          2
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 170,
+      "type": "circle",
+      "position": [
+        -250.0,
+        650.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          3
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 171,
+      "type": "circle",
+      "position": [
+        -250.0,
+        950.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          4
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 172,
+      "type": "circle",
+      "position": [
+        -250.0,
+        1250.0
+      ],
+      "size": [
+        150,
+        150
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          5
+        ],
+        "lattice_type": "square",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 173,
+      "type": "circle",
+      "position": [
+        -1750.0,
+        -1149.5190528383291
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          0
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 174,
+      "type": "circle",
+      "position": [
+        -1600.0,
+        -889.7114317029975
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          1
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 175,
+      "type": "circle",
+      "position": [
+        -1450.0,
+        -629.9038105676659
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          2
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 176,
+      "type": "circle",
+      "position": [
+        -1300.0,
+        -370.0961894323343
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          3
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 177,
+      "type": "circle",
+      "position": [
+        -1150.0,
+        -110.28856829700271
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          4
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 178,
+      "type": "circle",
+      "position": [
+        -1000.0,
+        149.5190528383289
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          0,
+          5
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 179,
+      "type": "circle",
+      "position": [
+        -1450.0,
+        -1149.5190528383291
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          0
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 180,
+      "type": "circle",
+      "position": [
+        -1300.0,
+        -889.7114317029975
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          1
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 181,
+      "type": "circle",
+      "position": [
+        -1150.0,
+        -629.9038105676659
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          2
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 182,
+      "type": "circle",
+      "position": [
+        -1000.0,
+        -370.0961894323343
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          3
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 183,
+      "type": "circle",
+      "position": [
+        -850.0,
+        -110.28856829700271
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          4
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 184,
+      "type": "circle",
+      "position": [
+        -700.0,
+        149.5190528383289
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          1,
+          5
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 185,
+      "type": "circle",
+      "position": [
+        -1150.0,
+        -1149.5190528383291
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          0
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 186,
+      "type": "circle",
+      "position": [
+        -1000.0,
+        -889.7114317029975
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          1
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 187,
+      "type": "circle",
+      "position": [
+        -850.0,
+        -629.9038105676659
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          2
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 188,
+      "type": "circle",
+      "position": [
+        -700.0,
+        -370.0961894323343
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          3
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 189,
+      "type": "circle",
+      "position": [
+        -550.0,
+        -110.28856829700271
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          4
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 190,
+      "type": "circle",
+      "position": [
+        -400.0,
+        149.5190528383289
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          2,
+          5
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 191,
+      "type": "circle",
+      "position": [
+        -850.0,
+        -1149.5190528383291
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          0
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 192,
+      "type": "circle",
+      "position": [
+        -700.0,
+        -889.7114317029975
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          1
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 193,
+      "type": "circle",
+      "position": [
+        -550.0,
+        -629.9038105676659
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          2
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 194,
+      "type": "circle",
+      "position": [
+        -400.0,
+        -370.0961894323343
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          3
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 195,
+      "type": "circle",
+      "position": [
+        -250.0,
+        -110.28856829700271
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          4
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 196,
+      "type": "circle",
+      "position": [
+        -100.0,
+        149.5190528383289
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          3,
+          5
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 197,
+      "type": "circle",
+      "position": [
+        -550.0,
+        -1149.5190528383291
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          0
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 198,
+      "type": "circle",
+      "position": [
+        -400.0,
+        -889.7114317029975
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          1
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 199,
+      "type": "circle",
+      "position": [
+        -250.0,
+        -629.9038105676659
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          2
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 200,
+      "type": "circle",
+      "position": [
+        -100.0,
+        -370.0961894323343
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          3
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 201,
+      "type": "circle",
+      "position": [
+        50.0,
+        -110.28856829700271
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          4
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 202,
+      "type": "circle",
+      "position": [
+        200.0,
+        149.5190528383289
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          4,
+          5
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 203,
+      "type": "circle",
+      "position": [
+        -250.0,
+        -1149.5190528383291
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          0
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 204,
+      "type": "circle",
+      "position": [
+        -100.0,
+        -889.7114317029975
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          1
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 205,
+      "type": "circle",
+      "position": [
+        50.0,
+        -629.9038105676659
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          2
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 206,
+      "type": "circle",
+      "position": [
+        200.0,
+        -370.0961894323343
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          3
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 207,
+      "type": "circle",
+      "position": [
+        350.0,
+        -110.28856829700271
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          4
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    },
+    {
+      "id": 208,
+      "type": "circle",
+      "position": [
+        500.0,
+        149.5190528383289
+      ],
+      "size": [
+        120,
+        120
+      ],
+      "layer": 0,
+      "dose_factor": 1.0,
+      "properties": {
+        "lattice_position": [
+          5,
+          5
+        ],
+        "lattice_type": "triangular",
+        "proximity_corrected": true
+      }
+    }
+  ]
+}

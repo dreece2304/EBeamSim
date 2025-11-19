@@ -90,8 +90,7 @@ void DetectorMessenger::SetNewValue(G4UIcommand* command, G4String newValue)
         fDetector->SetResistComposition(composition);
     }
     else if (command == fUpdateCmd) {
-        // Force geometry update
-        G4RunManager::GetRunManager()->GeometryHasBeenModified();
-        G4cout << "Detector geometry updated." << G4endl;
+        // Update the material with the new composition
+        fDetector->UpdateMaterial();
     }
 }

@@ -1,0 +1,34 @@
+{
+  "environment": "development",
+  "debug": true,
+  "verbose": false,
+  
+  "simulation": {
+    "beam_energy_kev": 100.0,
+    "beam_current_na": 1.0,
+    "working_distance_mm": 10.0,
+    "resist_thickness_nm": 100.0,
+    "substrate_material": "Silicon",
+    "num_particles": 1000000,
+    "random_seed": null
+  },
+  
+  "paths": {
+    "working_dir": null,
+    "output_dir": "output",
+    "geant4_install": null,
+    "macro_dir": "macros",
+    "config_dir": "config"
+  },
+  
+  "gui_theme": "dark",
+  "auto_save": true,
+  "recent_files_limit": 10,
+  
+  "max_threads": 8,
+  "memory_limit_gb": null,
+  
+  "psf_analysis_enabled": true,
+  "proximity_correction_enabled": true,
+  "beamer_export_enabled": true
+}

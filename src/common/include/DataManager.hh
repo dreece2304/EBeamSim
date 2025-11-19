@@ -71,8 +71,8 @@ private:
     DataManager(const DataManager&) = delete;
     DataManager& operator=(const DataManager&) = delete;
 
-    // Static instance
-    static DataManager* fInstance;
+    // Note: Meyer's Singleton - no static member needed
+    // Instance is created as static local in Instance() method
 
     // Data storage
     std::vector<G4double> fRadialEnergyProfile;

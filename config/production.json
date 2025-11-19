@@ -1,0 +1,15 @@
+{
+  "debug": false,
+  "verbose": false,
+  
+  "simulation": {
+    "num_particles": 1000000
+  },
+  
+  "gui_theme": "light",
+  "auto_save": true,
+  
+  "psf_analysis_enabled": true,
+  "proximity_correction_enabled": true,
+  "beamer_export_enabled": true
+}

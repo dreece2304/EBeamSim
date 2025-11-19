@@ -1,0 +1,29 @@
+# Test macro for Sn-MLD resist material
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+# Initialize
+/run/initialize
+
+# Material settings for Sn-MLD
+/det/setResistComposition "Sn:1,C:8,H:8,O:4"
+/det/setResistThickness 30 nm
+/det/setResistDensity 2.0 g/cm3
+/det/update
+
+# Beam settings
+/gun/energy 20 keV
+/gun/sigmaBeam 2 nm
+/gun/sigmaPosition 0.1 nm
+
+# Physics processes
+/process/em/fluo 1
+/process/em/auger 1
+
+# Output settings
+/data/setOutputDir .
+/data/setFilenameSuffix _sn_test
+
+# Run a few events to test
+/run/beamOn 100

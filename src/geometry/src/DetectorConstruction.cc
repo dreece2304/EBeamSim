@@ -2,6 +2,7 @@
 #include "DetectorConstruction.hh"
 #include "DetectorMessenger.hh"
 #include "EBLConstants.hh"
+#include "../../physics/include/PhysicsList.hh"
 
 #include "G4Material.hh"
 #include "G4NistManager.hh"
@@ -64,6 +65,7 @@ DetectorConstruction::DetectorConstruction()
     : G4VUserDetectorConstruction(),
     fScoringVolume(nullptr),
     fWorldVolume(nullptr),
+    fResistLogical(nullptr),
     fResistRegion(nullptr),
     fActualResistThickness(EBL::Resist::DEFAULT_THICKNESS),
     fResistDensity(EBL::Resist::DEFAULT_DENSITY),
@@ -151,6 +153,9 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
     G4LogicalVolume* logicResist = new G4LogicalVolume(
         solidResist, resist_mat, "Resist");
+
+    // Store the resist logical volume for later material updates
+    fResistLogical = logicResist;
 
     // Position resist on top of substrate (bottom at z=0)
     new G4PVPlacement(0,
@@ -328,4 +333,55 @@ void DetectorConstruction::SetResistComposition(G4String composition)
         G4cout << elem.first << ":" << elem.second << " ";
     }
     G4cout << G4endl;
+}
+
+void DetectorConstruction::UpdateMaterial()
+{
+    // Only update if the logical volume exists (after initial construction)
+    if (!fResistLogical) {
+        G4cout << "Warning: Cannot update material - geometry not yet constructed" << G4endl;
+        return;
+    }
+
+    G4cout << "\n=== Updating Resist Material ===" << G4endl;
+
+    // Create the new material with current parameters
+    G4Material* newResistMaterial = CreateResistMaterial();
+
+    // Get the old material for comparison
+    G4Material* oldMaterial = fResistLogical->GetMaterial();
+
+    if (oldMaterial != newResistMaterial) {
+        // Update the logical volume with the new material
+        fResistLogical->SetMaterial(newResistMaterial);
+
+        G4cout << "Material updated from " << oldMaterial->GetName()
+               << " to " << newResistMaterial->GetName() << G4endl;
+        G4cout << "New density: " << G4BestUnit(newResistMaterial->GetDensity(), "Volumic Mass") << G4endl;
+
+        // Print the new composition
+        G4cout << "New composition: ";
+        for (const auto& elem : fResistElements) {
+            G4cout << elem.first << ":" << elem.second << " ";
+        }
+        G4cout << G4endl;
+
+        // Notify Geant4 that the geometry has changed
+        G4RunManager::GetRunManager()->GeometryHasBeenModified();
+        G4cout << "Geometry update completed" << G4endl;
+
+        // Reconfigure physics for new material (especially important for high-Z)
+        auto* runManager = G4RunManager::GetRunManager();
+        if (runManager) {
+            auto* physicsList = dynamic_cast<PhysicsList*>(
+                const_cast<G4VUserPhysicsList*>(runManager->GetUserPhysicsList()));
+            if (physicsList) {
+                physicsList->ReconfigureForMaterial();
+            }
+        }
+    } else {
+        G4cout << "Material is already up to date" << G4endl;
+    }
+
+    G4cout << "================================\n" << G4endl;
 }

@@ -1,151 +1,39 @@
-#===============================================
-# Build and Compilation
-#===============================================
 # Build directories
 build/
-out/
+build_test/
 cmake-build-*/
-Release/
-Debug/
-x64/
-x86/
-**/build/
-**/out/
+out/
 
-# Compiled files
-*.o
-*.obj
-*.exe
-*.dll
-*.so
-*.dylib
-*.lib
-*.a
-*.pdb
-*.ilk
-
-#===============================================
-# CMake
-#===============================================
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-Makefile
-compile_commands.json
-CTestTestfile.cmake
-_deps/
-
-#===============================================
-# IDE and Editors
-#===============================================
-# Visual Studio
-.vs/
-*.suo
-*.user
-*.userosscache
-*.sln
-*.vcxproj
-*.vcxproj.filters
-*.vcxproj.user
-*.sln.docstates
-*.VC.db
-*.VC.opendb
-ipch/
-*.ipch
-
-# CLion
-.idea/
-cmake-build-debug/
-cmake-build-release/
-
-# VS Code
-.vscode/
-*.code-workspace
-
-#===============================================
-# Project Output and Data
-#===============================================
-# Output data
-*.csv
-*.dat
-*.root
-*.log
-data/output/*
-!data/output/.gitkeep
-**/output/
-simulation_summary.txt
-ebl_psf_data.csv
-beamer_psf.dat
-ebl_2d_data.csv
-
-#===============================================
-# Backup and Temporary Files
-#===============================================
-# Backup directories
-backup_*/
-deleted_backups/
-improvement_summary_*.txt
-
-# PowerShell scripts - removed from project
-*.ps1
-fix_*.ps1
-verify_*.ps1
-create_*.ps1
-update_*.ps1
-install_*.ps1
-
-# Batch files - removed from project  
-*.bat
-
-# Backup files
-*.backup*
-*.bak
-
-# Temporary files
-*.tmp
-*.temp
-*.swp
-*~
-temp_*.mac
-gui_generated.mac
-
-#===============================================
 # Python
-#===============================================
 __pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-.venv/
+*.pyc
+*.pyo
+ebl_env/
 venv/
-.env
 
-#===============================================
-# Documentation
-#===============================================
-docs/_build/
-docs/api/
-*.doxygen
+# Logs
+logs/*.log
 
-#===============================================
-# OS Specific
-#===============================================
-# macOS
+# Output files
+output/*.root
+output/*.csv
+output/*.txt
+*.root
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
-
-# Windows
 Thumbs.db
-desktop.ini
+*:Zone.Identifier
 
-#===============================================
-# Geant4 Specific
-#===============================================
-*.wrl
-*.heprep
-*.eps
-*.prim
-G4History.macro
-g4_*.wrl
-*.g4m
-# Comment out the next line if you want to track generated run macros
-# run*.mac
+# Documentation bloat (keep only essential)
+*_SUMMARY.md
+*_REPORT.md
+*_CHECKLIST.md
+*_INDEX.md
+*FIX*.md

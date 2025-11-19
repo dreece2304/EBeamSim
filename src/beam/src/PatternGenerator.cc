@@ -18,16 +18,17 @@ PatternGenerator::PatternGenerator()
       fDwellTime(0.0),
       fClockFrequency(0.0) {
     
+    // Reserve space for typical pattern sizes to avoid reallocations
+    fExposurePoints.reserve(10000);  // Reasonable default for most patterns
     SetJEOLMode(fJEOLMode);  // Initialize mode-specific parameters
 }
 
-PatternGenerator::~PatternGenerator() {
-    fExposurePoints.clear();
-}
+// Destructor defined as default in header
 
-void PatternGenerator::SetJEOLMode(JEOLMode mode) {
+void PatternGenerator::SetJEOLMode(JEOLMode mode) noexcept {
     fJEOLMode = mode;
     
+    // Use constexpr values for better performance
     switch (mode) {
         case MODE_3_4TH_LENS:
             fMachineGrid = 1.0 * nm;
@@ -37,12 +38,17 @@ void PatternGenerator::SetJEOLMode(JEOLMode mode) {
             fMachineGrid = 0.125 * nm;
             fFieldSize = 62.5 * um;
             break;
+        default:
+            G4cout << "Warning: Unknown JEOL mode, using default 3/4 lens" << G4endl;
+            fMachineGrid = 1.0 * nm;
+            fFieldSize = 500.0 * um;
+            break;
     }
 }
 
-void PatternGenerator::SetShotPitch(G4int pitch) {
-    // Shot pitch must be 1 or even multiple of machine grid
-    if (pitch == 1 || (pitch > 0 && pitch % 2 == 0)) {
+void PatternGenerator::SetShotPitch(G4int pitch) noexcept {
+    // Shot pitch must be 1 or even multiple of machine grid (optimized validation)
+    if (pitch == 1 || (pitch > 1 && pitch % 2 == 0)) {
         fShotPitch = pitch;
     } else {
         G4cout << "Warning: Shot pitch must be 1 or even multiple. Using 4." << G4endl;
@@ -51,16 +57,16 @@ void PatternGenerator::SetShotPitch(G4int pitch) {
 }
 
 void PatternGenerator::GeneratePattern() {
-    // Clear previous pattern
+    // Clear previous pattern and ensure capacity
     fExposurePoints.clear();
     
     // Calculate dwell time based on dose
     CalculateDwellTime();
     
-    // Generate pattern based on type
+    // Generate pattern based on type (with default case for safety)
     switch (fPatternType) {
         case SINGLE_SPOT:
-            fExposurePoints.push_back(fPatternCenter);
+            fExposurePoints.emplace_back(fPatternCenter);  // emplace_back for efficiency
             break;
         case SQUARE:
             GenerateSquarePattern();
@@ -70,6 +76,10 @@ void PatternGenerator::GeneratePattern() {
             break;
         case CUSTOM:
             GenerateCustomPattern();
+            break;
+        default:
+            G4cout << "Warning: Unknown pattern type, generating single spot" << G4endl;
+            fExposurePoints.emplace_back(fPatternCenter);
             break;
     }
     
@@ -81,44 +91,50 @@ void PatternGenerator::GeneratePattern() {
 }
 
 void PatternGenerator::GenerateSquarePattern() {
-    // Calculate exposure grid spacing
-    G4double gridSpacing = fShotPitch * fMachineGrid;
+    // Calculate exposure grid spacing (const for optimization)
+    const G4double gridSpacing = fShotPitch * fMachineGrid;
     
     // Calculate number of points in each direction
     G4int nPoints = static_cast<G4int>(std::floor(fPatternSize / gridSpacing));
     if (nPoints == 0) nPoints = 1;  // At least one point
     
-    // Generate points in a square grid
-    G4double halfSize = (nPoints - 1) * gridSpacing / 2.0;
+    // Reserve space for square pattern to avoid reallocations
+    fExposurePoints.reserve(fExposurePoints.size() + nPoints * nPoints);
+    
+    // Generate points in a square grid (optimized with const values)
+    const G4double halfSize = (nPoints - 1) * gridSpacing / 2.0;
+    const G4double baseX = fPatternCenter.x() - halfSize;
+    const G4double baseY = fPatternCenter.y() - halfSize;
+    const G4double z = fPatternCenter.z();  // Pattern is in XY plane
     
     for (G4int i = 0; i < nPoints; ++i) {
+        const G4double x = baseX + i * gridSpacing;
         for (G4int j = 0; j < nPoints; ++j) {
-            G4double x = fPatternCenter.x() - halfSize + i * gridSpacing;
-            G4double y = fPatternCenter.y() - halfSize + j * gridSpacing;
-            G4double z = fPatternCenter.z();  // Pattern is in XY plane
-            
-            fExposurePoints.push_back(G4ThreeVector(x, y, z));
+            const G4double y = baseY + j * gridSpacing;
+            fExposurePoints.emplace_back(x, y, z);  // emplace_back for efficiency
         }
     }
 }
 
 void PatternGenerator::CalculateDwellTime() {
-    // Calculate exposure grid spacing in nm
-    G4double exposureGrid = fShotPitch * fMachineGrid / nm;
+    // Calculate exposure grid spacing in nm (const for optimization)
+    const G4double exposureGrid = fShotPitch * fMachineGrid / nm;
     
-    // Calculate clock frequency (MHz)
+    // Calculate clock frequency (MHz) - optimized calculation
     // Dose (uC/cm2) = (Beam Current (pA) * 100) / (Shot Pitch^2 * Clock Frequency (MHz))
     // fBeamCurrent is in nA, so convert to pA: nA * 1000 = pA
-    fClockFrequency = (fBeamCurrent * 1000.0 * 100.0) / (fDose * exposureGrid * exposureGrid);
+    const G4double gridSquared = exposureGrid * exposureGrid;
+    fClockFrequency = (fBeamCurrent * 100000.0) / (fDose * gridSquared);  // Combined constants
     
-    // Check hardware limit of 50 MHz
-    if (fClockFrequency > 50.0) {
+    // Check hardware limit of 50 MHz (const for comparison)
+    constexpr G4double MAX_CLOCK_FREQ = 50.0;
+    if (fClockFrequency > MAX_CLOCK_FREQ) {
         G4cout << "Warning: Calculated clock frequency " << fClockFrequency 
-               << " MHz exceeds 50 MHz limit. Clamping to 50 MHz." << G4endl;
-        fClockFrequency = 50.0;
+               << " MHz exceeds " << MAX_CLOCK_FREQ << " MHz limit. Clamping." << G4endl;
+        fClockFrequency = MAX_CLOCK_FREQ;
         
-        // Recalculate actual dose with 50 MHz limit
-        G4double actualDose = (fBeamCurrent * 1000.0 * 100.0) / (50.0 * exposureGrid * exposureGrid);
+        // Recalculate actual dose with frequency limit
+        const G4double actualDose = (fBeamCurrent * 100000.0) / (MAX_CLOCK_FREQ * gridSquared);
         G4cout << "Actual dose will be: " << actualDose << " uC/cm2" << G4endl;
     }
     
@@ -126,19 +142,20 @@ void PatternGenerator::CalculateDwellTime() {
     fDwellTime = 1.0 / fClockFrequency;
 }
 
-G4bool PatternGenerator::IsValidConfiguration() const {
+G4bool PatternGenerator::IsValidConfiguration() const noexcept {
     // Check if pattern fits within field
     if (!CheckFieldBoundaries()) {
         return false;
     }
     
-    // Check if clock frequency is valid
-    if (fClockFrequency <= 0 || fClockFrequency > 50.0) {
+    // Check if clock frequency is valid (constexpr limit)
+    constexpr G4double MAX_CLOCK_FREQ = 50.0;
+    if (fClockFrequency <= 0.0 || fClockFrequency > MAX_CLOCK_FREQ) {
         return false;
     }
     
-    // Check shot pitch
-    if (fShotPitch != 1 && fShotPitch % 2 != 0) {
+    // Check shot pitch (optimized condition)
+    if (fShotPitch != 1 && (fShotPitch <= 1 || fShotPitch % 2 != 0)) {
         return false;
     }
     
@@ -167,30 +184,30 @@ G4String PatternGenerator::GetConfigurationErrors() const {
     return errors.str();
 }
 
-G4bool PatternGenerator::CheckFieldBoundaries() const {
-    // Check if pattern fits within a single field
-    G4double halfPattern = fPatternSize / 2.0;
-    G4double maxCoord = std::max(
+G4bool PatternGenerator::CheckFieldBoundaries() const noexcept {
+    // Check if pattern fits within a single field (optimized calculation)
+    const G4double halfPattern = fPatternSize / 2.0;
+    const G4double maxCoord = std::max(
         std::abs(fPatternCenter.x()) + halfPattern,
         std::abs(fPatternCenter.y()) + halfPattern
     );
     
-    return maxCoord <= fFieldSize / 2.0;
+    return maxCoord <= (fFieldSize / 2.0);
 }
 
-G4int PatternGenerator::GetElectronsPerPoint() const {
-    // Calculate number of electrons needed per exposure point
-    // to achieve the desired dose
+G4int PatternGenerator::GetElectronsPerPoint() const noexcept {
+    // Calculate number of electrons needed per exposure point (optimized)
     
-    // Beam current in electrons/second
+    // Beam current in electrons/second (using constexpr for electron charge)
     // I (nA) = I (A) * 1e-9 = Q (C/s) * 1e-9
     // Number of electrons/second = I (A) / e = I (nA) * 1e-9 / e
-    G4double electronsPerSecond = fBeamCurrent * 1.0e-9 / (1.602176634e-19); // nA to electrons/s
+    constexpr G4double ELECTRON_CHARGE = 1.602176634e-19;  // Coulombs
+    const G4double electronsPerSecond = fBeamCurrent * 1.0e-9 / ELECTRON_CHARGE;
     
-    // Dwell time is in microseconds
-    G4double electronsPerPoint = electronsPerSecond * fDwellTime * 1.0e-6;
+    // Dwell time is in microseconds (combined conversion factor)
+    const G4double electronsPerPoint = electronsPerSecond * fDwellTime * 1.0e-6;
     
-    // Return as integer (minimum 1)
+    // Return as integer (minimum 1, use static_cast for clarity)
     return std::max(1, static_cast<G4int>(std::round(electronsPerPoint)));
 }
 

@@ -12,7 +12,7 @@ class MaterialConfig:
     """Material configuration"""
     name: str = "Alucone_XPS"
     composition: str = "Al:1,C:5,H:4,O:2"
-    density: float = 1.35  # g/cm³
+    density: float = 1.35  # g/cmï¿½
     thickness: float = 30.0  # nm
 
 @dataclass
@@ -66,17 +66,25 @@ class Config:
     
     def _find_executable(self) -> str:
         """Try to find the EBL simulation executable"""
+        import platform
+        
+        # Determine executable extension based on platform
+        exe_ext = ".exe" if platform.system() == "Windows" else ""
+        
         possible_paths = [
-            Path("../../build/bin/ebl_sim.exe"),
-            Path("../../out/build/x64-Release/bin/ebl_sim.exe"),
-            Path("C:/Users/dreec/Geant4Projects/EBeamSim/build/bin/ebl_sim.exe"),
+            Path("../../build/bin/ebl_sim" + exe_ext),
+            Path("../../out/build/x64-Release/bin/ebl_sim" + exe_ext),
+            Path("C:/Users/dreec/Geant4Projects/EBeamSim/build/bin/ebl_sim" + exe_ext),
+            # Also try absolute paths from current working directory
+            Path("build/bin/ebl_sim" + exe_ext),
+            Path("../build/bin/ebl_sim" + exe_ext),
         ]
         
         for path in possible_paths:
             if path.exists():
                 return str(path.absolute())
         
-        return "ebl_sim.exe"  # Default
+        return "ebl_sim" + exe_ext  # Default
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary"""

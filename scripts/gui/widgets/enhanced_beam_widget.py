@@ -10,7 +10,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt
 from typing import Dict, Any
 
-from ..models.beam_model import BeamModel
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from models.beam_model import BeamModel
 
 
 class EnhancedBeamWidget(QWidget):

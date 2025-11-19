@@ -1,0 +1,11 @@
+{
+  "debug": true,
+  "verbose": true,
+  
+  "simulation": {
+    "num_particles": 10000
+  },
+  
+  "gui_theme": "dark",
+  "auto_save": true
+}

@@ -21,11 +21,11 @@ public:
     virtual G4VPhysicalVolume* Construct();
     virtual void ConstructSDandField();
 
-    // Parameter access methods
-    G4LogicalVolume* GetScoringVolume() const { return fScoringVolume; }
-    G4Region* GetResistRegion() const { return fResistRegion; }
-    G4double GetActualResistThickness() const { return fActualResistThickness; }
-    G4LogicalVolume* GetWorldVolume() const { return fWorldVolume; }
+    // Parameter access methods (const-correct and noexcept)
+    G4LogicalVolume* GetScoringVolume() const noexcept { return fScoringVolume; }
+    G4Region* GetResistRegion() const noexcept { return fResistRegion; }
+    G4double GetActualResistThickness() const noexcept { return fActualResistThickness; }
+    G4LogicalVolume* GetWorldVolume() const noexcept { return fWorldVolume; }
 
     // Parameter setting methods
     void SetResistThickness(G4double thickness);
@@ -35,13 +35,17 @@ public:
     void ClearResistElements();
     void SetResistComposition(G4String composition);  // Format: "Al:1,C:5,H:4,O:2"
 
-    // Return current parameters
-    G4double GetResistDensity() const { return fResistDensity; }
-    std::map<G4String, G4int> GetResistElements() const { return fResistElements; }
+    // Material update method
+    void UpdateMaterial();
+
+    // Return current parameters (const-correct)
+    G4double GetResistDensity() const noexcept { return fResistDensity; }
+    const std::map<G4String, G4int>& GetResistElements() const noexcept { return fResistElements; }
 
 protected:
     G4LogicalVolume* fScoringVolume;
     G4LogicalVolume* fWorldVolume;
+    G4LogicalVolume* fResistLogical;  // Store resist logical volume for material updates
     G4Region* fResistRegion;
     G4double fActualResistThickness;
 

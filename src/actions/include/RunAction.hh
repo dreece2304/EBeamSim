@@ -7,7 +7,7 @@
 #include <vector>
 #include <mutex>
 #include <chrono>
-#include "G4Accumulable.hh"
+#include "G4Accumulable.hh"  // For Geant4 11.3+ compatibility
 #include "G4Threading.hh"
 
 class G4Run;
@@ -30,11 +30,18 @@ public:
     void Add2DEnergyDeposit(const std::vector<std::vector<G4double>>& energy2D);
     void AddRegionEnergy(G4double resist, G4double substrate, G4double above);
 
-    // Access methods for analysis
-    std::vector<G4double> GetRadialEnergyProfile() const { return fRadialEnergyProfile; }
+    // Access methods for analysis (const-correct)
+    const std::vector<G4double>& GetRadialEnergyProfile() const { return fRadialEnergyProfile; }
+    const std::vector<std::vector<G4double>>& Get2DEnergyProfile() const { return f2DEnergyProfile; }
     
-    // Output filename setters
+    // Energy equivalence methods for UV dose correlation
+    G4double GetPerPrimaryResistEnergyAbsorption() const;
+    G4double CalculateEnergyAbsorptionCoefficient() const;
+    G4double CalculateUVEquivalentTime(G4double ebeamDose_uC_cm2, G4double uvFluenceRate_J_cm2_min, G4double uvAbsorptance) const;
+    
+    // Output filename setters (move-enabled for efficiency)
     void SetOutputDirectory(const G4String& dir) { fOutputDirectory = dir; }
+    void SetOutputDirectory(G4String&& dir) { fOutputDirectory = std::move(dir); }
     void SetPSFFilename(const G4String& name) { fPSFFilename = name; }
     void SetPSF2DFilename(const G4String& name) { fPSF2DFilename = name; }
     void SetSummaryFilename(const G4String& name) { fSummaryFilename = name; }
@@ -85,6 +92,13 @@ private:
     void SaveBEAMERFormat(const std::string& outputDir);
     void Save2DFormat(const std::string& outputDir);
     void SaveSummary(const std::string& outputDir);
+    void SaveEnergyEquivalenceReport(const std::string& outputDir);
+
+    // Validation metrics
+    G4double CalculateRMSRadius() const;
+    G4double CalculateForwardBackscatterRatio() const;
+    G4double CalculateEnergyConservation() const;
+    void ReportValidationMetrics();
 
     // Thread-safe merge of local arrays to master
     void MergeLocalArrays();

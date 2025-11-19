@@ -9,7 +9,7 @@
 class PatternGenerator {
 public:
     PatternGenerator();
-    ~PatternGenerator();
+    ~PatternGenerator() = default;  // Modern C++ default destructor
 
     // Pattern types
     enum PatternType {
@@ -25,36 +25,36 @@ public:
         MODE_6_5TH_LENS   // 62.5 um field, 0.125 nm machine grid
     };
 
-    // Set pattern parameters
-    void SetPatternType(PatternType type) { fPatternType = type; }
-    void SetJEOLMode(JEOLMode mode);
-    void SetShotPitch(G4int pitch);  // Must be even multiple of machine grid
-    void SetPatternSize(G4double size) { fPatternSize = size; }
+    // Set pattern parameters (const-correct and noexcept where appropriate)
+    void SetPatternType(PatternType type) noexcept { fPatternType = type; }
+    void SetJEOLMode(JEOLMode mode) noexcept;
+    void SetShotPitch(G4int pitch) noexcept;  // Must be even multiple of machine grid
+    void SetPatternSize(G4double size) noexcept { fPatternSize = size; }
     void SetPatternCenter(const G4ThreeVector& center) { fPatternCenter = center; }
     
-    // JEOL beam parameters
-    void SetBeamCurrent(G4double current) { fBeamCurrent = current; }  // nA
-    void SetDose(G4double dose) { fDose = dose; }  // uC/cm2
+    // JEOL beam parameters (noexcept for simple setters)
+    void SetBeamCurrent(G4double current) noexcept { fBeamCurrent = current; }  // nA
+    void SetDose(G4double dose) noexcept { fDose = dose; }  // uC/cm2
     
     // Generate pattern
     void GeneratePattern();
     
-    // Get exposure points and dwell times
-    const std::vector<G4ThreeVector>& GetExposurePoints() const { return fExposurePoints; }
-    G4double GetDwellTime() const { return fDwellTime; }  // microseconds
-    G4double GetClockFrequency() const { return fClockFrequency; }  // MHz
-    G4int GetTotalPoints() const { return static_cast<G4int>(fExposurePoints.size()); }
+    // Get exposure points and dwell times (const-correct and noexcept)
+    const std::vector<G4ThreeVector>& GetExposurePoints() const noexcept { return fExposurePoints; }
+    G4double GetDwellTime() const noexcept { return fDwellTime; }  // microseconds
+    G4double GetClockFrequency() const noexcept { return fClockFrequency; }  // MHz
+    G4int GetTotalPoints() const noexcept { return static_cast<G4int>(fExposurePoints.size()); }
     
-    // Get JEOL parameters
-    G4double GetMachineGrid() const { return fMachineGrid; }
-    G4double GetExposureGrid() const { return fShotPitch * fMachineGrid; }
-    G4double GetFieldSize() const { return fFieldSize; }
+    // Get JEOL parameters (noexcept getters)
+    G4double GetMachineGrid() const noexcept { return fMachineGrid; }
+    G4double GetExposureGrid() const noexcept { return fShotPitch * fMachineGrid; }
+    G4double GetFieldSize() const noexcept { return fFieldSize; }
     
-    // Calculate number of electrons per exposure point
-    G4int GetElectronsPerPoint() const;
+    // Calculate number of electrons per exposure point (noexcept)
+    G4int GetElectronsPerPoint() const noexcept;
     
-    // Check if parameters are valid
-    G4bool IsValidConfiguration() const;
+    // Check if parameters are valid (const-correct)
+    G4bool IsValidConfiguration() const noexcept;
     G4String GetConfigurationErrors() const;
 
 private:
@@ -78,12 +78,12 @@ private:
     // Generated pattern
     std::vector<G4ThreeVector> fExposurePoints;
     
-    // Helper methods
+    // Helper methods (const-correct where appropriate)
     void GenerateSquarePattern();
     void GenerateLinePattern();
     void GenerateCustomPattern();
     void CalculateDwellTime();
-    G4bool CheckFieldBoundaries() const;
+    G4bool CheckFieldBoundaries() const noexcept;
 };
 
 #endif

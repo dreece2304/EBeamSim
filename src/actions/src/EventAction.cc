@@ -247,10 +247,14 @@ void EventAction::AddEnergyDeposit(G4double edep, G4double x, G4double y, G4doub
     // Calculate radial distance from beam axis
     G4double r = std::sqrt(x * x + y * y);
 
-    // 1D radial binning (for BEAMER PSF) - ALL energy deposits
+    // NOTE: Importance sampling disabled - not fully implemented
+    // Would require biasing in StackingAction and consistent normalization
+    // Currently using unweighted energy deposition for accurate PSF
+
+    // 1D radial binning (for BEAMER PSF) - ALL energy deposits (no weighting)
     G4int radialBin1D = GetLogBin(r);
     if (radialBin1D >= 0 && radialBin1D < static_cast<G4int>(fRadialEnergyDeposit.size())) {
-        fRadialEnergyDeposit[radialBin1D] += edep;
+        fRadialEnergyDeposit[radialBin1D] += edep;  // No weight applied
     }
 
     // 2D binning (for visualization) - ALL energy deposits

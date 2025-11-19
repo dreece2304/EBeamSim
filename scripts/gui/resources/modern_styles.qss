@@ -1,0 +1,299 @@
+/* ===== MODERN EBL SIMULATION GUI STYLES ===== */
+/* Material Design 3 inspired theme with scientific computing focus */
+
+/* ===== MODERN EBL SIMULATION GUI STYLES ===== */
+/* Material Design 3 inspired theme with scientific computing focus */
+/* Note: QSS doesn't support CSS variables, so values are used directly */
+
+/* ===== GLOBAL RESET & BASE ===== */
+* {
+    font-family: "Inter", "Segoe UI", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+QMainWindow {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+        stop:0 #0f172a, stop:1 #1e293b);
+    color: #f9fafb;
+}
+
+QWidget {
+    background-color: transparent;
+    color: #f9fafb;
+}
+
+/* ===== MODERN CARDS & CONTAINERS ===== */
+QGroupBox {
+    background-color: #1f2937;
+    border: 1px solid #6b7280;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 24px;
+    padding: 24px 16px 16px 16px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 24px;
+    padding: 0 16px;
+    color: #6366f1;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* ===== MODERN TABS ===== */
+QTabWidget::pane {
+    border: none;
+    background-color: transparent;
+    top: -1px;
+}
+
+QTabWidget::tab-bar {
+    left: 0;
+}
+
+QTabBar::tab {
+    background: #374151;
+    color: #9ca3af;
+    padding: 16px 32px;
+    margin-right: 4px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    min-width: 140px;
+    font-weight: 500;
+}
+
+QTabBar::tab:selected {
+    background: #6366f1;
+    color: white;
+    font-weight: 600;
+}
+
+QTabBar::tab:hover:!selected {
+    background: #1f2937;
+    color: #f9fafb;
+}
+
+/* ===== MODERN BUTTONS ===== */
+QPushButton {
+    background: #6366f1;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 32px;
+    font-weight: 600;
+    font-size: 14px;
+    min-width: 120px;
+    min-height: 40px;
+}
+
+QPushButton:hover {
+    background: #4f46e5;
+}
+
+QPushButton:pressed {
+    background: #3730a3;
+}
+
+QPushButton:disabled {
+    background: #6b7280;
+    color: #9ca3af;
+}
+
+/* Button Variants */
+QPushButton[buttonType="secondary"] {
+    background: #374151;
+    color: #f9fafb;
+    border: 1px solid #6b7280;
+}
+
+QPushButton[buttonType="secondary"]:hover {
+    background: #1f2937;
+    border-color: #6366f1;
+}
+
+QPushButton[buttonType="success"] {
+    background: #10b981;
+}
+
+QPushButton[buttonType="success"]:hover {
+    background: #059669;
+}
+
+QPushButton[buttonType="danger"] {
+    background: #ef4444;
+}
+
+QPushButton[buttonType="danger"]:hover {
+    background: #dc2626;
+}
+
+/* ===== MODERN INPUTS ===== */
+QLineEdit, QSpinBox, QDoubleSpinBox {
+    background: #1f2937;
+    border: 1px solid #6b7280;
+    border-radius: 6px;
+    padding: 16px;
+    font-size: 14px;
+    color: #f9fafb;
+    min-height: 20px;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+    border-color: #6366f1;
+    outline: none;
+}
+
+QComboBox {
+    background: #1f2937;
+    border: 1px solid #6b7280;
+    border-radius: 6px;
+    padding: 16px;
+    min-width: 150px;
+    min-height: 20px;
+    font-size: 14px;
+    color: #f9fafb;
+}
+
+QComboBox:focus {
+    border-color: #6366f1;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 30px;
+    border-left: 1px solid #6b7280;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+QComboBox QAbstractItemView {
+    background: #1f2937;
+    border: 1px solid #6b7280;
+    color: #f9fafb;
+    selection-background-color: #6366f1;
+    selection-color: white;
+}
+
+/* ===== MODERN PROGRESS BARS ===== */
+QProgressBar {
+    background: #374151;
+    border: none;
+    border-radius: 12px;
+    height: 8px;
+    text-align: center;
+    font-weight: 600;
+    color: #f9fafb;
+}
+
+QProgressBar::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #6366f1, stop:1 #4f46e5);
+    border-radius: 12px;
+}
+
+/* ===== MODERN TEXT AREAS ===== */
+QTextEdit, QPlainTextEdit {
+    background: #1f2937;
+    border: 1px solid #6b7280;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #f9fafb;
+}
+
+QTextEdit:focus, QPlainTextEdit:focus {
+    border-color: #6366f1;
+}
+
+/* ===== MODERN SCROLLBARS ===== */
+QScrollBar:vertical {
+    background: transparent;
+    width: 8px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical {
+    background: #6b7280;
+    border-radius: 4px;
+    min-height: 40px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #6366f1;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+/* ===== TOOLTIPS ===== */
+QToolTip {
+    background: #1f2937;
+    border: 1px solid #6b7280;
+    border-radius: 6px;
+    padding: 8px;
+    color: #f9fafb;
+    font-size: 12px;
+}
+
+/* ===== STATUS BAR ===== */
+QStatusBar {
+    background: #1f2937;
+    border-top: 1px solid #6b7280;
+    padding: 8px;
+    font-weight: 500;
+}
+
+/* ===== MODERN CHECKBOXES & RADIO BUTTONS ===== */
+QCheckBox::indicator {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #6b7280;
+    border-radius: 4px;
+    background: transparent;
+}
+
+QCheckBox::indicator:checked {
+    background: #6366f1;
+    border-color: #6366f1;
+    image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTEiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEzIDFMNC41IDkuNSAxIDYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=);
+}
+
+QRadioButton::indicator {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #6b7280;
+    border-radius: 10px;
+    background: transparent;
+}
+
+QRadioButton::indicator:checked {
+    background: #6366f1;
+    border-color: #6366f1;
+}
+
+/* ===== ANIMATION CLASSES ===== */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+.slide-in {
+    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}

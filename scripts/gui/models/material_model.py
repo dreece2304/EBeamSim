@@ -25,7 +25,7 @@ class MaterialModel:
             "description": "Standard PMMA resist"
         },
         "HSQ": {
-            "composition": "Si:1,H:1,O:1.5", 
+            "composition": "Si:1,H:1,O:1.5",
             "density": 1.4,
             "description": "Hydrogen silsesquioxane negative resist"
         },
@@ -38,6 +38,11 @@ class MaterialModel:
             "composition": "Al:1,C:5,H:4,O:3",
             "density": 1.40,
             "description": "Exposed Alucone with extra oxygen"
+        },
+        "Sn-MLD": {
+            "composition": "Sn:1,C:8,H:8,O:4",
+            "density": 2.0,
+            "description": "Organic-inorganic hybrid Sn resist via MLD (TDMASn + 2-butyne-1,4-diol), ideal [-Sn(O-C4H4-O)2-] repeating unit"
         }
     }
     

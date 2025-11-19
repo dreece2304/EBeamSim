@@ -23,8 +23,9 @@ public:
     // Method from the base class
     virtual void GeneratePrimaries(G4Event*);
 
-    // Access to the particle gun
-    G4ParticleGun* GetParticleGun() { return fParticleGun; }
+    // Access to the particle gun (const-correct versions)
+    G4ParticleGun* GetParticleGun() noexcept { return fParticleGun; }
+    const G4ParticleGun* GetParticleGun() const noexcept { return fParticleGun; }
 
     // Beam property setters - using const reference for vectors
     void SetBeamEnergy(G4double energy);
@@ -32,10 +33,11 @@ public:
     void SetBeamPosition(const G4ThreeVector& position);
     void SetBeamDirection(const G4ThreeVector& direction);
     
-    // Pattern exposure mode
-    void SetPatternMode(G4bool enable) { fPatternMode = enable; }
-    G4bool GetPatternMode() const { return fPatternMode; }
-    PatternGenerator* GetPatternGenerator() { return fPatternGenerator; }
+    // Pattern exposure mode (noexcept for simple operations)
+    void SetPatternMode(G4bool enable) noexcept { fPatternMode = enable; }
+    G4bool GetPatternMode() const noexcept { return fPatternMode; }
+    PatternGenerator* GetPatternGenerator() noexcept { return fPatternGenerator; }
+    const PatternGenerator* GetPatternGenerator() const noexcept { return fPatternGenerator; }
 
 private:
     G4ParticleGun* fParticleGun;

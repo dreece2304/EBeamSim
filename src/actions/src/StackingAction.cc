@@ -13,7 +13,7 @@ StackingAction::StackingAction(DetectorConstruction* detector)
       fDetector(detector),
       fResistTop(0),
       fResistBottom(0),
-      fKillEnergyThreshold(100*eV),  // Kill very low energy particles
+      fKillEnergyThreshold(10*eV),  // Only kill extremely low energy particles
       fKilledTracks(0),
       fTotalTracks(0),
       fEventNumber(0)
@@ -50,8 +50,8 @@ G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* track
 
     // BEAMER optimization: Kill tracks that won't contribute to resist energy
 
-    // 1. Kill very low energy electrons deep in substrate
-    if (particleName == "e-" && z < -10*micrometer && energy < 1*keV) {
+    // 1. Kill very low energy electrons VERY deep in substrate (more conservative)
+    if (particleName == "e-" && z < -50*micrometer && energy < 100*eV) {
         fKilledTracks++;
         return fKill;
     }
@@ -68,38 +68,44 @@ G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* track
         return fKill;
     }
 
-    // 4. Kill electrons moving away from resist with low energy
+    // 4. Handle backscattered electrons carefully - they contribute to PSF tails
     if (particleName == "e-") {
         G4ThreeVector momentum = track->GetMomentumDirection();
 
-        // If deep in substrate and moving downward
-        if (z < -5*micrometer && momentum.z() < 0 && energy < 5*keV) {
+        // IMPORTANT: Backscattered electrons (moving upward from substrate)
+        if (z < 0 && momentum.z() > 0 && energy > 1*keV) {
+            // This is likely a backscattered electron - process immediately!
+            return fUrgent;  // High priority for backscattered electrons
+        }
+
+        // If very deep in substrate and moving downward with very low energy
+        if (z < -20*micrometer && momentum.z() < 0 && energy < 500*eV) {
             fKilledTracks++;
             return fKill;
         }
 
-        // If above resist and moving upward
-        if (z > fResistTop && momentum.z() > 0 && energy < 1*keV) {
+        // If far above resist and moving upward with very low energy
+        if (z > fResistTop + 5*micrometer && momentum.z() > 0 && energy < 100*eV) {
             fKilledTracks++;
             return fKill;
         }
     }
 
-    // 5. Range-based killing: estimate if particle can reach resist
-    if (particleName == "e-") {
+    // 5. Range-based killing: estimate if particle can reach resist (more conservative)
+    if (particleName == "e-" && energy < 1*keV) {  // Only apply to very low energy electrons
         // Rough estimate of electron range in silicon
         // R ~= 0.4 * E^1.75 (R in um, E in keV)
         G4double energyKeV = energy / keV;
         G4double estimatedRange = 0.4 * std::pow(energyKeV, 1.75) * micrometer;
 
-        // If in substrate and can't reach resist
-        if (z < 0 && std::abs(z) > estimatedRange + 100*nm) {
+        // If in substrate and definitely can't reach resist (with safety factor)
+        if (z < 0 && std::abs(z) > estimatedRange * 2.0 + 1*micrometer) {
             fKilledTracks++;
             return fKill;
         }
 
-        // If above resist and can't reach back
-        if (z > fResistTop && (z - fResistTop) > estimatedRange) {
+        // If above resist and definitely can't reach back (with safety factor)
+        if (z > fResistTop && (z - fResistTop) > estimatedRange * 2.0) {
             fKilledTracks++;
             return fKill;
         }

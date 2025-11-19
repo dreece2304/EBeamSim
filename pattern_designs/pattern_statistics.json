@@ -1,0 +1,33 @@
+{
+  "total_patterns": 209,
+  "pattern_types": {
+    "rectangle": 36,
+    "circle": 173
+  },
+  "layer_distribution": {
+    "0": 209
+  },
+  "size_statistics": {
+    "min_size": 80,
+    "max_size": 1000,
+    "mean_size": 257.36842105263156,
+    "std_size": 334.01037596394195
+  },
+  "dose_statistics": {
+    "min_dose": 0.9,
+    "max_dose": 1.1,
+    "mean_dose": 1.0138755980861243,
+    "std_dose": 0.06741149666796832
+  },
+  "spatial_extent": {
+    "x_range": [
+      -1750.0,
+      1500.0
+    ],
+    "y_range": [
+      -1149.5190528383291,
+      1250.0
+    ],
+    "total_area": 7798436.92172457
+  }
+}

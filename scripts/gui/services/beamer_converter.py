@@ -265,3 +265,7 @@ class BeamerConverterService:
             info["error"] = str(e)
         
         return info
+
+
+# Legacy compatibility alias
+BEAMERConverter = BeamerConverterService

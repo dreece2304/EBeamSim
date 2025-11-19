@@ -8,14 +8,10 @@
 #include <filesystem>
 #include <cmath>
 
-// Initialize static member
-DataManager* DataManager::fInstance = nullptr;
-
+// Meyer's Singleton - thread-safe in C++11+, automatic cleanup
 DataManager* DataManager::Instance() {
-    if (!fInstance) {
-        fInstance = new DataManager();
-    }
-    return fInstance;
+    static DataManager instance;  // Constructed on first call, destroyed at program exit
+    return &instance;
 }
 
 DataManager::DataManager()
@@ -232,9 +228,13 @@ void DataManager::SaveAllData() {
         SaveDoseDistribution();
     } else {
         SavePSFData();
-        SaveBEAMERFormat();
+        // NOTE: BEAMER format and summary output handled by RunAction in PSF mode
+        // DataManager is primarily used for pattern exposure mode
+        // Uncomment below if DataManager-based PSF output is needed:
+        // SaveBEAMERFormat();
     }
-    SaveSummary();
+    // NOTE: Summary output handled by RunAction in PSF mode
+    // SaveSummary();
 }
 
 G4double DataManager::GetCurrentProgress() const {
@@ -242,13 +242,18 @@ G4double DataManager::GetCurrentProgress() const {
         static_cast<G4double>(fProcessedEvents) / fTotalEvents : 0.0;
 }
 
-// Implement SaveBEAMERFormat() and SaveSummary() similar to RunAction
+// TODO: Implement these methods if DataManager-based output is needed in the future
+// Currently, RunAction handles all PSF output including BEAMER format and summary
 void DataManager::SaveBEAMERFormat() {
-    // Implementation similar to RunAction::SaveBEAMERFormat()
+    G4cout << "WARNING: DataManager::SaveBEAMERFormat() not implemented." << G4endl;
+    G4cout << "         PSF BEAMER output is handled by RunAction." << G4endl;
+    G4cout << "         For pattern mode, implement this method." << G4endl;
 }
 
 void DataManager::SaveSummary() {
-    // Implementation similar to RunAction::SaveSummary()
+    G4cout << "WARNING: DataManager::SaveSummary() not implemented." << G4endl;
+    G4cout << "         PSF summary output is handled by RunAction." << G4endl;
+    G4cout << "         For pattern mode, implement this method." << G4endl;
 }
 void DataManager::AddPSFData(G4double radius, G4double energy) {
     // Wrapper function for PSF data collection
