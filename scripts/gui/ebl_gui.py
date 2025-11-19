@@ -1150,6 +1150,10 @@ class PlotWidget(QWidget):
         self.compare_button.clicked.connect(self.add_comparison_data)
         self.compare_button.set_status(False, "Load initial PSF data first")
 
+        self.ref_library_button = StatusButton("Reference Library")
+        self.ref_library_button.clicked.connect(self.load_reference_psf_dialog)
+        self.ref_library_button.set_status(True, "Add standard PSFs for comparison")
+
         self.clear_button = StatusButton("Clear All")
         self.clear_button.clicked.connect(self.clear_all_data)
         self.clear_button.set_status(False, "No data to clear")
@@ -1163,6 +1167,7 @@ class PlotWidget(QWidget):
         controls.addStretch()
         controls.addWidget(self.load_button)
         controls.addWidget(self.compare_button)
+        controls.addWidget(self.ref_library_button)
         controls.addWidget(self.clear_button)
         controls.addWidget(self.save_button)
 
@@ -1397,6 +1402,170 @@ class PlotWidget(QWidget):
                 QMessageBox.critical(self, "Error", f"Failed to add comparison data: {str(e)}")
             finally:
                 self.compare_button.set_working(False)
+
+    def load_reference_psf_dialog(self):
+        """Show dialog to select and load reference PSFs from library"""
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QCheckBox, QPushButton, QLabel
+
+        # Define reference library (to be populated from data/reference_psfs/)
+        ref_library = {
+            'PMMA 100nm': {
+                'file': 'ref_PMMA_100nm_beamer.dat',
+                'description': 'Standard PMMA resist (C₅H₈O₂) at 100nm - traditional negative-tone',
+                'color': 'green',
+                'thickness': 100
+            },
+            'HSQ 100nm': {
+                'file': 'ref_HSQ_100nm_beamer.dat',
+                'description': 'Hydrogen Silsesquioxane (SiH₁O₁.₅) at 100nm - traditional negative-tone',
+                'color': 'orange',
+                'thickness': 100
+            },
+            'Alucone XPS 30nm': {
+                'file': 'ref_AluconeXPS_30nm_beamer.dat',
+                'description': 'Aluminum alkoxide (AlC₅H₄O₂) at 30nm - modern inorganic',
+                'color': 'blue',
+                'thickness': 30
+            },
+            'Sn-MLD 30nm': {
+                'file': 'ref_SnMLD_30nm_beamer.dat',
+                'description': 'Tin oxo-cage MLD (SnC₈H₈O₄) at 30nm - high-Z resist',
+                'color': 'red',
+                'thickness': 30
+            }
+        }
+
+        # Create dialog
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Reference PSF Library")
+        dialog.setMinimumWidth(500)
+        layout = QVBoxLayout()
+
+        # Header
+        header = QLabel("Select standard reference PSFs to add for comparison:")
+        header.setStyleSheet("font-weight: bold; font-size: 11pt; margin-bottom: 10px;")
+        layout.addWidget(header)
+
+        # Create checkboxes for each reference PSF
+        checkboxes = {}
+        for name, info in ref_library.items():
+            checkbox = QCheckBox(f"{name}")
+            checkbox.setToolTip(info['description'])
+
+            # Check if file exists
+            script_dir = Path(__file__).parent
+            ref_file = script_dir.parent.parent / 'data' / 'reference_psfs' / info['file']
+
+            if not ref_file.exists():
+                checkbox.setEnabled(False)
+                checkbox.setText(f"{name} (not yet generated)")
+                checkbox.setToolTip(f"{info['description']}\n\nRun: ./scripts/generate_reference_psfs.sh to create this PSF")
+
+            checkboxes[name] = checkbox
+            layout.addWidget(checkbox)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        select_all_btn = QPushButton("Select All")
+        select_all_btn.clicked.connect(lambda: [cb.setChecked(True) for cb in checkboxes.values() if cb.isEnabled()])
+
+        clear_btn = QPushButton("Clear All")
+        clear_btn.clicked.connect(lambda: [cb.setChecked(False) for cb in checkboxes.values()])
+
+        load_btn = QPushButton("Load Selected")
+        load_btn.clicked.connect(dialog.accept)
+        load_btn.setDefault(True)
+
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+
+        button_layout.addWidget(select_all_btn)
+        button_layout.addWidget(clear_btn)
+        button_layout.addStretch()
+        button_layout.addWidget(load_btn)
+        button_layout.addWidget(cancel_btn)
+
+        layout.addSpacing(10)
+        layout.addLayout(button_layout)
+        dialog.setLayout(layout)
+
+        # Show dialog and load selected PSFs
+        if dialog.exec() == QDialog.Accepted:
+            selected = [name for name, cb in checkboxes.items() if cb.isChecked()]
+
+            if selected:
+                self.load_reference_psfs(selected, ref_library)
+            else:
+                QMessageBox.information(self, "No Selection", "No reference PSFs were selected")
+
+    def load_reference_psfs(self, selected_names, ref_library):
+        """Load selected reference PSFs from library"""
+        script_dir = Path(__file__).parent
+        ref_dir = script_dir.parent.parent / 'data' / 'reference_psfs'
+
+        self.ref_library_button.set_working(True, "Loading...")
+
+        loaded_count = 0
+        try:
+            for name in selected_names:
+                info = ref_library[name]
+                ref_file = ref_dir / info['file']
+
+                if not ref_file.exists():
+                    print(f"Warning: {ref_file} not found, skipping")
+                    continue
+
+                # Load BEAMER format
+                radii, energies = self._load_beamer_format_file(ref_file)
+
+                if radii and energies:
+                    dataset_info = {
+                        'radii': radii,
+                        'energies': energies,
+                        'label': name,
+                        'file_path': str(ref_file),
+                        'style': {
+                            'color': info['color'],
+                            'linewidth': 2.5,
+                            'linestyle': '-',
+                            'alpha': 0.8
+                        }
+                    }
+                    self.datasets.append(dataset_info)
+                    loaded_count += 1
+
+            if loaded_count > 0:
+                # If this is the first data loaded, set it as current
+                if len(self.datasets) == loaded_count:
+                    self.current_data = {
+                        'radii': self.datasets[0]['radii'],
+                        'energies': self.datasets[0]['energies'],
+                        'label': self.datasets[0]['label'],
+                        'filename': self.datasets[0]['label']
+                    }
+
+                # Enable comparison features
+                if len(self.datasets) > 1:
+                    self.analyze_button.set_status(True)
+
+                # Enable controls
+                self.compare_button.set_status(True)
+                self.clear_button.set_status(True)
+                self.save_button.set_status(True)
+
+                # Replot all datasets
+                self.plot_all_datasets()
+                self.update_comparison_list()
+
+                QMessageBox.information(self, "Success",
+                                        f"Loaded {loaded_count} reference PSF(s) for comparison")
+            else:
+                QMessageBox.warning(self, "Warning", "No reference PSFs could be loaded")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load reference PSFs: {str(e)}")
+        finally:
+            self.ref_library_button.set_working(False)
 
     def _extract_psf_from_df(self, df):
         """Extract radius and energy data from DataFrame"""

@@ -1,0 +1,30 @@
+# Reference PSF: Alucone XPS 30nm resist
+# Modern inorganic resist (aluminum alkoxide) for comparison
+# Usage: ./ebl_sim ref_alucone_30nm.mac
+
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+# Initialize
+/run/initialize
+
+# Alucone (from XPS): AlC5H4O2 at 1.35 g/cm³
+/det/setResistComposition "Al:1,C:5,H:4,O:2"
+/det/setResistThickness 30 nm
+/det/setResistDensity 1.35 g/cm3
+/det/update
+
+# Enable physics processes
+/process/em/fluo 1
+/process/em/auger 1
+
+# Standard 100 keV beam with small beam size for PSF
+/gun/particle e-
+/gun/energy 100 keV
+/gun/position 0 0 100 nm
+/gun/direction 0 0 -1
+/gun/beamSize 2 nm
+
+# 200k events for good statistics on reference PSF
+/run/beamOn 200000
