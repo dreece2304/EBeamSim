@@ -452,19 +452,19 @@ class Enhanced2DPlotWidget(QWidget):
 
         self.radio_2d = QRadioButton("2D Heatmap")
         self.radio_2d.setChecked(True)
-        self.radio_3d = QRadioButton("3D Surface")
+        # 3D Surface plot removed - confusing and hard to read values
         self.radio_contour = QRadioButton("Contour Plot")
         self.radio_cross = QRadioButton("Cross Sections")
 
         self.plot_type_group = QButtonGroup()
         self.plot_type_group.addButton(self.radio_2d, 0)
-        self.plot_type_group.addButton(self.radio_3d, 1)
+        # ID 1 was 3D Surface (removed)
         self.plot_type_group.addButton(self.radio_contour, 2)
         self.plot_type_group.addButton(self.radio_cross, 3)
         self.plot_type_group.buttonClicked.connect(self.update_plot)
 
         plot_type_layout.addWidget(self.radio_2d)
-        plot_type_layout.addWidget(self.radio_3d)
+        # self.radio_3d removed
         plot_type_layout.addWidget(self.radio_contour)
         plot_type_layout.addWidget(self.radio_cross)
         plot_type_group.setLayout(plot_type_layout)
@@ -593,19 +593,81 @@ class Enhanced2DPlotWidget(QWidget):
         try:
             if plot_mode == 0:  # 2D Heatmap
                 self.plot_heatmap()
-            elif plot_mode == 1:  # 3D Surface
-                self.plot_3d_surface()
+            # plot_mode == 1 was 3D Surface (removed)
             elif plot_mode == 2:  # Contour
                 self.plot_contour()
             elif plot_mode == 3:  # Cross sections
                 self.plot_cross_sections()
+            else:
+                # Shouldn't happen, but fallback to heatmap
+                self.plot_heatmap()
 
             self.canvas.draw()
         except Exception as e:
             QMessageBox.critical(self, "Plotting Error", f"Failed to create plot: {str(e)}")
 
+    def _extract_resist_thickness(self):
+        """
+        Extract resist thickness from current data filename or metadata
+
+        Returns:
+            float: Resist thickness in nm, or 30.0 nm as default
+        """
+        # Try to get from metadata if available
+        if 'metadata' in self.current_data and 'resist_thickness' in self.current_data['metadata']:
+            return float(self.current_data['metadata']['resist_thickness'])
+
+        # Try to parse from filename (e.g., "resist30nm" or "30nm")
+        filename = self.current_data.get('filename', '')
+        import re
+
+        # Pattern 1: resist30nm
+        match = re.search(r'resist(\d+)nm', filename, re.IGNORECASE)
+        if match:
+            return float(match.group(1))
+
+        # Pattern 2: standalone number followed by nm
+        match = re.search(r'(\d+)nm', filename)
+        if match:
+            # Check if this might be resist thickness (typically 10-200 nm range)
+            thickness = float(match.group(1))
+            if 10 <= thickness <= 200:
+                return thickness
+
+        # Default fallback
+        return 30.0
+
+    def _calculate_psf_characteristic_radius(self, energy_2d, radii):
+        """
+        Calculate characteristic radius where PSF becomes negligible
+
+        Args:
+            energy_2d: 2D energy array (depth x radius)
+            radii: Array of radius values
+
+        Returns:
+            float: Characteristic radius in nm
+        """
+        # Use surface (depth index 0) or average over top few nm
+        energy_surface = energy_2d[0, :]  # First row (surface)
+
+        max_energy = np.max(energy_surface)
+
+        if max_energy == 0:
+            return radii[-1]  # Return max radius if no energy
+
+        # Find radius where energy drops to 1% of maximum
+        threshold = max_energy * 0.01
+        significant_indices = np.where(energy_surface > threshold)[0]
+
+        if len(significant_indices) > 0:
+            char_radius = radii[significant_indices[-1]]
+            return char_radius
+        else:
+            return radii[-1]  # Show all data if threshold not reached
+
     def plot_heatmap(self):
-        """Create 2D heatmap visualization"""
+        """Create 2D heatmap visualization with intelligent axis limits"""
         ax = self.figure.add_subplot(111)
 
         depths = self.current_data['depths']
@@ -637,49 +699,29 @@ class Enhanced2DPlotWidget(QWidget):
         ax.set_ylabel('Depth [nm]')
         ax.set_title(f'Energy Deposition Profile - {self.current_data["filename"]}')
 
-        # Add resist boundary line if visible
-        resist_thickness = 30  # nm, default
-        if depths.min() < resist_thickness < depths.max():
-            ax.axhline(y=resist_thickness, color='white', linestyle='--',
-                       linewidth=2, label='Resist/Substrate boundary')
-            ax.axhline(y=0, color='white', linestyle='-',
-                       linewidth=2, label='Resist surface')
-            ax.legend()
+        # Apply intelligent axis limits to show only relevant regions
+        resist_thickness = self._extract_resist_thickness()
 
-    def plot_3d_surface(self):
-        """Create 3D surface plot"""
-        from mpl_toolkits.mplot3d import Axes3D
+        # Radial limit: Show up to 3× characteristic radius or where energy drops to 1%
+        char_radius = self._calculate_psf_characteristic_radius(energy, radii)
+        max_radius_display = min(char_radius * 3, radii.max())
 
-        ax = self.figure.add_subplot(111, projection='3d')
+        # Depth limits: Show resist region with small margins
+        depth_margin_below = resist_thickness * 0.2  # 20% into substrate
+        depth_margin_above = resist_thickness * 0.1  # 10% above surface
 
-        depths = self.current_data['depths']
-        radii = self.current_data['radii']
-        energy = self.current_data['energy']
+        ax.set_xlim(0, max_radius_display)
+        ax.set_ylim(-depth_margin_below, depth_margin_above)
 
-        # Create meshgrid
-        R, D = np.meshgrid(radii, depths)
+        # Add resist boundary lines (now they'll always be visible with new limits)
+        ax.axhline(y=0, color='white', linestyle='-',
+                   linewidth=2, label='Resist surface', alpha=0.8)
+        ax.axhline(y=resist_thickness, color='yellow', linestyle='--',
+                   linewidth=2, label=f'Resist/Substrate ({resist_thickness:.0f} nm)', alpha=0.8)
+        ax.legend(loc='upper right', fontsize=9)
 
-        # Apply log scale if selected
-        if self.log_scale_check.isChecked():
-            energy_plot = np.log10(np.maximum(energy, 1e-10))
-            label = 'Log10(Energy) [eV/nm²]'
-        else:
-            energy_plot = energy
-            label = 'Energy [eV/nm²]'
-
-        # Create surface plot
-        cmap = self.colormap_combo.currentText()
-        surf = ax.plot_surface(R, D, energy_plot, cmap=cmap,
-                               linewidth=0, antialiased=True, alpha=0.8)
-
-        # Add colorbar
-        self.figure.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
-
-        # Labels
-        ax.set_xlabel('Radius [nm]')
-        ax.set_ylabel('Depth [nm]')
-        ax.set_zlabel(label)
-        ax.set_title(f'3D Energy Distribution - {self.current_data["filename"]}')
+    # plot_3d_surface method removed - 3D visualization was confusing and hard to read values
+    # Users can still visualize depth information using Contour Plot or Cross Sections modes
 
     def plot_contour(self):
         """Create contour plot - FIXED VERSION"""
@@ -738,6 +780,24 @@ class Enhanced2DPlotWidget(QWidget):
         ax.set_xlabel('Radius [nm]')
         ax.set_ylabel('Depth [nm]')
         ax.set_title(f'Energy Contours - {self.current_data["filename"]}')
+
+        # Apply intelligent axis limits (same as heatmap)
+        resist_thickness = self._extract_resist_thickness()
+        char_radius = self._calculate_psf_characteristic_radius(energy, radii)
+        max_radius_display = min(char_radius * 3, radii.max())
+
+        depth_margin_below = resist_thickness * 0.2
+        depth_margin_above = resist_thickness * 0.1
+
+        ax.set_xlim(0, max_radius_display)
+        ax.set_ylim(-depth_margin_below, depth_margin_above)
+
+        # Add resist boundary lines
+        ax.axhline(y=0, color='white', linestyle='-', linewidth=2,
+                   label='Resist surface', alpha=0.8)
+        ax.axhline(y=resist_thickness, color='yellow', linestyle='--', linewidth=2,
+                   label=f'Resist/Substrate ({resist_thickness:.0f} nm)', alpha=0.8)
+        ax.legend(loc='upper right', fontsize=9)
 
     def plot_cross_sections(self):
         """Plot depth and radial cross sections"""
@@ -950,33 +1010,87 @@ class PlotWidget(QWidget):
 
         self.setLayout(layout)
 
+    def _load_beamer_format_file(self, file_path):
+        """
+        Load BEAMER format file (.dat or .txt)
+
+        Args:
+            file_path: Path to BEAMER format file
+
+        Returns:
+            Tuple of (radii_nm, psf_values) or (None, None) on error
+        """
+        try:
+            radius_um = []
+            psf = []
+
+            with open(file_path, 'r') as f:
+                for line in f:
+                    # Skip comments and empty lines
+                    if not line.startswith('#') and line.strip():
+                        try:
+                            r, p = map(float, line.split())
+                            radius_um.append(r)
+                            psf.append(p)
+                        except ValueError:
+                            continue  # Skip malformed lines
+
+            if not radius_um or not psf:
+                return None, None
+
+            # Convert radius from micrometers to nanometers for consistency with CSV format
+            radius_nm = [r * 1000.0 for r in radius_um]
+
+            return radius_nm, psf
+
+        except Exception as e:
+            print(f"Error loading BEAMER file: {e}")
+            return None, None
+
     def load_data(self):
-        """Load PSF data from CSV file"""
+        """Load PSF data from CSV or BEAMER format file (.csv, .dat, .txt)"""
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Load PSF Data", str(self.file_manager.working_dir),
-            "CSV files (*.csv);;All files (*.*)"
+            "PSF files (*.csv *.dat *.txt);;CSV files (*.csv);;BEAMER files (*.dat *.txt);;All files (*.*)"
         )
 
         if file_path:
             self.load_button.set_working(True, "Loading...")
 
             try:
-                # Use file manager for consistent loading
-                df, message = self.file_manager.load_csv_with_validation(file_path)
+                # Detect file type and load appropriately
+                file_ext = Path(file_path).suffix.lower()
 
-                if df is None:
-                    QMessageBox.critical(self, "Error", f"Failed to load PSF data: {message}")
+                if file_ext == '.csv':
+                    # Load CSV format
+                    df, message = self.file_manager.load_csv_with_validation(file_path)
+
+                    if df is None:
+                        QMessageBox.critical(self, "Error", f"Failed to load PSF data: {message}")
+                        return
+
+                    # Extract PSF data from CSV
+                    radii, energies = self._extract_psf_from_df(df)
+
+                elif file_ext in ['.dat', '.txt']:
+                    # Load BEAMER format
+                    radii, energies = self._load_beamer_format_file(file_path)
+
+                else:
+                    QMessageBox.warning(self, "Unsupported Format",
+                                      f"File extension '{file_ext}' is not supported.\n"
+                                      "Supported formats: .csv, .dat, .txt")
                     return
-
-                # Extract PSF data from CSV
-                radii, energies = self._extract_psf_from_df(df)
 
                 if not radii or not energies:
                     QMessageBox.warning(self, "Warning", "No valid PSF data found in file")
                     return
 
-                # Store the path for BEAMER conversion
-                self.current_csv_path = file_path
+                # Store the path for BEAMER conversion (only for CSV files)
+                if file_ext == '.csv':
+                    self.current_csv_path = file_path
+                else:
+                    self.current_csv_path = None  # BEAMER files don't need conversion
 
                 # Clear existing data and add this as primary dataset
                 self.datasets = []
@@ -1010,10 +1124,10 @@ class PlotWidget(QWidget):
                 self.load_button.set_working(False)
 
     def add_comparison_data(self):
-        """Add additional PSF dataset for comparison"""
+        """Add additional PSF dataset for comparison (supports CSV and BEAMER formats)"""
         file_paths, _ = QFileDialog.getOpenFileNames(
             self, "Add PSF Data for Comparison", str(self.file_manager.working_dir),
-            "CSV files (*.csv);;All files (*.*)"
+            "PSF files (*.csv *.dat *.txt);;CSV files (*.csv);;BEAMER files (*.dat *.txt);;All files (*.*)"
         )
 
         if file_paths:
@@ -1024,15 +1138,31 @@ class PlotWidget(QWidget):
 
             try:
                 for file_path in file_paths:
-                    # Load and validate each file
-                    df, message = self.file_manager.load_csv_with_validation(file_path)
+                    # Detect file type
+                    file_ext = Path(file_path).suffix.lower()
 
-                    if df is None:
-                        print(f"Skipping {file_path}: {message}")
+                    if file_ext == '.csv':
+                        # Load CSV format
+                        df, message = self.file_manager.load_csv_with_validation(file_path)
+
+                        if df is None:
+                            print(f"Skipping {file_path}: {message}")
+                            continue
+
+                        # Extract PSF data
+                        radii, energies = self._extract_psf_from_df(df)
+
+                    elif file_ext in ['.dat', '.txt']:
+                        # Load BEAMER format
+                        radii, energies = self._load_beamer_format_file(file_path)
+
+                        if not radii or not energies:
+                            print(f"Skipping {file_path}: Failed to load BEAMER format")
+                            continue
+
+                    else:
+                        print(f"Skipping {file_path}: Unsupported format '{file_ext}'")
                         continue
-
-                    # Extract PSF data
-                    radii, energies = self._extract_psf_from_df(df)
 
                     if radii and energies:
                         dataset_info = {
@@ -1384,8 +1514,54 @@ class PlotWidget(QWidget):
         except Exception as e:
             return False, str(e)
 
+    def _calculate_optimal_axis_limits(self, radii, values, axis='both'):
+        """
+        Calculate optimal axis limits based on actual data range
+
+        Args:
+            radii: Array of radius values
+            values: Array of PSF/energy values
+            axis: 'x', 'y', or 'both'
+
+        Returns:
+            Tuple of (x_min, x_max, y_min, y_max) or subset based on axis
+        """
+        import numpy as np
+
+        # Filter out non-positive values for log scale
+        valid_mask = (np.array(radii) > 0) & (np.array(values) > 0)
+        valid_radii = np.array(radii)[valid_mask]
+        valid_values = np.array(values)[valid_mask]
+
+        if len(valid_radii) == 0 or len(valid_values) == 0:
+            # Fallback to defaults
+            return (0.01, 100, 1e-10, 2) if axis == 'both' else None
+
+        # X-axis (radius) limits with log-space padding
+        min_radius = np.min(valid_radii)
+        max_radius = np.max(valid_radii)
+        x_padding_factor = 0.5  # Half decade padding in log space
+        x_min = min_radius / (10 ** x_padding_factor)
+        x_max = max_radius * (10 ** x_padding_factor)
+
+        # Y-axis (PSF) limits using 0.1% threshold strategy
+        max_value = np.max(valid_values)
+        min_significant = max_value * 0.001  # 0.1% threshold
+        min_data = np.min(valid_values)
+
+        # Use whichever is larger: 0.1% of peak or actual minimum (clamped at 1e-10)
+        y_min = max(min_significant, min_data, 1e-10) / (10 ** 1.0)  # One decade below
+        y_max = max_value * (10 ** 0.5)  # Half decade above
+
+        if axis == 'x':
+            return (x_min, x_max)
+        elif axis == 'y':
+            return (y_min, y_max)
+        else:  # 'both'
+            return (x_min, x_max, y_min, y_max)
+
     def plot_beamer_format(self, radius_um, psf_norm):
-        """Plot BEAMER format PSF in standard style"""
+        """Plot BEAMER format PSF in standard style with dynamic axis limits"""
         self.figure.clear()
         ax = self.figure.add_subplot(111)
 
@@ -1397,9 +1573,10 @@ class PlotWidget(QWidget):
         ax.set_ylabel('relative energy deposition', fontsize=12)
         ax.set_title('Electron energy deposition point spread function', fontsize=14)
 
-        # Set axis limits similar to BEAMER
-        ax.set_xlim(0.01, 100)
-        ax.set_ylim(1e-10, 2)
+        # Set dynamic axis limits based on actual data
+        x_min, x_max, y_min, y_max = self._calculate_optimal_axis_limits(radius_um, psf_norm)
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
 
         # Grid
         ax.grid(True, which="both", ls="-", alpha=0.2)
@@ -3051,6 +3228,10 @@ class EBLMainWindow(QMainWindow):
 
             colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray']
 
+            # Collect all data for dynamic axis calculation
+            all_radii = []
+            all_psf = []
+
             # Load and plot each BEAMER file
             for i, file_path in enumerate(file_paths):
                 try:
@@ -3072,15 +3253,29 @@ class EBLMainWindow(QMainWindow):
                         ax.loglog(radius, psf, linewidth=2, color=color,
                                   label=Path(file_path).stem)
 
+                        # Collect for axis limit calculation
+                        all_radii.extend(radius)
+                        all_psf.extend(psf)
+
                 except Exception as e:
                     self.log_output(f"Error loading {file_path}: {str(e)}")
 
-            # Format plot in BEAMER style
+            # Format plot in BEAMER style with dynamic limits
             ax.set_xlabel('radius, μm')
             ax.set_ylabel('relative energy deposition')
             ax.set_title('BEAMER PSF Comparison')
-            ax.set_xlim(0.01, 100)
-            ax.set_ylim(1e-10, 2)
+
+            # Calculate optimal limits from all loaded data
+            if all_radii and all_psf:
+                x_min, x_max, y_min, y_max = self.plot_widget._calculate_optimal_axis_limits(
+                    all_radii, all_psf
+                )
+                ax.set_xlim(x_min, x_max)
+                ax.set_ylim(y_min, y_max)
+            else:
+                # Fallback to defaults if no data
+                ax.set_xlim(0.01, 100)
+                ax.set_ylim(1e-10, 2)
             ax.grid(True, which="both", ls="-", alpha=0.2)
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
