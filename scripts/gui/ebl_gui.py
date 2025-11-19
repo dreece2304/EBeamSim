@@ -1815,45 +1815,62 @@ class EBLMainWindow(QMainWindow):
         self.create_menu_bar()
         self.create_status_bar()
 
+        # Add tab switching shortcuts
+        self.setup_tab_shortcuts()
+
     def create_menu_bar(self):
         """Create enhanced menu bar with consolidated BEAMER tools"""
         menubar = self.menuBar()
 
         # File menu
-        file_menu = menubar.addMenu("File")
+        file_menu = menubar.addMenu("&File")
 
-        select_exe_action = QAction("Select Executable", self)
+        select_exe_action = QAction("Select &Executable...", self)
+        select_exe_action.setShortcut("Ctrl+E")
         select_exe_action.triggered.connect(self.select_executable)
         file_menu.addAction(select_exe_action)
 
-        save_macro_action = QAction("Save Macro", self)
+        save_macro_action = QAction("Save &Macro...", self)
+        save_macro_action.setShortcut("Ctrl+M")
         save_macro_action.triggered.connect(self.save_macro)
         file_menu.addAction(save_macro_action)
 
-        load_config_action = QAction("Load Configuration", self)
+        load_config_action = QAction("&Load Configuration...", self)
+        load_config_action.setShortcut("Ctrl+O")
         load_config_action.triggered.connect(self.load_configuration)
         file_menu.addAction(load_config_action)
 
-        save_config_action = QAction("Save Configuration", self)
+        save_config_action = QAction("&Save Configuration...", self)
+        save_config_action.setShortcut("Ctrl+S")
         save_config_action.triggered.connect(self.save_configuration)
         file_menu.addAction(save_config_action)
 
         file_menu.addSeparator()
 
-        exit_action = QAction("Exit", self)
+        exit_action = QAction("E&xit", self)
+        exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
-        # Simulation menu (removed placeholder batch run)
-        sim_menu = menubar.addMenu("Simulation")
+        # Simulation menu
+        sim_menu = menubar.addMenu("&Simulation")
 
-        run_action = QAction("Run Simulation", self)
+        run_action = QAction("&Run Simulation", self)
+        run_action.setShortcut("Ctrl+R")
         run_action.triggered.connect(self.run_simulation)
         sim_menu.addAction(run_action)
 
-        stop_action = QAction("Stop Simulation", self)
+        stop_action = QAction("&Stop Simulation", self)
+        stop_action.setShortcut("Esc")
         stop_action.triggered.connect(self.stop_simulation)
         sim_menu.addAction(stop_action)
+
+        sim_menu.addSeparator()
+
+        generate_action = QAction("&Generate Macro", self)
+        generate_action.setShortcut("Ctrl+G")
+        generate_action.triggered.connect(self.generate_macro)
+        sim_menu.addAction(generate_action)
 
         # Enhanced BEAMER menu with consolidated functionality
         beamer_menu = menubar.addMenu("BEAMER")
@@ -1877,30 +1894,40 @@ class EBLMainWindow(QMainWindow):
         beamer_menu.addAction(compare_beamer_action)
 
         # Tools menu
-        tools_menu = menubar.addMenu("Tools")
+        tools_menu = menubar.addMenu("&Tools")
 
-        settings_action = QAction("Settings...", self)
+        settings_action = QAction("&Settings...", self)
+        settings_action.setShortcut("Ctrl+,")
         settings_action.triggered.connect(self.open_settings)
         tools_menu.addAction(settings_action)
 
         tools_menu.addSeparator()
 
-        psf_compare_action = QAction("PSF Comparison Tool", self)
+        psf_compare_action = QAction("&PSF Comparison Tool", self)
+        psf_compare_action.setShortcut("Ctrl+P")
         psf_compare_action.triggered.connect(self.open_psf_comparison)
         tools_menu.addAction(psf_compare_action)
 
-        recent_files_action = QAction("Recent Simulation Files", self)
+        recent_files_action = QAction("&Recent Simulation Files", self)
+        recent_files_action.setShortcut("Ctrl+H")
         recent_files_action.triggered.connect(self.show_recent_files)
         tools_menu.addAction(recent_files_action)
 
         # Help menu
-        help_menu = menubar.addMenu("Help")
+        help_menu = menubar.addMenu("&Help")
 
-        about_action = QAction("About", self)
+        shortcuts_action = QAction("&Keyboard Shortcuts", self)
+        shortcuts_action.setShortcut("F1")
+        shortcuts_action.triggered.connect(self.show_shortcuts_help)
+        help_menu.addAction(shortcuts_action)
+
+        help_menu.addSeparator()
+
+        about_action = QAction("&About", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
 
-        beamer_help_action = QAction("BEAMER Format Help", self)
+        beamer_help_action = QAction("&BEAMER Format Help", self)
         beamer_help_action.triggered.connect(self.show_beamer_help)
         help_menu.addAction(beamer_help_action)
 
@@ -1921,8 +1948,37 @@ class EBLMainWindow(QMainWindow):
 
         # File operations indicator
         self.file_status_label = QLabel("")
-        self.file_status_label.setVisible(False)
-        self.status_bar.addPermanentWidget(self.file_status_label)
+
+    def setup_tab_shortcuts(self):
+        """Setup keyboard shortcuts for tab switching"""
+        from PySide6.QtGui import QShortcut, QKeySequence
+
+        # Ctrl+1 through Ctrl+9 for direct tab switching
+        for i in range(1, 10):
+            if i <= self.tab_widget.count():
+                shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
+                # Use lambda with default argument to capture current value of i
+                shortcut.activated.connect(lambda idx=i-1: self.tab_widget.setCurrentIndex(idx))
+
+        # Ctrl+Tab for next tab
+        next_tab_shortcut = QShortcut(QKeySequence("Ctrl+Tab"), self)
+        next_tab_shortcut.activated.connect(self.next_tab)
+
+        # Ctrl+Shift+Tab for previous tab
+        prev_tab_shortcut = QShortcut(QKeySequence("Ctrl+Shift+Tab"), self)
+        prev_tab_shortcut.activated.connect(self.previous_tab)
+
+    def next_tab(self):
+        """Switch to next tab"""
+        current = self.tab_widget.currentIndex()
+        next_index = (current + 1) % self.tab_widget.count()
+        self.tab_widget.setCurrentIndex(next_index)
+
+    def previous_tab(self):
+        """Switch to previous tab"""
+        current = self.tab_widget.currentIndex()
+        prev_index = (current - 1) % self.tab_widget.count()
+        self.tab_widget.setCurrentIndex(prev_index)
 
     def create_resist_tab(self):
         """Enhanced resist properties tab with simplified material builder"""
@@ -3912,6 +3968,55 @@ class EBLMainWindow(QMainWindow):
                   
                   <p><b>Support:</b> Check the Help menu for BEAMER format guide and usage tips.</p>
                   """)
+
+    def show_shortcuts_help(self):
+        """Show keyboard shortcuts help dialog"""
+        shortcuts_text = """
+<h3>⌨️  Keyboard Shortcuts</h3>
+
+<h4>File Operations:</h4>
+<table cellpadding="5">
+<tr><td><b>Ctrl+O</b></td><td>Load Configuration</td></tr>
+<tr><td><b>Ctrl+S</b></td><td>Save Configuration</td></tr>
+<tr><td><b>Ctrl+M</b></td><td>Save Macro</td></tr>
+<tr><td><b>Ctrl+E</b></td><td>Select Executable</td></tr>
+<tr><td><b>Ctrl+Q</b></td><td>Exit Application</td></tr>
+</table>
+
+<h4>Simulation:</h4>
+<table cellpadding="5">
+<tr><td><b>Ctrl+R</b></td><td>Run Simulation</td></tr>
+<tr><td><b>Ctrl+G</b></td><td>Generate Macro</td></tr>
+<tr><td><b>Esc</b></td><td>Stop Simulation</td></tr>
+</table>
+
+<h4>Tools:</h4>
+<table cellpadding="5">
+<tr><td><b>Ctrl+,</b></td><td>Settings</td></tr>
+<tr><td><b>Ctrl+P</b></td><td>PSF Comparison Tool</td></tr>
+<tr><td><b>Ctrl+H</b></td><td>Recent Simulation Files</td></tr>
+</table>
+
+<h4>Navigation:</h4>
+<table cellpadding="5">
+<tr><td><b>Ctrl+1-9</b></td><td>Switch to Tab 1-9</td></tr>
+<tr><td><b>Ctrl+Tab</b></td><td>Next Tab</td></tr>
+<tr><td><b>Ctrl+Shift+Tab</b></td><td>Previous Tab</td></tr>
+</table>
+
+<h4>Help:</h4>
+<table cellpadding="5">
+<tr><td><b>F1</b></td><td>Show This Help</td></tr>
+</table>
+
+<p><i>Tip: Menu items show their shortcuts next to the command.</i></p>
+        """
+
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("Keyboard Shortcuts")
+        dialog.setText(shortcuts_text)
+        dialog.setIcon(QMessageBox.Information)
+        dialog.exec()
 
     def show_beamer_help(self):
         """Enhanced BEAMER format help dialog"""
