@@ -455,18 +455,21 @@ class Enhanced2DPlotWidget(QWidget):
         # 3D Surface plot removed - confusing and hard to read values
         self.radio_contour = QRadioButton("Contour Plot")
         self.radio_cross = QRadioButton("Cross Sections")
+        self.radio_radial_avg = QRadioButton("Radial Average")
 
         self.plot_type_group = QButtonGroup()
         self.plot_type_group.addButton(self.radio_2d, 0)
         # ID 1 was 3D Surface (removed)
         self.plot_type_group.addButton(self.radio_contour, 2)
         self.plot_type_group.addButton(self.radio_cross, 3)
+        self.plot_type_group.addButton(self.radio_radial_avg, 4)
         self.plot_type_group.buttonClicked.connect(self.update_plot)
 
         plot_type_layout.addWidget(self.radio_2d)
         # self.radio_3d removed
         plot_type_layout.addWidget(self.radio_contour)
         plot_type_layout.addWidget(self.radio_cross)
+        plot_type_layout.addWidget(self.radio_radial_avg)
         plot_type_group.setLayout(plot_type_layout)
 
         # Colormap selection
@@ -605,6 +608,8 @@ class Enhanced2DPlotWidget(QWidget):
                 self.plot_contour()
             elif plot_mode == 3:  # Cross sections
                 self.plot_cross_sections()
+            elif plot_mode == 4:  # Radial Average
+                self.plot_radial_average()
             else:
                 # Shouldn't happen, but fallback to heatmap
                 self.plot_heatmap()
@@ -883,24 +888,184 @@ class Enhanced2DPlotWidget(QWidget):
 
         self.figure.tight_layout()
 
+    def plot_radial_average(self):
+        """Create radial average analysis view with 3 panels"""
+        from matplotlib.gridspec import GridSpec
+
+        depths = self.current_data['depths']
+        radii = self.current_data['radii']
+        energy = self.current_data['energy']
+
+        # Get resist thickness
+        resist_thickness = self._extract_resist_thickness()
+
+        # Create GridSpec layout: 2 rows, 2 columns
+        gs = GridSpec(2, 2, figure=self.figure, height_ratios=[2, 1], width_ratios=[3, 1])
+
+        ax_main = self.figure.add_subplot(gs[0, 0])      # Main radial average
+        ax_depth = self.figure.add_subplot(gs[0, 1])     # Depth profiles
+        ax_2d = self.figure.add_subplot(gs[1, :])        # 2D overview
+
+        # Calculate radial average (integrated over depth in resist region)
+        resist_mask = (depths >= 0) & (depths <= resist_thickness)
+        energy_resist = energy[resist_mask, :]
+
+        radial_average = np.mean(energy_resist, axis=0)
+        radial_std = np.std(energy_resist, axis=0)
+
+        # Main plot: Depth-averaged radial profile
+        use_log = self.log_scale_check.isChecked()
+
+        if use_log:
+            ax_main.loglog(radii, radial_average, 'b-', linewidth=2.5, label='Depth Average')
+            # Show standard deviation as shaded region
+            ax_main.fill_between(radii,
+                                np.maximum(radial_average - radial_std, 1e-10),
+                                radial_average + radial_std,
+                                alpha=0.3, color='blue', label='±1σ')
+        else:
+            ax_main.plot(radii, radial_average, 'b-', linewidth=2.5, label='Depth Average')
+            ax_main.fill_between(radii,
+                                radial_average - radial_std,
+                                radial_average + radial_std,
+                                alpha=0.3, color='blue', label='±1σ')
+
+        ax_main.set_xlabel('Radius [nm]', fontsize=11)
+        ax_main.set_ylabel('Average Energy Deposition [eV/nm²]', fontsize=11)
+        ax_main.set_title('Depth-Averaged Radial Profile', fontsize=12, fontweight='bold')
+        ax_main.grid(True, alpha=0.3, which='both')
+        ax_main.legend(fontsize=9)
+
+        # Depth profiles at selected radii
+        radii_indices = [0, len(radii)//4, len(radii)//2, 3*len(radii)//4]
+        colors = ['red', 'orange', 'green', 'blue']
+
+        for idx, color in zip(radii_indices, colors):
+            if idx < len(radii):
+                label = f'r={radii[idx]:.0f} nm'
+                if use_log:
+                    ax_depth.semilogx(energy[:, idx], depths, color=color,
+                                     linewidth=2, label=label)
+                else:
+                    ax_depth.plot(energy[:, idx], depths, color=color,
+                                linewidth=2, label=label)
+
+        # Add resist boundaries
+        ax_depth.axhline(y=0, color='k', linestyle='-', alpha=0.5, linewidth=1.5)
+        ax_depth.axhline(y=resist_thickness, color='k', linestyle='--',
+                        alpha=0.5, linewidth=1.5)
+
+        ax_depth.set_ylabel('Depth [nm]', fontsize=10)
+        ax_depth.set_xlabel('Energy [eV/nm²]', fontsize=10)
+        ax_depth.set_title('Depth Profiles', fontsize=11, fontweight='bold')
+        ax_depth.legend(fontsize=8)
+        ax_depth.grid(True, alpha=0.3)
+
+        # Limit depth axis to resist region
+        depth_margin = resist_thickness * 0.2
+        ax_depth.set_ylim(-depth_margin, resist_thickness * 1.1)
+
+        # 2D overview heatmap (compact)
+        R, D = np.meshgrid(radii, depths)
+
+        if use_log:
+            energy_plot = np.log10(np.maximum(energy, 1e-10))
+            label = 'Log10(Energy) [eV/nm²]'
+        else:
+            energy_plot = energy
+            label = 'Energy [eV/nm²]'
+
+        cmap = self.colormap_combo.currentText()
+        im = ax_2d.pcolormesh(R, D, energy_plot, cmap=cmap, shading='gouraud')
+
+        ax_2d.set_xlabel('Radius [nm]', fontsize=10)
+        ax_2d.set_ylabel('Depth [nm]', fontsize=10)
+        ax_2d.set_title('2D Energy Distribution Overview', fontsize=11, fontweight='bold')
+
+        # Apply same axis limits as heatmap
+        char_radius = self._calculate_psf_characteristic_radius(energy, radii)
+        max_radius_display = min(char_radius * 3, radii.max())
+        ax_2d.set_xlim(0, max_radius_display)
+        ax_2d.set_ylim(-depth_margin, resist_thickness * 1.1)
+
+        # Colorbar
+        cbar = self.figure.colorbar(im, ax=ax_2d, orientation='horizontal',
+                                    pad=0.15, aspect=30)
+        cbar.set_label(label, fontsize=9)
+
+        self.figure.tight_layout()
+
     def update_plot(self):
         """Update plot when settings change"""
         if self.current_data:
             self.plot_2d_data()
 
+    def _update_depth_indicator(self, depth_value):
+        """
+        Update or create depth indicator line on current plot
+
+        Args:
+            depth_value: Depth in nm to mark
+        """
+        try:
+            # Get current axes
+            ax = self.figure.axes[0] if self.figure.axes else None
+            if ax is None:
+                return
+
+            # Remove old depth indicator if it exists
+            if hasattr(self, '_depth_indicator_line') and self._depth_indicator_line is not None:
+                try:
+                    self._depth_indicator_line.remove()
+                except:
+                    pass
+
+            # Add new depth indicator line
+            xlim = ax.get_xlim()
+            self._depth_indicator_line = ax.plot(
+                xlim, [depth_value, depth_value],
+                color='cyan', linestyle='-', linewidth=2.5,
+                label=f'Depth: {depth_value:.1f} nm',
+                alpha=0.8, zorder=10
+            )[0]
+
+            # Update legend if it exists
+            if ax.get_legend():
+                ax.legend(loc='upper right', fontsize=9)
+
+            # Redraw canvas
+            self.canvas.draw()
+
+        except Exception as e:
+            # Silently fail if update not possible
+            pass
+
     def update_cross_section(self):
-        """Update cross section when slider moves - enhanced version"""
-        if self.current_data and self.plot_type_group.checkedId() == 3:
-            # Get current depth index and update label immediately
-            depth_idx = self.depth_slider.value()
-            depths = self.current_data['depths']
-            
-            if depth_idx < len(depths):
-                current_depth = depths[depth_idx]
-                self.depth_label.setText(f"Depth: {current_depth:.1f} nm")
-            
-            # Replot with new depth slice
+        """Update cross section when slider moves - works in all plot modes"""
+        if not self.current_data:
+            return
+
+        # Get current depth index and update label
+        depth_idx = self.depth_slider.value()
+        depths = self.current_data['depths']
+
+        if depth_idx < len(depths):
+            current_depth = depths[depth_idx]
+            self.depth_label.setText(f"Depth: {current_depth:.1f} nm")
+
+            # Store current depth for use in plotting
+            self.current_depth_value = current_depth
+
+        # Get current plot mode
+        plot_mode = self.plot_type_group.checkedId()
+
+        if plot_mode == 3:
+            # Cross sections mode: full replot
             self.plot_2d_data()
+        elif plot_mode in [0, 2]:
+            # Heatmap or Contour: add/update depth indicator line
+            self._update_depth_indicator(current_depth)
+        # Mode 1 was 3D (removed), no action needed
    
     def save_plot(self):
         """Save current plot"""
