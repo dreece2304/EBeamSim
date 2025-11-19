@@ -34,7 +34,7 @@ import random
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGridLayout, QTabWidget, QLabel, QLineEdit, QPushButton,
-    QComboBox, QSpinBox, QDoubleSpinBox, QCheckBox, QTextEdit,
+    QComboBox, QSpinBox, QDoubleSpinBox, QCheckBox, QTextEdit, QPlainTextEdit,
     QProgressBar, QStatusBar, QMenuBar, QFileDialog, QMessageBox,
     QGroupBox, QSplitter, QTreeWidget, QTreeWidgetItem, QHeaderView,
     QSlider, QRadioButton, QButtonGroup
@@ -55,6 +55,7 @@ from beamer_converter import BeamerConverterService as BEAMERConverter
 # Import Geant4 detector and settings dialog
 from core.geant4_detector import Geant4PathDetector, setup_geant4_environment
 from widgets.settings_dialog import SettingsDialog
+from core.validator import SimulationValidator
 
 # Matplotlib for Qt
 import matplotlib
@@ -2460,10 +2461,11 @@ class EBLMainWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout()
 
-        # Output text
-        self.output_text = QTextEdit()
+        # Output text with memory leak prevention
+        self.output_text = QPlainTextEdit()
         self.output_text.setReadOnly(True)
         self.output_text.setFont(QFont("Consolas", 9))
+        self.output_text.setMaximumBlockCount(5000)  # Limit to 5000 lines to prevent memory leak
         layout.addWidget(self.output_text)
 
         # Enhanced control buttons
@@ -3361,12 +3363,65 @@ class EBLMainWindow(QMainWindow):
             self.generate_button.set_working(False)
 
     def run_simulation(self):
-        """Start simulation with enhanced progress tracking"""
+        """Start simulation with enhanced progress tracking and comprehensive validation"""
         if self.simulation_running:
             QMessageBox.information(self, "Info", "Simulation is already running")
             return
 
-        # Validate inputs
+        # Comprehensive validation before simulation
+        beam_params = {
+            'energy': self.energy_spin.value(),
+            'beam_size': self.beam_size_spin.value(),
+            'pos_z': self.pos_z_spin.value(),
+            'dir_z': self.dir_z_spin.value()
+        }
+
+        material_params = {
+            'composition': self.composition_edit.text(),
+            'thickness': self.thickness_spin.value(),
+            'density': self.density_spin.value()
+        }
+
+        sim_params = {
+            'events': self.events_spin.value(),
+            'seed': self.seed_spin.value()
+        }
+
+        file_params = {
+            'executable_path': self.executable_path,
+            'working_dir': self.working_dir,
+            'geant4_path': self.geant4_path
+        }
+
+        is_valid, validation_errors = SimulationValidator.validate_all(
+            beam_params, material_params, sim_params, file_params
+        )
+
+        if validation_errors:
+            # Show validation report
+            report = SimulationValidator.format_validation_report(validation_errors)
+
+            if not is_valid:
+                # Has errors - cannot run
+                QMessageBox.critical(
+                    self,
+                    "Validation Failed",
+                    f"Cannot run simulation due to validation errors:\n\n{report}"
+                )
+                return
+            else:
+                # Only warnings - ask user
+                reply = QMessageBox.question(
+                    self,
+                    "Validation Warnings",
+                    f"{report}\n\nDo you want to proceed anyway?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                if reply == QMessageBox.No:
+                    return
+
+        # Validate inputs (additional large simulation warning)
         if self.events_spin.value() > 1000000:
             reply = QMessageBox.question(
                 self, "Large Simulation Warning",
@@ -3413,11 +3468,11 @@ class EBLMainWindow(QMainWindow):
         self.simulation_worker = SimulationWorker(self.executable_path, macro_path, self.working_dir, self.geant4_path)
         self.simulation_worker.moveToThread(self.simulation_thread)
 
-        # Connect signals
-        self.simulation_worker.output.connect(self.log_output)
-        self.simulation_worker.progress.connect(self.update_progress)
-        self.simulation_worker.finished.connect(self.simulation_finished)
-        self.simulation_thread.started.connect(self.simulation_worker.run_simulation)
+        # Connect signals with UniqueConnection to prevent duplicates
+        self.simulation_worker.output.connect(self.log_output, Qt.UniqueConnection)
+        self.simulation_worker.progress.connect(self.update_progress, Qt.UniqueConnection)
+        self.simulation_worker.finished.connect(self.simulation_finished, Qt.UniqueConnection)
+        self.simulation_thread.started.connect(self.simulation_worker.run_simulation, Qt.UniqueConnection)
 
         # Start thread
         self.simulation_thread.start()
@@ -3431,7 +3486,7 @@ class EBLMainWindow(QMainWindow):
             self.log_output("Stopping simulation...")
 
     def simulation_finished(self, success, message):
-        """Handle simulation completion with enhanced file loading"""
+        """Handle simulation completion with enhanced file loading and proper cleanup"""
         self.simulation_running = False
         self.run_button.set_working(False)
         self.stop_button.setEnabled(False)
@@ -3440,7 +3495,22 @@ class EBLMainWindow(QMainWindow):
         self.log_output(message)
         self.status_label.setText(message)
 
+        # Disconnect signals to prevent memory leaks
+        if self.simulation_worker:
+            try:
+                self.simulation_worker.output.disconnect(self.log_output)
+                self.simulation_worker.progress.disconnect(self.update_progress)
+                self.simulation_worker.finished.disconnect(self.simulation_finished)
+            except (TypeError, RuntimeError):
+                # Signals may already be disconnected
+                pass
+
         if self.simulation_thread:
+            try:
+                self.simulation_thread.started.disconnect(self.simulation_worker.run_simulation)
+            except (TypeError, RuntimeError):
+                pass
+
             self.simulation_thread.quit()
             self.simulation_thread.wait()
 
@@ -3639,7 +3709,7 @@ class EBLMainWindow(QMainWindow):
     def log_output(self, message):
         """Add message to output log with timestamp"""
         timestamp = time.strftime("%H:%M:%S")
-        self.output_text.append(f"[{timestamp}] {message}")
+        self.output_text.appendPlainText(f"[{timestamp}] {message}")
 
         # Auto-scroll to bottom
         scrollbar = self.output_text.verticalScrollBar()
