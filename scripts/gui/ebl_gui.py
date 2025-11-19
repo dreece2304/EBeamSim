@@ -56,6 +56,7 @@ from beamer_converter import BeamerConverterService as BEAMERConverter
 from core.geant4_detector import Geant4PathDetector, setup_geant4_environment
 from widgets.settings_dialog import SettingsDialog
 from core.validator import SimulationValidator
+from core import constants as const
 
 # Matplotlib for Qt
 import matplotlib
@@ -284,7 +285,7 @@ class SimulationWorker(QObject):
 
             # OPTIMIZED progress tracking for large simulations
             line_count = 0
-            max_gui_lines = 3000  # Reduce GUI overhead for large sims
+            max_gui_lines = const.MAX_GUI_LINES_FOR_FILTERING  # Reduce GUI overhead for large sims
 
             # Enhanced tracking variables
             last_event_number = 0
@@ -312,7 +313,7 @@ class SimulationWorker(QObject):
                 if line:
                     # Smart output filtering for large simulations
                     should_show_line = True
-                    if self.total_events and self.total_events > 100000:
+                    if self.total_events and self.total_events > const.LARGE_SIMULATION_THRESHOLD:
                         # For large sims, filter output aggressively
                         should_show_line = any(keyword in line for keyword in important_keywords)
 
@@ -375,7 +376,7 @@ class SimulationWorker(QObject):
                         track_reports_count += 1
 
                         # For 1M+ events, use track reports as backup indicator
-                        if self.total_events and self.total_events >= 1000000:
+                        if self.total_events and self.total_events >= const.VERY_LARGE_SIMULATION_THRESHOLD:
                             estimated_from_tracks = track_reports_count * 3000
                             if estimated_from_tracks > max(last_event_number, estimated_progress):
                                 estimated_progress = min(estimated_from_tracks, self.total_events)
@@ -389,14 +390,14 @@ class SimulationWorker(QObject):
                         percentage = (current_progress / self.total_events) * 100
 
                         # Dynamic reporting threshold based on simulation size
-                        if self.total_events > 2000000:
-                            report_threshold = 0.5  # Every 0.5% for very large sims
-                        elif self.total_events > 500000:
-                            report_threshold = 1.0  # Every 1% for large sims
-                        elif self.total_events > 50000:
-                            report_threshold = 2.0  # Every 2% for medium sims
+                        if self.total_events > const.SIMULATION_SIZE_HUGE:
+                            report_threshold = const.PROGRESS_REPORT_THRESHOLD_HUGE
+                        elif self.total_events > const.SIMULATION_SIZE_LARGE:
+                            report_threshold = const.PROGRESS_REPORT_THRESHOLD_LARGE
+                        elif self.total_events > const.SIMULATION_SIZE_MEDIUM:
+                            report_threshold = const.PROGRESS_REPORT_THRESHOLD_MEDIUM
                         else:
-                            report_threshold = 5.0  # Every 5% for smaller sims
+                            report_threshold = const.PROGRESS_REPORT_THRESHOLD_SMALL
 
                         if percentage - self.last_reported_progress >= report_threshold:
                             self.output.emit(f">>> Progress: {percentage:.1f}% ({current_progress:,}/{self.total_events:,})")
@@ -1794,17 +1795,17 @@ class EBLMainWindow(QMainWindow):
         # Create tab widget
         self.tab_widget = QTabWidget()
 
-        # Create tabs (removed placeholder tabs)
+        # Create tabs (removed unused tabs: Pattern Exposure, Proximity Correction)
         self.create_resist_tab()
         self.create_beam_tab()
         self.create_simulation_tab()
-        self.create_pattern_tab()
+        # self.create_pattern_tab()  # REMOVED - Not used
         self.create_output_tab()
         self.create_1d_visualization_tab()
         self.create_2d_visualization_tab()
         self.create_pattern_heatmap_tab()
-        self.create_proximity_correction_tab()
-        # Note: Removed analysis tab as it had placeholder functionality
+        # self.create_proximity_correction_tab()  # REMOVED - Not used
+        # Note: Removed analysis tab, pattern tab, and proximity correction tab as unused
 
         # Main layout
         layout = QVBoxLayout()
@@ -2521,7 +2522,7 @@ class EBLMainWindow(QMainWindow):
         self.output_text = QPlainTextEdit()
         self.output_text.setReadOnly(True)
         self.output_text.setFont(QFont("Consolas", 9))
-        self.output_text.setMaximumBlockCount(5000)  # Limit to 5000 lines to prevent memory leak
+        self.output_text.setMaximumBlockCount(const.MAX_GUI_OUTPUT_LINES)  # Prevent memory leak
         layout.addWidget(self.output_text)
 
         # Enhanced control buttons
@@ -4175,10 +4176,10 @@ study parameter dependencies (energy, material, thickness).</i></p>
                     self.statusBar().showMessage("Waiting for simulation to stop...")
 
                     # Try graceful shutdown first
-                    if not self.simulation_thread.wait(5000):  # 5 second timeout
+                    if not self.simulation_thread.wait(const.THREAD_WAIT_TIMEOUT):
                         # If still running, force termination
                         self.simulation_thread.terminate()
-                        if not self.simulation_thread.wait(2000):  # 2 more seconds
+                        if not self.simulation_thread.wait(const.THREAD_TERMINATE_TIMEOUT):
                             self.statusBar().showMessage("Warning: Force-quitting simulation thread")
 
         event.accept()
