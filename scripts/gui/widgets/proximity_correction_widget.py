@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                               QCheckBox, QMessageBox, QHeaderView, QTextEdit,
                               QSlider, QRadioButton, QButtonGroup, QTabWidget,
                               QFileDialog, QProgressBar)
-from PySide6.QtCore import Qt, Signal, QThread, pyqtSignal
+from PySide6.QtCore import Qt, Signal, QThread
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure

@@ -29,7 +29,6 @@ import json
 import re
 import glob
 import random
-import scipy.signal
 
 # Qt imports
 from PySide6.QtWidgets import (
@@ -40,7 +39,7 @@ from PySide6.QtWidgets import (
     QGroupBox, QSplitter, QTreeWidget, QTreeWidgetItem, QHeaderView,
     QSlider, QRadioButton, QButtonGroup
 )
-from PySide6.QtCore import Qt, QTimer, QThread, QObject, Signal, QSettings
+from PySide6.QtCore import Qt, QTimer, QThread, QObject, Signal, QSettings, QMutex
 from PySide6.QtGui import QFont, QIcon, QAction, QPalette, QColor
 
 # Scientific computing
@@ -48,8 +47,14 @@ import numpy as np
 import pandas as pd
 
 # Import consolidated BEAMER converter
-from beamer_converter import BEAMERConverter
 import scipy.interpolate
+# Add services directory to path for direct import
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'services'))
+from beamer_converter import BeamerConverterService as BEAMERConverter
+
+# Import Geant4 detector and settings dialog
+from core.geant4_detector import Geant4PathDetector, setup_geant4_environment
+from widgets.settings_dialog import SettingsDialog
 
 # Matplotlib for Qt
 import matplotlib
@@ -206,41 +211,64 @@ class SimulationWorker(QObject):
     progress = Signal(int)
     finished = Signal(bool, str)
 
-    def __init__(self, executable_path, macro_path, working_dir):
+    def __init__(self, executable_path, macro_path, working_dir, g4_path=None):
         super().__init__()
         self.executable_path = executable_path
         self.macro_path = macro_path
         self.working_dir = working_dir
+        self.g4_path = g4_path
         self.process = None
         self.should_stop = False
         self.total_events = None
         self.last_reported_progress = -1
+        self.mutex = QMutex()  # Thread-safe access to shared state
+
+    def _safe_emit(self, signal, *args):
+        """Thread-safe signal emission with stop check"""
+        self.mutex.lock()
+        try:
+            if not self.should_stop:
+                signal.emit(*args)
+        finally:
+            self.mutex.unlock()
+
+    def stop(self):
+        """Request worker to stop - thread-safe"""
+        self.mutex.lock()
+        try:
+            self.should_stop = True
+        finally:
+            self.mutex.unlock()
 
     def run_simulation(self):
         """Run the simulation in this thread with optimized progress tracking"""
         try:
+            from core.geant4_detector import setup_geant4_environment
+
             args = [self.executable_path, self.macro_path]
 
             # Set up environment variables for Geant4
             env = os.environ.copy()
-            g4_path = r"C:\Users\bergsman_lab_user\Geant4\ProgramFiles"
 
-            # Add Geant4 data paths
-            env['G4ABLADATA'] = f"{g4_path}\\share\\Geant4\\data\\G4ABLA3.3"
-            env['G4CHANNELINGDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4CHANNELING1.0"
-            env['G4LEDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4EMLOW8.6.1"
-            env['G4ENSDFSTATEDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4ENSDFSTATE3.0"
-            env['G4INCLDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4INCL1.2"
-            env['G4NEUTRONHPDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4NDL4.7.1"
-            env['G4PARTICLEXSDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4PARTICLEXS4.1"
-            env['G4PIIDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4PII1.3"
-            env['G4RADIOACTIVEDATA'] = f"{g4_path}\\share\\Geant4\\data\\RadioactiveDecay6.1.2"
-            env['G4REALSURFACEDATA'] = f"{g4_path}\\share\\Geant4\\data\\RealSurface2.2"
-            env['G4SAIDXSDATA'] = f"{g4_path}\\share\\Geant4\\data\\G4SAIDDATA2.0"
-            env['G4LEVELGAMMADATA'] = f"{g4_path}\\share\\Geant4\\data\\PhotonEvaporation6.1"
+            # Use provided G4 path or try to detect it
+            if self.g4_path:
+                success, message = setup_geant4_environment(self.g4_path)
+                if not success:
+                    self._safe_emit(self.output, f"Error: {message}\n")
+                    self._safe_emit(self.finished, False, message)
+                    return
+                self._safe_emit(self.output, f"Geant4 environment: {message}\n")
+            else:
+                self._safe_emit(self.output, "Warning: No Geant4 path configured. Simulation may fail.\n")
 
-            # Add to PATH
-            env['PATH'] = f"{g4_path}\\bin;" + env.get('PATH', '')
+            # Update env with Geant4 variables (already set by setup_geant4_environment)
+            env.update(os.environ)
+
+            # Add bin directory to PATH if needed
+            if self.g4_path:
+                bin_dir = self.g4_path / 'bin'
+                if bin_dir.exists():
+                    env['PATH'] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
 
             self.process = subprocess.Popen(
                 args,
@@ -388,18 +416,12 @@ class SimulationWorker(QObject):
             return_code = self.process.wait()
 
             if return_code == 0 and not self.should_stop:
-                self.finished.emit(True, "Simulation completed successfully")
+                self._safe_emit(self.finished, True, "Simulation completed successfully")
             else:
-                self.finished.emit(False, f"Simulation failed (code: {return_code})")
+                self._safe_emit(self.finished, False, f"Simulation failed (code: {return_code})")
 
         except Exception as e:
-            self.finished.emit(False, f"Error: {str(e)}")
-
-    def stop(self):
-        """Stop the simulation"""
-        self.should_stop = True
-        if self.process:
-            self.process.terminate()
+            self._safe_emit(self.finished, False, f"Error: {str(e)}")
 
 
 class Enhanced2DPlotWidget(QWidget):
@@ -1663,6 +1685,10 @@ class EBLMainWindow(QMainWindow):
         self.working_dir = str(Path(__file__).resolve().parent.parent.parent / "cmake-build-release" / "bin")
         self.file_manager = FileManager(self.working_dir)
 
+        # Initialize Geant4 path (load from settings or auto-detect)
+        self.geant4_path = None
+        self._initialize_geant4_path()
+
         self.setup_ui()
         self.setup_defaults()
         self.load_settings()
@@ -1732,6 +1758,14 @@ class EBLMainWindow(QMainWindow):
                 border-radius: 3px;
                 padding: 5px;
                 color: #ffffff;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #404040;
+                border: 1px solid #555555;
+                selection-background-color: #007acc;
+                selection-color: #ffffff;
+                color: #ffffff;
+                outline: none;
             }
             QTextEdit {
                 background-color: #404040;
@@ -1843,6 +1877,12 @@ class EBLMainWindow(QMainWindow):
 
         # Tools menu
         tools_menu = menubar.addMenu("Tools")
+
+        settings_action = QAction("Settings...", self)
+        settings_action.triggered.connect(self.open_settings)
+        tools_menu.addAction(settings_action)
+
+        tools_menu.addSeparator()
 
         psf_compare_action = QAction("PSF Comparison Tool", self)
         psf_compare_action.triggered.connect(self.open_psf_comparison)
@@ -3370,7 +3410,7 @@ class EBLMainWindow(QMainWindow):
 
         # Create worker thread
         self.simulation_thread = QThread()
-        self.simulation_worker = SimulationWorker(self.executable_path, macro_path, self.working_dir)
+        self.simulation_worker = SimulationWorker(self.executable_path, macro_path, self.working_dir, self.geant4_path)
         self.simulation_worker.moveToThread(self.simulation_thread)
 
         # Connect signals
@@ -3905,9 +3945,43 @@ study parameter dependencies (energy, material, thickness).</i></p>
         """Save application settings"""
         self.settings.setValue("geometry", self.saveGeometry())
         self.settings.setValue("executable_path", self.executable_path)
+        if self.geant4_path:
+            self.settings.setValue("geant4_path", str(self.geant4_path))
+
+    def _initialize_geant4_path(self):
+        """Initialize Geant4 path from settings or auto-detect"""
+        # Try to load from settings first
+        saved_path = self.settings.value("geant4_path")
+        if saved_path:
+            path = Path(saved_path)
+            detector = Geant4PathDetector()
+            if detector.validate_geant4_path(path):
+                self.geant4_path = path
+                return
+
+        # If no valid saved path, try auto-detection
+        detector = Geant4PathDetector()
+        detected_path = detector.detect_geant4_path()
+        if detected_path:
+            self.geant4_path = detected_path
+            # Save for next time
+            self.settings.setValue("geant4_path", str(detected_path))
+
+    def open_settings(self):
+        """Open settings dialog"""
+        dialog = SettingsDialog(self, self.geant4_path)
+        dialog.settings_changed.connect(self._on_settings_changed)
+        dialog.exec()
+
+    def _on_settings_changed(self, settings):
+        """Handle settings changes"""
+        if 'geant4_path' in settings:
+            self.geant4_path = settings['geant4_path']
+            self.settings.setValue("geant4_path", str(self.geant4_path))
+            self.statusBar().showMessage(f"Geant4 path updated: {self.geant4_path}", 3000)
 
     def closeEvent(self, event):
-        """Handle window close event"""
+        """Handle window close event with proper thread cleanup"""
         self.save_settings()
 
         if self.simulation_running:
@@ -3921,11 +3995,27 @@ study parameter dependencies (energy, material, thickness).</i></p>
             else:
                 self.stop_simulation()
 
+                # Wait for thread to finish properly
+                if self.simulation_thread and self.simulation_thread.isRunning():
+                    self.statusBar().showMessage("Waiting for simulation to stop...")
+
+                    # Try graceful shutdown first
+                    if not self.simulation_thread.wait(5000):  # 5 second timeout
+                        # If still running, force termination
+                        self.simulation_thread.terminate()
+                        if not self.simulation_thread.wait(2000):  # 2 more seconds
+                            self.statusBar().showMessage("Warning: Force-quitting simulation thread")
+
         event.accept()
 
 
 def main():
     """Enhanced main function with better error handling"""
+    # Fix for WSL2/X11 - Force Qt to use X11 instead of Wayland
+    # Detect WSL2 and set appropriate Qt platform
+    if platform.system() == 'Linux' and 'microsoft' in platform.uname().release.lower():
+        os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')
+
     app = QApplication(sys.argv)
 
     # Set application properties
