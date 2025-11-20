@@ -1158,6 +1158,23 @@ class Enhanced2DPlotWidget(QWidget):
         quality_group.setLayout(quality_layout)
         layout.addWidget(quality_group)
 
+        # Display options group
+        display_group = QGroupBox("Display Options")
+        display_layout = QVBoxLayout()
+
+        self._show_legend = QCheckBox("Include legend")
+        self._show_legend.setChecked(False)  # Default: no legend
+        self._show_legend.setToolTip("Show/hide legend on saved plot")
+        display_layout.addWidget(self._show_legend)
+
+        self._show_metrics = QCheckBox("Include metrics (FWHM, R50, R90)")
+        self._show_metrics.setChecked(False)  # Default: no metrics
+        self._show_metrics.setToolTip("Show/hide statistics text box")
+        display_layout.addWidget(self._show_metrics)
+
+        display_group.setLayout(display_layout)
+        layout.addWidget(display_group)
+
         # Format selection
         format_layout = QHBoxLayout()
         format_layout.addWidget(QLabel("Format:"))
@@ -1201,6 +1218,10 @@ class Enhanced2DPlotWidget(QWidget):
         dpi = self._dpi_spin.value()
         font_scale = self._font_scale.value()
 
+        # Get display options
+        show_legend = self._show_legend.isChecked()
+        show_metrics = self._show_metrics.isChecked()
+
         # Get format and file path
         format_text = self._format_combo.currentText()
         format_map = {
@@ -1222,9 +1243,9 @@ class Enhanced2DPlotWidget(QWidget):
         if not file_path.lower().endswith(ext):
             file_path += ext
 
-        return file_path, size_cm, dpi, font_scale
+        return file_path, size_cm, dpi, font_scale, show_legend, show_metrics
 
-    def _save_plot_with_settings(self, file_path, size_cm, dpi, font_scale):
+    def _save_plot_with_settings(self, file_path, size_cm, dpi, font_scale, show_legend, show_metrics):
         """Save plot with presentation-ready formatting"""
         import matplotlib.pyplot as plt
 
@@ -1238,6 +1259,9 @@ class Enhanced2DPlotWidget(QWidget):
         # Temporarily modify figure for export
         self.figure.set_size_inches(size_inches)
         self.figure.set_dpi(dpi)
+
+        # Store original visibility states for restoration
+        hidden_artists = []
 
         # Enhance fonts and line widths for all axes
         for ax in self.figure.axes:
@@ -1260,14 +1284,28 @@ class Enhanced2DPlotWidget(QWidget):
             if ax.get_xgridlines():
                 ax.grid(True, alpha=0.3, linewidth=0.8)
 
-            # Make legend more readable if present
+            # Handle legend visibility
             legend = ax.get_legend()
             if legend:
-                legend.set_frame_on(True)
-                legend.get_frame().set_alpha(0.9)
-                legend.get_frame().set_linewidth(1.0)
-                for text in legend.get_texts():
-                    text.set_fontsize(9 * font_scale)
+                if show_legend:
+                    # Make legend more readable
+                    legend.set_frame_on(True)
+                    legend.get_frame().set_alpha(0.9)
+                    legend.get_frame().set_linewidth(1.0)
+                    for text in legend.get_texts():
+                        text.set_fontsize(9 * font_scale)
+                else:
+                    # Hide legend for export
+                    legend.set_visible(False)
+                    hidden_artists.append(legend)
+
+            # Handle metrics text box visibility (if present)
+            if not show_metrics:
+                for text in ax.texts:
+                    # Hide text boxes (typically metrics/statistics)
+                    if text.get_visible():
+                        text.set_visible(False)
+                        hidden_artists.append(text)
 
         # Save with tight bounding box and high quality
         self.figure.savefig(
@@ -1283,6 +1321,10 @@ class Enhanced2DPlotWidget(QWidget):
         self.figure.set_size_inches(old_size)
         self.figure.set_dpi(old_dpi)
 
+        # Restore visibility of hidden elements
+        for artist in hidden_artists:
+            artist.set_visible(True)
+
         # Reset formatting (re-draw current plot)
         # This will restore original line widths and fonts
         self.canvas.draw()
@@ -1297,11 +1339,11 @@ class Enhanced2DPlotWidget(QWidget):
         if not result:
             return
 
-        file_path, size_cm, dpi, font_scale = result
+        file_path, size_cm, dpi, font_scale, show_legend, show_metrics = result
 
         self.save_plot_button.set_working(True, "Saving...")
         try:
-            self._save_plot_with_settings(file_path, size_cm, dpi, font_scale)
+            self._save_plot_with_settings(file_path, size_cm, dpi, font_scale, show_legend, show_metrics)
             QMessageBox.information(self, "Success",
                                   f"Plot saved to {Path(file_path).name}\n"
                                   f"Size: {size_cm[0]}×{size_cm[1]} cm @ {dpi} DPI")
@@ -2653,6 +2695,23 @@ class PlotWidget(QWidget):
         quality_group.setLayout(quality_layout)
         layout.addWidget(quality_group)
 
+        # Display options group
+        display_group = QGroupBox("Display Options")
+        display_layout = QVBoxLayout()
+
+        self._show_legend = QCheckBox("Include legend")
+        self._show_legend.setChecked(False)  # Default: no legend
+        self._show_legend.setToolTip("Show/hide legend on saved plot")
+        display_layout.addWidget(self._show_legend)
+
+        self._show_metrics = QCheckBox("Include metrics (FWHM, R50, R90)")
+        self._show_metrics.setChecked(False)  # Default: no metrics
+        self._show_metrics.setToolTip("Show/hide statistics text box")
+        display_layout.addWidget(self._show_metrics)
+
+        display_group.setLayout(display_layout)
+        layout.addWidget(display_group)
+
         # Format selection
         format_layout = QHBoxLayout()
         format_layout.addWidget(QLabel("Format:"))
@@ -2696,6 +2755,10 @@ class PlotWidget(QWidget):
         dpi = self._dpi_spin.value()
         font_scale = self._font_scale.value()
 
+        # Get display options
+        show_legend = self._show_legend.isChecked()
+        show_metrics = self._show_metrics.isChecked()
+
         # Get format and file path
         format_text = self._format_combo.currentText()
         format_map = {
@@ -2717,9 +2780,9 @@ class PlotWidget(QWidget):
         if not file_path.lower().endswith(ext):
             file_path += ext
 
-        return file_path, size_cm, dpi, font_scale
+        return file_path, size_cm, dpi, font_scale, show_legend, show_metrics
 
-    def _save_plot_with_settings(self, file_path, size_cm, dpi, font_scale):
+    def _save_plot_with_settings(self, file_path, size_cm, dpi, font_scale, show_legend, show_metrics):
         """Save plot with presentation-ready formatting"""
         import matplotlib.pyplot as plt
 
@@ -2733,6 +2796,9 @@ class PlotWidget(QWidget):
         # Temporarily modify figure for export
         self.figure.set_size_inches(size_inches)
         self.figure.set_dpi(dpi)
+
+        # Store original visibility states for restoration
+        hidden_artists = []
 
         # Enhance fonts and line widths for all axes
         for ax in self.figure.axes:
@@ -2755,14 +2821,28 @@ class PlotWidget(QWidget):
             if ax.get_xgridlines():
                 ax.grid(True, alpha=0.3, linewidth=0.8)
 
-            # Make legend more readable if present
+            # Handle legend visibility
             legend = ax.get_legend()
             if legend:
-                legend.set_frame_on(True)
-                legend.get_frame().set_alpha(0.9)
-                legend.get_frame().set_linewidth(1.0)
-                for text in legend.get_texts():
-                    text.set_fontsize(9 * font_scale)
+                if show_legend:
+                    # Make legend more readable
+                    legend.set_frame_on(True)
+                    legend.get_frame().set_alpha(0.9)
+                    legend.get_frame().set_linewidth(1.0)
+                    for text in legend.get_texts():
+                        text.set_fontsize(9 * font_scale)
+                else:
+                    # Hide legend for export
+                    legend.set_visible(False)
+                    hidden_artists.append(legend)
+
+            # Handle metrics text box visibility (if present)
+            if not show_metrics:
+                for text in ax.texts:
+                    # Hide text boxes (typically metrics/statistics)
+                    if text.get_visible():
+                        text.set_visible(False)
+                        hidden_artists.append(text)
 
         # Save with tight bounding box and high quality
         self.figure.savefig(
@@ -2778,6 +2858,10 @@ class PlotWidget(QWidget):
         self.figure.set_size_inches(old_size)
         self.figure.set_dpi(old_dpi)
 
+        # Restore visibility of hidden elements
+        for artist in hidden_artists:
+            artist.set_visible(True)
+
         # Reset formatting (re-draw current plot)
         # This will restore original line widths and fonts
         self.canvas.draw()
@@ -2792,11 +2876,11 @@ class PlotWidget(QWidget):
         if not result:
             return
 
-        file_path, size_cm, dpi, font_scale = result
+        file_path, size_cm, dpi, font_scale, show_legend, show_metrics = result
 
         self.save_button.set_working(True, "Saving...")
         try:
-            self._save_plot_with_settings(file_path, size_cm, dpi, font_scale)
+            self._save_plot_with_settings(file_path, size_cm, dpi, font_scale, show_legend, show_metrics)
             QMessageBox.information(self, "Success",
                                   f"Plot saved to {Path(file_path).name}\n"
                                   f"Size: {size_cm[0]}×{size_cm[1]} cm @ {dpi} DPI")
