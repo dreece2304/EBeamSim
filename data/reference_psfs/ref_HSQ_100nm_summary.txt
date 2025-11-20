@@ -1,0 +1,17 @@
+BEAMER PSF Simulation Summary
+=============================
+Events simulated: 1000000
+Total energy deposited: 101.642 MeV
+Energy in resist: 101.642 MeV
+Fraction in resist: 100%
+
+Performance:
+Simulation time: 1067 seconds
+Events per second: 937
+
+Beam parameters:
+Energy: 100 keV
+
+Resist parameters:
+Thickness: 100 nm 
+Density: 1.4 g/cm3 
