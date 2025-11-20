@@ -1066,27 +1066,249 @@ class Enhanced2DPlotWidget(QWidget):
             # Heatmap or Contour: add/update depth indicator line
             self._update_depth_indicator(current_depth)
         # Mode 1 was 3D (removed), no action needed
-   
+
+    def _show_save_plot_dialog(self):
+        """Show dialog for presentation-ready plot export settings"""
+        from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QGroupBox,
+                                       QRadioButton, QButtonGroup, QSpinBox, QDoubleSpinBox,
+                                       QLabel, QPushButton, QComboBox, QFormLayout)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Save Plot - Presentation Settings")
+        dialog.setMinimumWidth(450)
+        layout = QVBoxLayout()
+
+        # Size presets group
+        size_group = QGroupBox("Plot Size")
+        size_layout = QVBoxLayout()
+
+        size_button_group = QButtonGroup(dialog)
+        size_presets = {
+            "Presentation (7×7 cm)": (7, 7),
+            "Presentation Wide (10×7 cm)": (10, 7),
+            "Presentation Tall (7×10 cm)": (7, 10),
+            "Paper Half-Column (8.5×6 cm)": (8.5, 6),
+            "Paper Full-Column (17×12 cm)": (17, 12),
+            "Paper Full-Page (17×20 cm)": (17, 20),
+            "Custom": None
+        }
+
+        self._size_radios = {}
+        for i, (name, size) in enumerate(size_presets.items()):
+            radio = QRadioButton(name)
+            size_button_group.addButton(radio, i)
+            size_layout.addWidget(radio)
+            self._size_radios[name] = (radio, size)
+
+            if name == "Presentation (7×7 cm)":  # Default selection
+                radio.setChecked(True)
+
+        # Custom size inputs
+        custom_layout = QFormLayout()
+        self._custom_width = QDoubleSpinBox()
+        self._custom_width.setRange(1, 50)
+        self._custom_width.setValue(7)
+        self._custom_width.setSuffix(" cm")
+        self._custom_width.setEnabled(False)
+
+        self._custom_height = QDoubleSpinBox()
+        self._custom_height.setRange(1, 50)
+        self._custom_height.setValue(7)
+        self._custom_height.setSuffix(" cm")
+        self._custom_height.setEnabled(False)
+
+        custom_layout.addRow("Width:", self._custom_width)
+        custom_layout.addRow("Height:", self._custom_height)
+        size_layout.addLayout(custom_layout)
+
+        # Enable custom inputs when custom radio selected
+        def toggle_custom(checked):
+            if self._size_radios["Custom"][0].isChecked():
+                self._custom_width.setEnabled(True)
+                self._custom_height.setEnabled(True)
+            else:
+                self._custom_width.setEnabled(False)
+                self._custom_height.setEnabled(False)
+
+        for radio, _ in self._size_radios.values():
+            radio.toggled.connect(toggle_custom)
+
+        size_group.setLayout(size_layout)
+        layout.addWidget(size_group)
+
+        # Quality settings group
+        quality_group = QGroupBox("Quality Settings")
+        quality_layout = QFormLayout()
+
+        self._dpi_spin = QSpinBox()
+        self._dpi_spin.setRange(150, 600)
+        self._dpi_spin.setValue(300)
+        self._dpi_spin.setSingleStep(50)
+        self._dpi_spin.setSuffix(" DPI")
+        quality_layout.addRow("Resolution:", self._dpi_spin)
+
+        self._font_scale = QDoubleSpinBox()
+        self._font_scale.setRange(0.5, 3.0)
+        self._font_scale.setValue(1.3)
+        self._font_scale.setSingleStep(0.1)
+        self._font_scale.setSuffix("×")
+        self._font_scale.setToolTip("Font size multiplier for better readability")
+        quality_layout.addRow("Font Scale:", self._font_scale)
+
+        quality_group.setLayout(quality_layout)
+        layout.addWidget(quality_group)
+
+        # Format selection
+        format_layout = QHBoxLayout()
+        format_layout.addWidget(QLabel("Format:"))
+        self._format_combo = QComboBox()
+        self._format_combo.addItems(["PNG (Raster)", "PDF (Vector)", "SVG (Vector)", "EPS (Vector)"])
+        self._format_combo.setCurrentIndex(1)  # Default to PDF
+        format_layout.addWidget(self._format_combo)
+        format_layout.addStretch()
+        layout.addLayout(format_layout)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        save_btn = QPushButton("Save")
+        save_btn.clicked.connect(dialog.accept)
+        save_btn.setDefault(True)
+
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+
+        button_layout.addStretch()
+        button_layout.addWidget(save_btn)
+        button_layout.addWidget(cancel_btn)
+
+        layout.addLayout(button_layout)
+        dialog.setLayout(layout)
+
+        # Execute dialog
+        if dialog.exec() != QDialog.Accepted:
+            return None
+
+        # Get selected size
+        for name, (radio, size) in self._size_radios.items():
+            if radio.isChecked():
+                if name == "Custom":
+                    size_cm = (self._custom_width.value(), self._custom_height.value())
+                else:
+                    size_cm = size
+                break
+
+        # Get DPI and font scale
+        dpi = self._dpi_spin.value()
+        font_scale = self._font_scale.value()
+
+        # Get format and file path
+        format_text = self._format_combo.currentText()
+        format_map = {
+            "PNG (Raster)": ("PNG files (*.png)", ".png"),
+            "PDF (Vector)": ("PDF files (*.pdf)", ".pdf"),
+            "SVG (Vector)": ("SVG files (*.svg)", ".svg"),
+            "EPS (Vector)": ("EPS files (*.eps)", ".eps")
+        }
+        file_filter, ext = format_map[format_text]
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Plot", "", file_filter
+        )
+
+        if not file_path:
+            return None
+
+        # Ensure correct extension
+        if not file_path.lower().endswith(ext):
+            file_path += ext
+
+        return file_path, size_cm, dpi, font_scale
+
+    def _save_plot_with_settings(self, file_path, size_cm, dpi, font_scale):
+        """Save plot with presentation-ready formatting"""
+        import matplotlib.pyplot as plt
+
+        # Store current figure settings
+        old_size = self.figure.get_size_inches()
+        old_dpi = self.figure.dpi
+
+        # Convert cm to inches (matplotlib uses inches)
+        size_inches = (size_cm[0] / 2.54, size_cm[1] / 2.54)
+
+        # Temporarily modify figure for export
+        self.figure.set_size_inches(size_inches)
+        self.figure.set_dpi(dpi)
+
+        # Enhance fonts and line widths for all axes
+        for ax in self.figure.axes:
+            # Increase font sizes
+            ax.title.set_fontsize(11 * font_scale)
+            ax.title.set_fontweight('bold')
+            ax.xaxis.label.set_fontsize(10 * font_scale)
+            ax.yaxis.label.set_fontsize(10 * font_scale)
+            ax.tick_params(labelsize=9 * font_scale)
+
+            # Make tick marks more visible
+            ax.tick_params(width=1.5, length=6)
+
+            # Increase line widths for plot elements
+            for line in ax.get_lines():
+                current_width = line.get_linewidth()
+                line.set_linewidth(current_width * 1.5)
+
+            # Enhance grid if present
+            if ax.get_xgridlines():
+                ax.grid(True, alpha=0.3, linewidth=0.8)
+
+            # Make legend more readable if present
+            legend = ax.get_legend()
+            if legend:
+                legend.set_frame_on(True)
+                legend.get_frame().set_alpha(0.9)
+                legend.get_frame().set_linewidth(1.0)
+                for text in legend.get_texts():
+                    text.set_fontsize(9 * font_scale)
+
+        # Save with tight bounding box and high quality
+        self.figure.savefig(
+            file_path,
+            dpi=dpi,
+            bbox_inches='tight',
+            pad_inches=0.05,
+            facecolor='white',
+            edgecolor='none'
+        )
+
+        # Restore original settings
+        self.figure.set_size_inches(old_size)
+        self.figure.set_dpi(old_dpi)
+
+        # Reset formatting (re-draw current plot)
+        # This will restore original line widths and fonts
+        self.canvas.draw()
+
     def save_plot(self):
-        """Save current plot"""
+        """Save current plot with presentation-ready options"""
         if not self.current_data:
             QMessageBox.warning(self, "Warning", "No data to save")
             return
 
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Plot", "",
-            "PNG files (*.png);;PDF files (*.pdf);;SVG files (*.svg)"
-        )
+        result = self._show_save_plot_dialog()
+        if not result:
+            return
 
-        if file_path:
-            self.save_plot_button.set_working(True, "Saving...")
-            try:
-                self.figure.savefig(file_path, dpi=300, bbox_inches='tight')
-                QMessageBox.information(self, "Success", f"Plot saved to {file_path}")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to save plot: {str(e)}")
-            finally:
-                self.save_plot_button.set_working(False)
+        file_path, size_cm, dpi, font_scale = result
+
+        self.save_plot_button.set_working(True, "Saving...")
+        try:
+            self._save_plot_with_settings(file_path, size_cm, dpi, font_scale)
+            QMessageBox.information(self, "Success",
+                                  f"Plot saved to {Path(file_path).name}\n"
+                                  f"Size: {size_cm[0]}×{size_cm[1]} cm @ {dpi} DPI")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save plot: {str(e)}")
+        finally:
+            self.save_plot_button.set_working(False)
 
     def export_data(self):
         """Export processed data"""
@@ -2341,25 +2563,27 @@ class PlotWidget(QWidget):
         return report
 
     def save_plot(self):
-        """Save current plot"""
+        """Save current plot with presentation-ready options"""
         if not self.datasets:
             QMessageBox.warning(self, "Warning", "No data to save")
             return
 
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Plot", "",
-            "PNG files (*.png);;PDF files (*.pdf);;SVG files (*.svg)"
-        )
+        result = self._show_save_plot_dialog()
+        if not result:
+            return
 
-        if file_path:
-            self.save_button.set_working(True, "Saving...")
-            try:
-                self.figure.savefig(file_path, dpi=300, bbox_inches='tight')
-                QMessageBox.information(self, "Success", f"Plot saved to {file_path}")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to save plot: {str(e)}")
-            finally:
-                self.save_button.set_working(False)
+        file_path, size_cm, dpi, font_scale = result
+
+        self.save_button.set_working(True, "Saving...")
+        try:
+            self._save_plot_with_settings(file_path, size_cm, dpi, font_scale)
+            QMessageBox.information(self, "Success",
+                                  f"Plot saved to {Path(file_path).name}\n"
+                                  f"Size: {size_cm[0]}×{size_cm[1]} cm @ {dpi} DPI")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save plot: {str(e)}")
+        finally:
+            self.save_button.set_working(False)
 
 class EBLMainWindow(QMainWindow):
     """Main window for EBL simulation GUI with enhanced functionality"""
