@@ -59,16 +59,19 @@ class SimulationValidator:
                 "warning"
             ))
 
-        # Beam size validation
-        if beam_size <= 0:
+        # Beam size validation - 0nm (point source) is valid for PSF generation
+        if beam_size < 0:
             errors.append(ValidationError(
                 "Beam Size",
-                "Beam size must be greater than 0 nm"
+                "Beam size cannot be negative"
             ))
+        elif beam_size == 0:
+            # Point source is valid - BEAMER applies blur correction separately
+            pass
         elif beam_size < 0.5:
             errors.append(ValidationError(
                 "Beam Size",
-                f"Beam size {beam_size} nm is extremely small. Typical range is 2-10 nm",
+                f"Beam size {beam_size} nm is extremely small. Use 0 nm for point source or typical range 2-10 nm",
                 "warning"
             ))
         elif beam_size > 100:
