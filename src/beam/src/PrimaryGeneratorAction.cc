@@ -81,19 +81,11 @@ G4double PrimaryGeneratorAction::GetBeamZPosition() const
 {
     // Get the resist thickness to position beam correctly
     G4double resistThickness = fDetConstruction->GetActualResistThickness();
-    
-    // Default Z position: 100 nm above resist top surface
+
+    // Position beam 1nm above resist surface (dynamic with resist thickness)
+    // This minimizes vacuum tracking while ensuring electron starts outside resist.
     // In our geometry, resist bottom is at z=0, top is at z=resistThickness
-    G4double defaultZ = resistThickness + 100.0*nanometer;
-    
-    // Use user-specified Z if it's been set, otherwise use smart default
-    G4double z = fBeamPosition.z();
-    if (std::abs(z - EBL::Beam::DEFAULT_POSITION_Z) < 1.0*nanometer) {
-        // User hasn't changed from default, use smart positioning
-        z = defaultZ;
-    }
-    
-    return z;
+    return resistThickness + 1.0*nanometer;
 }
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)

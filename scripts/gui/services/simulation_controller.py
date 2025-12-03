@@ -39,26 +39,40 @@ class SimulationWorker(QObject):
         try:
             args = [self.executable_path, self.macro_path]
 
-            # Set up environment variables for Geant4
+            # Set up environment - use existing env which should have Geant4 paths
+            # The main GUI's Geant4 detector handles finding and setting up paths
             env = os.environ.copy()
-            g4_path = r"C:\Users\dreec\Geant4Projects\program_files"
 
-            # Add Geant4 data paths
-            env.update({
-                'G4ABLADATA': f"{g4_path}\\share\\Geant4\\data\\G4ABLA3.3",
-                'G4CHANNELINGDATA': f"{g4_path}\\share\\Geant4\\data\\G4CHANNELING1.0",
-                'G4LEDATA': f"{g4_path}\\share\\Geant4\\data\\G4EMLOW8.6.1",
-                'G4ENSDFSTATEDATA': f"{g4_path}\\share\\Geant4\\data\\G4ENSDFSTATE3.0",
-                'G4INCLDATA': f"{g4_path}\\share\\Geant4\\data\\G4INCL1.2",
-                'G4NEUTRONHPDATA': f"{g4_path}\\share\\Geant4\\data\\G4NDL4.7.1",
-                'G4PARTICLEXSDATA': f"{g4_path}\\share\\Geant4\\data\\G4PARTICLEXS4.1",
-                'G4PIIDATA': f"{g4_path}\\share\\Geant4\\data\\G4PII1.3",
-                'G4RADIOACTIVEDATA': f"{g4_path}\\share\\Geant4\\data\\RadioactiveDecay6.1.2",
-                'G4REALSURFACEDATA': f"{g4_path}\\share\\Geant4\\data\\RealSurface2.2",
-                'G4SAIDXSDATA': f"{g4_path}\\share\\Geant4\\data\\G4SAIDDATA2.0",
-                'G4LEVELGAMMADATA': f"{g4_path}\\share\\Geant4\\data\\PhotonEvaporation6.1",
-                'PATH': f"{g4_path}\\bin;" + env.get('PATH', '')
-            })
+            # If G4 data paths aren't in environment, try to find them
+            if 'G4LEDATA' not in env:
+                g4_path = self._find_geant4_path()
+                if g4_path:
+                    data_dir = Path(g4_path) / "share" / "Geant4" / "data"
+                    if data_dir.exists():
+                        # Auto-detect data directories
+                        for item in data_dir.iterdir():
+                            if item.is_dir():
+                                name = item.name
+                                if name.startswith("G4ABLA"):
+                                    env['G4ABLADATA'] = str(item)
+                                elif name.startswith("G4EMLOW"):
+                                    env['G4LEDATA'] = str(item)
+                                elif name.startswith("G4ENSDFSTATE"):
+                                    env['G4ENSDFSTATEDATA'] = str(item)
+                                elif name.startswith("G4NDL"):
+                                    env['G4NEUTRONHPDATA'] = str(item)
+                                elif name.startswith("G4PARTICLEXS"):
+                                    env['G4PARTICLEXSDATA'] = str(item)
+                                elif name.startswith("G4PII"):
+                                    env['G4PIIDATA'] = str(item)
+                                elif name.startswith("RadioactiveDecay"):
+                                    env['G4RADIOACTIVEDATA'] = str(item)
+                                elif name.startswith("RealSurface"):
+                                    env['G4REALSURFACEDATA'] = str(item)
+                                elif name.startswith("G4SAIDDATA"):
+                                    env['G4SAIDXSDATA'] = str(item)
+                                elif name.startswith("PhotonEvaporation"):
+                                    env['G4LEVELGAMMADATA'] = str(item)
 
             self.process = subprocess.Popen(
                 args,
@@ -118,6 +132,44 @@ class SimulationWorker(QObject):
                         self.progress.emit(progress)
                         self.last_reported_progress = progress
                     break
+
+    def _find_geant4_path(self):
+        """Try to find Geant4 installation path"""
+        import platform
+
+        # Check environment variable first
+        if 'G4INSTALL' in os.environ:
+            return os.environ['G4INSTALL']
+
+        # Common paths by platform (no hardcoded usernames)
+        home = Path.home()
+        common_paths = []
+
+        if platform.system() == "Windows":
+            common_paths = [
+                home / "Geant4Projects" / "program_files",
+                home / "geant4-install",
+                Path(r"C:\Program Files\Geant4"),
+            ]
+        elif platform.system() == "Linux":
+            common_paths = [
+                home / "geant4" / "install",
+                home / "geant4-install",
+                Path("/opt/geant4"),
+                Path("/usr/local/geant4"),
+            ]
+        elif platform.system() == "Darwin":
+            common_paths = [
+                home / "geant4-install",
+                home / "geant4" / "install",
+                Path("/opt/geant4"),
+            ]
+
+        for path in common_paths:
+            if path.exists():
+                return str(path)
+
+        return None
 
     def stop_simulation(self):
         """Stop the running simulation"""

@@ -3212,6 +3212,7 @@ class EBLMainWindow(QMainWindow):
             "Alucone_Exposed": ("Al:1,C:5,H:4,O:3", 1.40),
             "Biscone_2Butyne": ("Bi:1,C:4,H:4,O:2", 3.3),
             "Biscone_2Butyne_Hydrated": ("Bi:1,C:4,H:6,O:3", 3.1),
+            "Sn-MLD": ("Sn:1,C:8,H:8,O:4", 2.0),
             "Custom": ("", 1.0)
         }
 
@@ -3219,7 +3220,7 @@ class EBLMainWindow(QMainWindow):
         self.atomic_weights = {
             'H': 1.008, 'C': 12.011, 'N': 14.007, 'O': 15.999, 'F': 18.998,
             'Al': 26.982, 'Si': 28.086, 'P': 30.974, 'S': 32.065,
-            'Ti': 47.867, 'Zr': 91.224, 'Hf': 178.49, 'W': 183.84,
+            'Ti': 47.867, 'Sn': 118.71, 'Zr': 91.224, 'Hf': 178.49, 'W': 183.84,
             'Au': 196.97, 'Bi': 208.98
         }
 
@@ -3342,10 +3343,12 @@ class EBLMainWindow(QMainWindow):
         self.energy_spin.setDecimals(1)
         beam_layout.addWidget(self.energy_spin, 0, 1)
 
+        # NOTE: Point source (0nm) is default for PSF generation because BEAMER
+        # applies short-range blur correction for beam diameter separately.
         beam_layout.addWidget(QLabel("Beam Size (nm):"), 1, 0)
         self.beam_size_spin = QDoubleSpinBox()
-        self.beam_size_spin.setRange(0.1, 1000.0)
-        self.beam_size_spin.setValue(2.0)
+        self.beam_size_spin.setRange(0.0, 1000.0)  # Allow 0 for point source
+        self.beam_size_spin.setValue(0.0)  # Point source default (BEAMER handles blur)
         self.beam_size_spin.setDecimals(1)
         beam_layout.addWidget(self.beam_size_spin, 1, 1)
 
@@ -4541,16 +4544,17 @@ class EBLMainWindow(QMainWindow):
                 elif self.seed_spin.value() > 0:
                     f.write(f"/random/setSeeds {self.seed_spin.value()} {self.seed_spin.value()+1}\n\n")
 
-                # Initialize
-                f.write("# Initialize\n")
-                f.write("/run/initialize\n\n")
-
-                # Material settings
-                f.write("# Material settings\n")
+                # Material settings BEFORE initialize (avoids double geometry build)
+                # Setting material before /run/initialize means geometry is built once
+                # with the correct composition, rather than building with default then rebuilding
+                f.write("# Material settings (before init for efficiency)\n")
                 f.write(f'/det/setResistComposition "{self.composition_edit.text()}"\n')
                 f.write(f"/det/setResistThickness {self.thickness_spin.value()} nm\n")
-                f.write(f"/det/setResistDensity {self.density_spin.value()} g/cm3\n")
-                f.write("/det/update\n\n")
+                f.write(f"/det/setResistDensity {self.density_spin.value()} g/cm3\n\n")
+
+                # Initialize (geometry built once with correct material)
+                f.write("# Initialize\n")
+                f.write("/run/initialize\n\n")
 
                 # Physics processes
                 f.write("# Physics processes\n")
@@ -4607,10 +4611,14 @@ class EBLMainWindow(QMainWindow):
                 f.write("# Beam configuration\n")
                 f.write("/gun/particle e-\n")
                 f.write(f"/gun/energy {self.energy_spin.value()} keV\n")
-                
+
                 # For pattern mode, position is set by pattern generator
+                # Note: Z position is now dynamically calculated (1nm above resist surface)
+                # Only write X,Y position; let C++ handle Z for optimal positioning
                 if not (hasattr(self, 'pattern_mode_check') and self.pattern_mode_check.isChecked()):
-                    f.write(f"/gun/position {self.pos_x_spin.value()} {self.pos_y_spin.value()} {self.pos_z_spin.value()} nm\n")
+                    # Only set position if X or Y is non-zero (centered beam is default)
+                    if self.pos_x_spin.value() != 0.0 or self.pos_y_spin.value() != 0.0:
+                        f.write(f"/gun/position {self.pos_x_spin.value()} {self.pos_y_spin.value()} 0 nm\n")
 
                 # Normalize direction
                 dx, dy, dz = self.dir_x_spin.value(), self.dir_y_spin.value(), self.dir_z_spin.value()
@@ -4621,6 +4629,7 @@ class EBLMainWindow(QMainWindow):
                     dx, dy, dz = 0, 0, -1
 
                 f.write(f"/gun/direction {dx} {dy} {dz}\n")
+                # Point source (0nm) is default for PSF; BEAMER handles beam blur separately
                 f.write(f"/gun/beamSize {self.beam_size_spin.value()} nm\n\n")
 
                 # Visualization (only for small simulations)
@@ -5088,10 +5097,11 @@ class EBLMainWindow(QMainWindow):
                 # Load beam settings
                 if 'beam' in config:
                     self.energy_spin.setValue(config['beam'].get('energy', 100.0))
-                    self.beam_size_spin.setValue(config['beam'].get('size', 2.0))
+                    self.beam_size_spin.setValue(config['beam'].get('size', 0.0))  # Point source default
                     self.pos_x_spin.setValue(config['beam'].get('pos_x', 0.0))
                     self.pos_y_spin.setValue(config['beam'].get('pos_y', 0.0))
-                    self.pos_z_spin.setValue(config['beam'].get('pos_z', 100.0))
+                    # Note: Z position is now dynamic (1nm above resist), this is just for override
+                    self.pos_z_spin.setValue(config['beam'].get('pos_z', 0.0))
                     self.dir_x_spin.setValue(config['beam'].get('dir_x', 0.0))
                     self.dir_y_spin.setValue(config['beam'].get('dir_y', 0.0))
                     self.dir_z_spin.setValue(config['beam'].get('dir_z', -1.0))

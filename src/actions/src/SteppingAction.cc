@@ -57,16 +57,21 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
     // Every bit of energy matters for accurate proximity correction
 
     // OPTIMIZED reporting - minimize hot-path output
-    static G4long resistDeposits = 0;
-    static G4double totalResistEnergy = 0.0;
-    static auto lastReportTime = std::chrono::steady_clock::now();
+    // Using G4ThreadLocal for thread-safety in case MT mode is ever used
+    static G4ThreadLocal G4long resistDeposits = 0;
+    static G4ThreadLocal G4double totalResistEnergy = 0.0;
+    static G4ThreadLocal std::chrono::steady_clock::time_point* lastReportTime = nullptr;
+
+    if (!lastReportTime) {
+        lastReportTime = new std::chrono::steady_clock::time_point(std::chrono::steady_clock::now());
+    }
 
     resistDeposits++;
     totalResistEnergy += edep;
 
     // MUCH LESS FREQUENT reporting for large simulations
     auto currentTime = std::chrono::steady_clock::now();
-    auto timeDiff = std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastReportTime).count();
+    auto timeDiff = std::chrono::duration_cast<std::chrono::seconds>(currentTime - *lastReportTime).count();
 
     // Adaptive reporting interval based on deposit rate
     G4int reportInterval = 15;  // Default 15 seconds
@@ -84,7 +89,7 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
         printf("Resist energy deposits: %ld, Total energy: %.3f MeV\n",
                resistDeposits, totalResistEnergy / CLHEP::MeV);
         fflush(stdout);
-        lastReportTime = currentTime;
+        *lastReportTime = currentTime;
     }
 
     // Add energy deposit to event action

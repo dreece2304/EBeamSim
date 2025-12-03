@@ -6,11 +6,14 @@
 
 namespace EBL {
     // Beam parameters (C++17 constexpr with inline)
+    // NOTE: Point source (0nm) is used for PSF generation because BEAMER
+    // applies short-range blur correction for beam diameter separately.
+    // Using finite beam size here would double-count the blur effect.
     namespace Beam {
         inline constexpr G4double DEFAULT_ENERGY = 100.0 * keV;
-        inline constexpr G4double DEFAULT_SPOT_SIZE = 1.0 * nm;
+        inline constexpr G4double DEFAULT_SPOT_SIZE = 0.0 * nm;  // Point source for PSF (BEAMER handles blur)
         inline constexpr G4double POSITION_SIGMA = 0.0 * nm;
-        inline constexpr G4double DEFAULT_POSITION_Z = 100.0 * nm;
+        inline constexpr G4double DEFAULT_POSITION_Z = 1.0 * nm;  // Dynamic: 1nm above resist surface
     }
 
     // PSF calculation parameters - OPTIMIZED FOR BEAMER (inline constexpr)

@@ -71,35 +71,36 @@ class SimulationWorker(QObject):
 
     def _find_geant4_installation(self) -> Optional[str]:
         """Try to automatically find Geant4 installation"""
-        # Common installation paths by platform
+        # Check environment variable first (highest priority)
+        if 'G4INSTALL' in os.environ:
+            return os.environ['G4INSTALL']
+
+        # Common installation paths by platform (no hardcoded usernames)
         common_paths = []
-        
+        home = Path.home()
+
         if platform.system() == "Windows":
             common_paths = [
-                r"C:\Users\dreec\Geant4Projects\program_files",
+                str(home / "Geant4Projects" / "program_files"),
+                str(home / "geant4-install"),
                 r"C:\Program Files\Geant4",
                 r"C:\Geant4",
             ]
         elif platform.system() == "Linux":
             common_paths = [
+                str(home / "geant4" / "install"),
+                str(home / "geant4-install"),
                 "/opt/geant4",
                 "/usr/local/geant4",
-                "/home/dreece23/geant4/install",  # Actual installation path
-                "/home/dreece23/geant4-install",
-                str(Path.home() / "geant4-install"),
-                str(Path.home() / "geant4/install"),
             ]
         elif platform.system() == "Darwin":  # macOS
             common_paths = [
+                str(home / "geant4-install"),
+                str(home / "geant4" / "install"),
                 "/opt/geant4",
                 "/usr/local/geant4",
-                str(Path.home() / "geant4-install"),
             ]
-        
-        # Check environment variable first
-        if 'G4INSTALL' in os.environ:
-            return os.environ['G4INSTALL']
-        
+
         # Check common paths
         for path in common_paths:
             if Path(path).exists():

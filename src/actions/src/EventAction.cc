@@ -21,7 +21,9 @@ EventAction::EventAction(RunAction* runAction, DetectorConstruction* detConstruc
     fTotalTrackLength(0.),
     fResistEnergy(0.),
     fSubstrateEnergy(0.),
-    fAboveResistEnergy(0.)
+    fAboveResistEnergy(0.),
+    fLogBinDenominator(0.),
+    fInvLogBinDenominator(0.)
 {
     // Initialize the radial bins for energy deposition (1D - for BEAMER)
     fRadialEnergyDeposit.resize(EBL::PSF::NUM_RADIAL_BINS, 0.0);
@@ -32,9 +34,15 @@ EventAction::EventAction(RunAction* runAction, DetectorConstruction* detConstruc
         radialBins.resize(NUM_RADIAL_BINS, 0.0);
     }
 
+    // Pre-compute log binning constants to avoid std::log() in hot path
+    // This is called 100k+ times per event, so avoiding log() saves significant CPU
+    fLogBinDenominator = std::log(EBL::PSF::MAX_RADIUS / EBL::PSF::MIN_RADIUS);
+    fInvLogBinDenominator = 1.0 / fLogBinDenominator;
+
     G4cout << "EventAction initialized with:" << G4endl;
     G4cout << "  1D radial bins: " << EBL::PSF::NUM_RADIAL_BINS << " (for BEAMER PSF)" << G4endl;
     G4cout << "  2D bins: " << NUM_DEPTH_BINS << " x " << NUM_RADIAL_BINS << " (for visualization)" << G4endl;
+    G4cout << "  >>> Sequential mode initialized with BEAMER optimizations" << G4endl;
 }
 
 EventAction::~EventAction()
@@ -139,6 +147,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
 }
 
 // Helper function for logarithmic binning (1D)
+// OPTIMIZED: Uses pre-computed fInvLogBinDenominator to avoid std::log() in denominator
 G4int EventAction::GetLogBin(G4double radius) const
 {
     if (!EBL::PSF::USE_LOG_BINNING) {
@@ -149,14 +158,15 @@ G4int EventAction::GetLogBin(G4double radius) const
         return bin;
     }
 
-    // Logarithmic binning
+    // Logarithmic binning - early exit for edge cases
     if (radius <= 0) return -1;
     if (radius < EBL::PSF::MIN_RADIUS) return 0;
     if (radius >= EBL::PSF::MAX_RADIUS) return EBL::PSF::NUM_RADIAL_BINS - 1;
 
-    // Logarithmic binning: bin = log(r/r_min) / log(r_max/r_min) * n_bins
-    G4double logRatio = std::log(radius / EBL::PSF::MIN_RADIUS) /
-        std::log(EBL::PSF::MAX_RADIUS / EBL::PSF::MIN_RADIUS);
+    // OPTIMIZED: Use pre-computed inverse denominator (computed once in constructor)
+    // Old: logRatio = log(r/r_min) / log(r_max/r_min)  -- 2 log calls
+    // New: logRatio = log(r/r_min) * fInvLogBinDenominator  -- 1 log call
+    G4double logRatio = std::log(radius / EBL::PSF::MIN_RADIUS) * fInvLogBinDenominator;
     G4int bin = static_cast<G4int>(logRatio * (EBL::PSF::NUM_RADIAL_BINS - 1));
 
     // Ensure bin is within valid range

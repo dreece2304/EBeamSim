@@ -51,6 +51,11 @@ private:
     G4int GetDepthBin(G4double z) const;
     G4double GetBinRadius(G4int bin) const;
     G4double GetDepthBinCenter(G4int bin) const;
+
+    // Pre-computed constants for log binning optimization
+    // Avoids calling std::log() in hot path
+    G4double fLogBinDenominator;  // = log(MAX_RADIUS/MIN_RADIUS)
+    G4double fInvLogBinDenominator;  // = 1.0 / fLogBinDenominator
 };
 
 #endif
