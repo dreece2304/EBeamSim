@@ -172,6 +172,16 @@ void PhysicsList::ConstructProcess()
 
 void PhysicsList::SetCuts()
 {
+    // Re-check for high-Z materials now that geometry is constructed
+    // (The check in constructor happens before macro sets the composition)
+    G4bool wasHighZ = fUseHighZOptimization;
+    fUseHighZOptimization = IsHighZMaterial();
+
+    if (fUseHighZOptimization && !wasHighZ) {
+        // Material was updated to high-Z after initial construction
+        ConfigureForHighZMaterial();
+    }
+
     // BEAMER OPTIMIZATION: Use region-specific cuts
 
     // Default global cuts (moderate)
