@@ -71,8 +71,9 @@ int main(int argc, char** argv)
     ActionInitialization* actionInitialization = new ActionInitialization(detConstruction);
     runManager->SetUserInitialization(actionInitialization);
 
-    // Initialize G4 kernel
-    runManager->Initialize();
+    // NOTE: Do NOT call runManager->Initialize() here!
+    // Let the macro's /run/initialize handle it so that material settings
+    // from the macro are applied BEFORE geometry construction.
 
     // Initialize visualization
     G4VisManager* visManager = new G4VisExecutive("Quiet");
