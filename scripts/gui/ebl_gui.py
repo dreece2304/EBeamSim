@@ -23,8 +23,6 @@ import subprocess
 import platform
 from pathlib import Path
 import csv
-import queue
-from collections import deque
 import json
 import re
 import glob
@@ -213,6 +211,11 @@ class SimulationWorker(QObject):
     progress = Signal(int)
     finished = Signal(bool, str)
 
+    # Pre-compiled regex patterns (compiled once, used many times)
+    RE_TOTAL_EVENTS = re.compile(r'(\d+)\s+events?\s+will be processed')
+    RE_PROCESSING_EVENT = re.compile(r'Processing event\s+(\d+)')
+    RE_MILESTONE_EVENTS = re.compile(r'(\d+)/(\d+) events')
+
     def __init__(self, executable_path, macro_path, working_dir, g4_path=None):
         super().__init__()
         self.executable_path = executable_path
@@ -324,7 +327,7 @@ class SimulationWorker(QObject):
 
                     # Parse for total events
                     if "events will be processed" in line or "event will be processed" in line:
-                        match = re.search(r'(\d+)\s+events?\s+will be processed', line)
+                        match = self.RE_TOTAL_EVENTS.search(line)
                         if match:
                             self.total_events = int(match.group(1))
                             self.output.emit(f">>> Total events to process: {self.total_events}")
@@ -335,7 +338,7 @@ class SimulationWorker(QObject):
 
                     # Method 1: Direct "Processing event X" messages
                     if "Processing event" in line and "complete" in line:
-                        match = re.search(r'Processing event\s+(\d+)', line)
+                        match = self.RE_PROCESSING_EVENT.search(line)
                         if match:
                             event_num = int(match.group(1))
                             last_event_number = event_num
@@ -344,7 +347,7 @@ class SimulationWorker(QObject):
 
                     # Method 2: Milestone messages for very large sims
                     elif "Milestone:" in line:
-                        match = re.search(r'(\d+)/(\d+) events', line)
+                        match = self.RE_MILESTONE_EVENTS.search(line)
                         if match:
                             event_num = int(match.group(1))
                             last_event_number = event_num
@@ -631,7 +634,6 @@ class Enhanced2DPlotWidget(QWidget):
 
         # Try to parse from filename (e.g., "resist30nm" or "30nm")
         filename = self.current_data.get('filename', '')
-        import re
 
         # Pattern 1: resist30nm
         match = re.search(r'resist(\d+)nm', filename, re.IGNORECASE)
