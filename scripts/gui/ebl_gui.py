@@ -53,6 +53,7 @@ from beamer_converter import BeamerConverterService as BEAMERConverter
 # Import Geant4 detector and settings dialog
 from core.geant4_detector import Geant4PathDetector, setup_geant4_environment
 from widgets.settings_dialog import SettingsDialog
+from widgets.common.status_button import StatusButton
 from core.validator import SimulationValidator
 from core import constants as const
 
@@ -72,32 +73,6 @@ import matplotlib.cm as cm
 # Import canonical FileManager from core module
 from core.file_manager import FileManager
 
-
-class StatusButton(QPushButton):
-    """Enhanced button with status awareness"""
-
-    def __init__(self, text, parent=None):
-        super().__init__(text, parent)
-        self.default_text = text
-        self.is_working = False
-
-    def set_status(self, enabled, tooltip_message=""):
-        """Set button status with helpful tooltip"""
-        self.setEnabled(enabled)
-        if not enabled and tooltip_message:
-            self.setToolTip(f"[ERROR] {tooltip_message}")
-        else:
-            self.setToolTip("")
-
-    def set_working(self, working, message="Processing..."):
-        """Show working state with spinner effect"""
-        self.is_working = working
-        if working:
-            self.setText(f"[WORKING] {message}")
-            self.setEnabled(False)
-        else:
-            self.setText(self.default_text)
-            self.setEnabled(True)
 
 
 # SimulationWorker is now imported from utils.threading_utils (canonical implementation)
@@ -3470,36 +3445,36 @@ class EBLMainWindow(QMainWindow):
         self.material_combo.setCurrentText("Alucone_XPS")
         self.on_material_changed()
 
-        # Set the working executable path
+        # Set the working executable path (cross-platform)
+        import platform
         project_root = Path(__file__).resolve().parent.parent.parent
-        build_dir = project_root / "cmake-build-release" / "bin"
+        exe_ext = ".exe" if platform.system() == "Windows" else ""
 
-        self.executable_path = str(build_dir / "ebl_sim.exe")
-        self.working_dir = str(build_dir)
+        # Try to find executable dynamically
+        possible_paths = [
+            # Linux/WSL standard build
+            project_root / "build" / "bin" / ("ebl_sim" + exe_ext),
+            # Windows CLion/CMake builds
+            project_root / "cmake-build-release" / "bin" / ("ebl_sim" + exe_ext),
+            project_root / "cmake-build-debug" / "bin" / ("ebl_sim" + exe_ext),
+            # Visual Studio builds
+            project_root / "out" / "build" / "x64-release" / "bin" / ("ebl_sim" + exe_ext),
+            project_root / "out" / "build" / "x64-Release" / "bin" / ("ebl_sim" + exe_ext),
+        ]
 
-        # Update file manager working directory
-        self.file_manager.working_dir = Path(self.working_dir)
+        self.executable_path = ""
+        self.working_dir = str(project_root / "build" / "bin")
 
-        # Verify executable exists
-        if Path(self.executable_path).exists():
-            self.log_output(f"Found executable: {self.executable_path}")
-        else:
-            self.log_output(f"Warning: Executable not found at: {self.executable_path}")
-            # Try to find it dynamically
-            possible_paths = [
-                project_root / "cmake-build-release" / "bin" / "ebl_sim.exe",
-                project_root / "cmake-build-debug" / "bin" / "ebl_sim.exe",
-                project_root / "build" / "bin" / "ebl_sim.exe",
-                project_root / "out" / "build" / "x64-release" / "bin" / "ebl_sim.exe",
-                ]
+        for path in possible_paths:
+            if path.exists():
+                self.executable_path = str(path)
+                self.working_dir = str(path.parent)
+                self.file_manager.working_dir = Path(self.working_dir)
+                self.log_output(f"Found executable: {self.executable_path}")
+                break
 
-            for path in possible_paths:
-                if path.exists():
-                    self.executable_path = str(path)
-                    self.working_dir = str(path.parent)
-                    self.file_manager.working_dir = Path(self.working_dir)
-                    self.log_output(f"Found executable: {self.executable_path}")
-                    break
+        if not self.executable_path:
+            self.log_output(f"Warning: Executable not found. Use File > Select Executable")
 
     # Enhanced material helper methods (keeping existing implementation)
     def parse_composition(self, composition_str):
@@ -4739,10 +4714,15 @@ class EBLMainWindow(QMainWindow):
 
     def select_executable(self):
         """Select executable file"""
+        import platform
+        if platform.system() == "Windows":
+            file_filter = "Executable files (*.exe);;All files (*.*)"
+        else:
+            file_filter = "All files (*)"
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Select EBL Executable",
             str(Path(self.executable_path).parent) if self.executable_path else "",
-            "Executable files (*.exe);;All files (*.*)"
+            file_filter
         )
 
         if file_path:
