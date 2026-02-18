@@ -1,44 +1,100 @@
-# Basic visualization macro for manual/debugging use
-# This is only used when running ebl_sim directly with -u flag
-# The GUI does NOT use this - it only visualizes output data
+# Interactive visualization macro for EBL simulation
+# Loaded automatically when running with -p or -u flag
 
-# Use OpenGL
-/vis/open OGL 600x600-0+0
+# ============================================================
+# GEOMETRY SETUP - Zincone 100nm
+# ============================================================
+/det/setResistComposition Zn:1,C:2,H:4,O:2
+/det/setResistDensity 2.1 g/cm3
+/det/setResistThickness 100 nm
 
-# Basic setup
-/vis/viewer/set/autoRefresh false
-/vis/verbose errors
+# Initialize geometry
+/run/initialize
+
+# ============================================================
+# BEAM CONFIGURATION - 100 keV point source
+# ============================================================
+/gun/particle e-
+/gun/energy 100 keV
+/gun/position 0 0 150 nm
+/gun/direction 0 0 -1
+/gun/beamSize 0 nm
+
+# ============================================================
+# VISUALIZATION SETUP - OpenGL
+# ============================================================
+/vis/open OGL 1200x800
 
 # Draw geometry
 /vis/drawVolume
 
-# Set viewing angle
-/vis/viewer/set/viewpointThetaPhi 90. 180.
-/vis/viewer/zoom 1.4
+# ============================================================
+# CAMERA - Side view with electrons coming from top
+# ============================================================
+# Z axis points up (electrons travel in -Z direction, from top to bottom)
+# Looking from +Y direction (side view)
+/vis/viewer/set/upVector 0 0 1
+/vis/viewer/set/viewpointVector 0 1 0
+# Target the middle of the resist (bottom=0, top=100nm)
+/vis/viewer/set/targetPoint 0 0 50 nm
+/vis/viewer/zoom 5
 
-# Wireframe view
-/vis/viewer/set/style wireframe
+# ============================================================
+# RENDERING
+# ============================================================
+/vis/viewer/set/style surface
+/vis/viewer/set/hiddenEdge true
+/vis/viewer/set/background white
 
-# Add trajectories
+# ============================================================
+# TRAJECTORY VISUALIZATION
+# ============================================================
 /vis/scene/add/trajectories smooth
+/vis/modeling/trajectories/create/drawByParticleID
+/vis/modeling/trajectories/drawByParticleID-0/default/setDrawStepPts true
+/vis/modeling/trajectories/drawByParticleID-0/default/setStepPtsSize 2
 
-# Show only electrons and gammas
+# Color by particle type
+/vis/modeling/trajectories/drawByParticleID-0/set e- blue
+/vis/modeling/trajectories/drawByParticleID-0/set e+ red
+/vis/modeling/trajectories/drawByParticleID-0/set gamma green
+
+# Filter particles
 /vis/filtering/trajectories/create/particleFilter
 /vis/filtering/trajectories/particleFilter-0/add e-
 /vis/filtering/trajectories/particleFilter-0/add e+
 /vis/filtering/trajectories/particleFilter-0/add gamma
 
-# Color by particle type
-/vis/modeling/trajectories/create/drawByParticleID
-/vis/modeling/trajectories/drawByParticleID-0/default/setDrawStepPts true
-
-# Add scale
-/vis/scene/add/axes 0 0 0 100 nm
-/vis/scene/add/scale
+# ============================================================
+# SCENE ELEMENTS
+# ============================================================
+# Axes at origin with 50nm length - shows scale and orientation
+# X=red, Y=green, Z=blue (Z is up, electrons travel in -Z)
+/vis/scene/add/axes 0 0 0 50 nm
 
 # Hide world volume
 /vis/geometry/set/visibility World 0 false
 
-# Re-enable auto refresh
+# Nice colors for geometry
+# Resist: cyan/teal, semi-transparent to see trajectories inside
+/vis/geometry/set/colour Resist 0 0.2 0.7 0.8 0.6
+# Substrate: dark gray
+/vis/geometry/set/colour Substrate 0 0.3 0.3 0.35 1.0
+
+# ============================================================
+# EVENT HANDLING - Accumulate trajectories
+# ============================================================
+# Keep trajectories from multiple events
+/vis/scene/endOfEventAction accumulate 200
+
+# Only update display at end of run (prevents flashing)
+/vis/ogl/flushAt endOfRun
+
+# Enable auto-refresh
 /vis/viewer/set/autoRefresh true
 /vis/verbose warnings
+
+# ============================================================
+# READY - Use GUI controls or type commands:
+#   /run/beamOn 50
+# ============================================================

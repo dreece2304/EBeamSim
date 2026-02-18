@@ -16,6 +16,7 @@
 #include "G4UnitsTable.hh"
 #include "G4RunManager.hh"
 #include "G4SDManager.hh"
+#include "G4UserLimits.hh"
 
 #include <sstream>
 #include <algorithm>
@@ -118,7 +119,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     G4Material* substrate_mat = nist->FindOrBuildMaterial("G4_Si");
 
     G4double substrate_thickness = EBL::Geometry::SUBSTRATE_THICKNESS;
-    G4double substrate_xy = 100.0 * mm;  // Large lateral size
+    G4double substrate_xy = 100.0 * um;  // 100 micrometers - sufficient for electron scattering visualization
 
     G4Box* solidSubstrate = new G4Box("Substrate",
         0.5 * substrate_xy, 0.5 * substrate_xy, 0.5 * substrate_thickness);
@@ -186,13 +187,27 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     resistVis->SetForceSolid(true);
     logicResist->SetVisAttributes(resistVis);
 
-    // Print geometry info
-    G4cout << "\n=== Detector Construction ===" << G4endl;
-    G4cout << "Substrate: Silicon, " << G4BestUnit(substrate_thickness, "Length") << " thick" << G4endl;
-    G4cout << "Resist: " << resist_mat->GetName() << ", "
-        << G4BestUnit(resist_thickness, "Length") << " thick" << G4endl;
-    G4cout << "Resist density: " << G4BestUnit(resist_mat->GetDensity(), "Volumic Mass") << G4endl;
-    G4cout << "===========================\n" << G4endl;
+    // CRITICAL: Apply step limits for accurate trajectory tracking
+    // The step limit must be applied to ALL volumes the particle traverses,
+    // including the world/vacuum, otherwise electrons can skip through boundaries
+    G4double maxStepResist = EBL::Physics::MAX_STEP_SIZE;  // 2 nm - fine for energy deposition
+
+    // Resist - finest step limit for accurate energy deposition tracking
+    G4UserLimits* resistLimits = new G4UserLimits(maxStepResist);
+    logicResist->SetUserLimits(resistLimits);
+    G4cout << "Resist step limit: " << maxStepResist/nm << " nm" << G4endl;
+
+    // Substrate - coarse steps OK (we only care about resist for figure)
+    G4double maxStepSubstrate = 500.0 * nm;
+    G4UserLimits* substrateLimits = new G4UserLimits(maxStepSubstrate);
+    logicSubstrate->SetUserLimits(substrateLimits);
+    G4cout << "Substrate step limit: " << maxStepSubstrate/nm << " nm" << G4endl;
+
+    // World/vacuum - just needs to catch resist boundary, doesn't need to be as fine
+    G4double maxStepWorld = 10.0 * nm;
+    G4UserLimits* worldLimits = new G4UserLimits(maxStepWorld);
+    fWorldVolume->SetUserLimits(worldLimits);
+    G4cout << "World step limit: " << maxStepWorld/nm << " nm" << G4endl;
 
     return physWorld;
 }
@@ -217,7 +232,6 @@ G4Material* DetectorConstruction::CreateResistMaterial()
     // Check if material already exists
     G4Material* existingMat = G4Material::GetMaterial(materialName, false);
     if (existingMat) {
-        G4cout << "Using existing material: " << materialName << G4endl;
         return existingMat;
     }
 
@@ -225,7 +239,6 @@ G4Material* DetectorConstruction::CreateResistMaterial()
     G4int totalAtoms = 0;
     for (const auto& elem : fResistElements) {
         totalAtoms += elem.second;
-        G4cout << "Element " << elem.first << ": " << elem.second << " atoms" << G4endl;
     }
 
     if (totalAtoms == 0) {
@@ -255,33 +268,18 @@ G4Material* DetectorConstruction::CreateResistMaterial()
         G4Element* element = nist->FindOrBuildElement(elem.first);
         G4double massFraction = (element->GetA() * elem.second) / molecularWeight;
         resist->AddElement(element, massFraction);
-        G4cout << "  Mass fraction of " << elem.first << ": "
-               << massFraction << G4endl;
     }
 
-    // Validate density
-    if (fResistDensity < 0.1*g/cm3 || fResistDensity > 10.0*g/cm3) {
-        G4cerr << "WARNING: Unusual resist density: "
-               << fResistDensity/(g/cm3) << " g/cm3" << G4endl;
-        G4cerr << "         Typical range is 0.5-3.0 g/cm3" << G4endl;
-    }
-
-    G4cout << "\nCreated resist material: " << materialName << G4endl;
-    G4cout << "Composition: ";
+    // Concise material summary
+    G4cout << "Resist: ";
     bool first = true;
     for (const auto& elem : fResistElements) {
-        if (!first) G4cout << ", ";
-        G4cout << elem.first << ":" << elem.second;
+        if (!first) G4cout << ",";
+        G4cout << elem.first << elem.second;
         first = false;
     }
-    G4cout << "\nDensity: " << G4BestUnit(fResistDensity, "Volumic Mass") << G4endl;
-    G4cout << "Molecular weight: " << molecularWeight << " g/mol" << G4endl;
-
-    // Print material properties for verification
-    G4cout << "\nMaterial properties:" << G4endl;
-    G4cout << "  Radiation length: " << G4BestUnit(resist->GetRadlen(), "Length") << G4endl;
-    G4cout << "  Nuclear int. length: " << G4BestUnit(resist->GetNuclearInterLength(), "Length") << G4endl;
-    G4cout << "  Ionisation potential: " << resist->GetIonisation()->GetMeanExcitationEnergy()/eV << " eV" << G4endl;
+    G4cout << " @ " << fResistDensity/(g/cm3) << " g/cm3, "
+           << fActualResistThickness/nm << " nm" << G4endl;
 
     return resist;
 }
@@ -290,24 +288,17 @@ void DetectorConstruction::SetResistThickness(G4double thickness)
 {
     fActualResistThickness = thickness;
     fParametersChanged = true;
-
-    G4cout << "Resist thickness set to " << G4BestUnit(thickness, "Length") << G4endl;
-    G4cout << "Call /det/update to apply changes" << G4endl;
 }
 
 void DetectorConstruction::SetResistDensity(G4double density)
 {
     fResistDensity = density;
     fParametersChanged = true;
-
-    G4cout << "Resist density set to " << G4BestUnit(density, "Volumic Mass") << G4endl;
 }
 
 void DetectorConstruction::SetResistVisualizationThickness(G4double thickness)
 {
     fResistVisualizationThickness = thickness;
-    G4cout << "Resist visualization thickness set to "
-        << G4BestUnit(thickness, "Length") << G4endl;
 }
 
 void DetectorConstruction::AddResistElement(G4String element, G4int count)
@@ -324,53 +315,24 @@ void DetectorConstruction::ClearResistElements()
 
 void DetectorConstruction::SetResistComposition(G4String composition)
 {
-    // Use the parseComposition helper function
     parseComposition(composition, fResistElements);
     fParametersChanged = true;
-
-    G4cout << "Resist composition updated: ";
-    for (const auto& elem : fResistElements) {
-        G4cout << elem.first << ":" << elem.second << " ";
-    }
-    G4cout << G4endl;
 }
 
 void DetectorConstruction::UpdateMaterial()
 {
-    // Only update if the logical volume exists (after initial construction)
     if (!fResistLogical) {
-        G4cout << "Warning: Cannot update material - geometry not yet constructed" << G4endl;
         return;
     }
 
-    G4cout << "\n=== Updating Resist Material ===" << G4endl;
-
-    // Create the new material with current parameters
     G4Material* newResistMaterial = CreateResistMaterial();
-
-    // Get the old material for comparison
     G4Material* oldMaterial = fResistLogical->GetMaterial();
 
     if (oldMaterial != newResistMaterial) {
-        // Update the logical volume with the new material
         fResistLogical->SetMaterial(newResistMaterial);
-
-        G4cout << "Material updated from " << oldMaterial->GetName()
-               << " to " << newResistMaterial->GetName() << G4endl;
-        G4cout << "New density: " << G4BestUnit(newResistMaterial->GetDensity(), "Volumic Mass") << G4endl;
-
-        // Print the new composition
-        G4cout << "New composition: ";
-        for (const auto& elem : fResistElements) {
-            G4cout << elem.first << ":" << elem.second << " ";
-        }
-        G4cout << G4endl;
-
-        // Notify Geant4 that the geometry has changed
         G4RunManager::GetRunManager()->GeometryHasBeenModified();
-        G4cout << "Geometry update completed" << G4endl;
 
-        // Reconfigure physics for new material (especially important for high-Z)
+        // Reconfigure physics for new material (important for high-Z)
         auto* runManager = G4RunManager::GetRunManager();
         if (runManager) {
             auto* physicsList = dynamic_cast<PhysicsList*>(
@@ -379,9 +341,5 @@ void DetectorConstruction::UpdateMaterial()
                 physicsList->ReconfigureForMaterial();
             }
         }
-    } else {
-        G4cout << "Material is already up to date" << G4endl;
     }
-
-    G4cout << "================================\n" << G4endl;
 }

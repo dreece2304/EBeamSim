@@ -83,11 +83,6 @@ void PatternGenerator::GeneratePattern() {
             break;
     }
     
-    G4cout << "Generated pattern with " << fExposurePoints.size() << " exposure points" << G4endl;
-    G4cout << "Dwell time: " << fDwellTime << " microseconds" << G4endl;
-    G4cout << "Clock frequency: " << fClockFrequency << " MHz" << G4endl;
-    G4cout << "Electrons per point: " << GetElectronsPerPoint() << G4endl;
-    G4cout << "Total electrons needed: " << GetElectronsPerPoint() * fExposurePoints.size() << G4endl;
 }
 
 void PatternGenerator::GenerateSquarePattern() {
@@ -231,7 +226,6 @@ void PatternGenerator::GenerateLinePattern() {
         fExposurePoints.push_back(G4ThreeVector(x, y, z));
     }
     
-    G4cout << "Generated line pattern with " << nPoints << " points" << G4endl;
 }
 
 void PatternGenerator::GenerateCustomPattern() {
@@ -262,5 +256,4 @@ void PatternGenerator::GenerateCustomPattern() {
         fExposurePoints.push_back(G4ThreeVector(x, y, z));
     }
     
-    G4cout << "Generated custom cross pattern with " << fExposurePoints.size() << " points" << G4endl;
 }

@@ -64,6 +64,9 @@ PrimaryGeneratorMessenger::~PrimaryGeneratorMessenger()
 
 void PrimaryGeneratorMessenger::SetNewValue(G4UIcommand* command, G4String newValue)
 {
+    G4cout << ">>> PrimaryGeneratorMessenger::SetNewValue called: " << command->GetCommandPath()
+           << " = " << newValue << G4endl;
+
     if (command == fParticleCmd) {
         // Handle particle type change
         G4ParticleTable* particleTable = G4ParticleTable::GetParticleTable();

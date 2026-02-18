@@ -3,6 +3,7 @@
 #include "EventAction.hh"
 #include "DetectorConstruction.hh"
 #include "DataManager.hh"
+#include "TrajectoryRecorder.hh"
 
 #include "G4Step.hh"
 #include "G4RunManager.hh"
@@ -27,6 +28,22 @@ SteppingAction::~SteppingAction()
 
 void SteppingAction::UserSteppingAction(const G4Step* step)
 {
+    // Record trajectory if enabled (for visualization)
+    TrajectoryRecorder* trajRec = TrajectoryRecorder::Instance();
+    if (trajRec->IsEnabled()) {
+        G4Track* track = step->GetTrack();
+        G4ThreeVector pos = step->GetPreStepPoint()->GetPosition();
+        G4double energy = step->GetPreStepPoint()->GetKineticEnergy();
+
+        trajRec->RecordStep(
+            track->GetTrackID(),
+            track->GetParentID(),
+            track->GetParticleDefinition()->GetParticleName(),
+            pos,
+            energy
+        );
+    }
+
     // Get energy deposit in this step
     G4double edep = step->GetTotalEnergyDeposit();
 

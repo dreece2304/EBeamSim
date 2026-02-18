@@ -83,17 +83,11 @@ void DataManager::BeginRun(G4int runID, G4int nEvents) {
         *fLiveDataStream << "Event,Progress,TotalEnergy" << std::endl;
     }
 
-    G4cout << "DataManager: Starting run " << runID << " with " << nEvents << " events" << G4endl;
 }
 
 void DataManager::EndRun() {
-    G4cout << "DataManager: Run " << fRunID << " complete. "
-        << fProcessedEvents << "/" << fTotalEvents << " events processed." << G4endl;
-
-    // Save all data
     SaveAllData();
 
-    // Close live monitoring
     if (fLiveDataStream && fLiveDataStream->is_open()) {
         fLiveDataStream->close();
     }
@@ -220,7 +214,6 @@ void DataManager::SavePSFData() {
     }
 
     file.close();
-    G4cout << "PSF data saved to: " << filename << G4endl;
 }
 
 void DataManager::SaveAllData() {
@@ -242,18 +235,12 @@ G4double DataManager::GetCurrentProgress() const {
         static_cast<G4double>(fProcessedEvents) / fTotalEvents : 0.0;
 }
 
-// TODO: Implement these methods if DataManager-based output is needed in the future
-// Currently, RunAction handles all PSF output including BEAMER format and summary
 void DataManager::SaveBEAMERFormat() {
-    G4cout << "WARNING: DataManager::SaveBEAMERFormat() not implemented." << G4endl;
-    G4cout << "         PSF BEAMER output is handled by RunAction." << G4endl;
-    G4cout << "         For pattern mode, implement this method." << G4endl;
+    // PSF BEAMER output handled by RunAction
 }
 
 void DataManager::SaveSummary() {
-    G4cout << "WARNING: DataManager::SaveSummary() not implemented." << G4endl;
-    G4cout << "         PSF summary output is handled by RunAction." << G4endl;
-    G4cout << "         For pattern mode, implement this method." << G4endl;
+    // PSF summary output handled by RunAction
 }
 void DataManager::AddPSFData(G4double radius, G4double energy) {
     // Wrapper function for PSF data collection
@@ -280,8 +267,6 @@ void DataManager::InitializeDoseGrid(G4int nx, G4int ny, G4int nz,
     fDoseGrid.clear();
     fDoseGrid.resize(nx, std::vector<std::vector<G4double>>(ny, std::vector<G4double>(nz, 0.0)));
     
-    G4cout << "Initialized dose grid: " << nx << "x" << ny << "x" << nz 
-           << " cells, spacing: " << fDx/nm << "x" << fDy/nm << "x" << fDz/nm << " nm" << G4endl;
 }
 
 void DataManager::AddDoseDeposit(const G4ThreeVector& position, G4double energy) {
@@ -374,5 +359,4 @@ void DataManager::SaveDoseDistribution() {
     
     file.close();
     file2d.close();
-    G4cout << "Pattern dose data saved to: " << filename << " and " << filename2d << G4endl;
 }

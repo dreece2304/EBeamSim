@@ -6,6 +6,7 @@ add_library(ebl_actions STATIC
         src/SteppingAction.cc
         src/StackingAction.cc
         src/OutputMessenger.cc
+        src/TrajectoryRecorder.cc
 )
 
 target_include_directories(ebl_actions

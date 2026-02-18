@@ -56,11 +56,8 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(DetectorConstruction* detConstruc
     // Create pattern messenger
     fPatternMessenger = new PatternMessenger(this);
 
-    G4cout << "PrimaryGeneratorAction initialized with:" << G4endl;
-    G4cout << "  Beam energy: " << G4BestUnit(fBeamEnergy, "Energy") << G4endl;
-    G4cout << "  Beam size (FWHM): " << G4BestUnit(fBeamSize, "Length") << G4endl;
-    G4cout << "  Default position: (" << fBeamPosition.x()/nm << ", "
-           << fBeamPosition.y()/nm << ", " << fBeamPosition.z()/nm << ") nm" << G4endl;
+    G4cout << "Beam: " << fBeamEnergy/keV << " keV, FWHM=" << fBeamSize/nm << " nm" << G4endl;
+    G4cout << ">>> PrimaryGeneratorMessenger created for /gun/ commands" << G4endl;
 }
 
 PrimaryGeneratorAction::~PrimaryGeneratorAction()
@@ -157,6 +154,13 @@ void PrimaryGeneratorAction::GeneratePSFPrimary(G4Event* anEvent)
                                                      y + fBeamPosition.y(),
                                                      z));
     fParticleGun->SetParticleMomentumDirection(fBeamDirection);
+
+    // Use energy from particle gun (set via /gun/energy) if different from default,
+    // otherwise use our fBeamEnergy. This allows both G4 built-in and custom commands.
+    G4double gunEnergy = fParticleGun->GetParticleEnergy();
+    if (gunEnergy != EBL::Beam::DEFAULT_ENERGY) {
+        fBeamEnergy = gunEnergy;  // Sync our value with the particle gun
+    }
     fParticleGun->SetParticleEnergy(fBeamEnergy);
 
     // Debug output for first few events
@@ -197,25 +201,20 @@ void PrimaryGeneratorAction::ValidateBeamPosition() const
 void PrimaryGeneratorAction::SetBeamEnergy(G4double energy)
 {
     fBeamEnergy = energy;
-    G4cout << "Beam energy set to " << G4BestUnit(energy, "Energy") << G4endl;
+    G4cout << ">>> SetBeamEnergy called: " << energy/keV << " keV" << G4endl;
 }
 
 void PrimaryGeneratorAction::SetBeamSize(G4double size)
 {
     fBeamSize = size;
-    G4cout << "Beam diameter (FWHM) set to " << G4BestUnit(size, "Length") << G4endl;
 }
 
 void PrimaryGeneratorAction::SetBeamPosition(const G4ThreeVector& position)
 {
     fBeamPosition = position;
-    G4cout << "Beam position set to (" << position.x()/nm << ", "
-           << position.y()/nm << ", " << position.z()/nm << ") nm" << G4endl;
 }
 
 void PrimaryGeneratorAction::SetBeamDirection(const G4ThreeVector& direction)
 {
-    fBeamDirection = direction.unit(); // Normalize
-    G4cout << "Beam direction set to (" << fBeamDirection.x() << ", "
-           << fBeamDirection.y() << ", " << fBeamDirection.z() << ")" << G4endl;
+    fBeamDirection = direction.unit();
 }

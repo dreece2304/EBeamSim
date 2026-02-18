@@ -7,6 +7,12 @@ echo "🖥️  Starting EBL Simulation GUI..."
 export DISPLAY=:0
 export QT_QPA_PLATFORM=xcb
 
+# Fix PySide6 plugin path (needed after Qt updates)
+PYSIDE_PATH=$(python -c "import PySide6; import os; print(os.path.dirname(PySide6.__file__))" 2>/dev/null)
+if [ -n "$PYSIDE_PATH" ]; then
+    export QT_PLUGIN_PATH="$PYSIDE_PATH/Qt/plugins"
+fi
+
 # Check if display is available
 if ! xset q &>/dev/null; then
     echo "❌ X11 display not available. Please ensure X11 forwarding is enabled."
@@ -14,7 +20,10 @@ if ! xset q &>/dev/null; then
 fi
 
 # Activate Python environment
-if [ -d "/home/dreece23/miniconda3" ]; then
+if [ -d "/home/dreece23/miniforge3" ]; then
+    source /home/dreece23/miniforge3/bin/activate
+    conda activate ebeam 2>/dev/null || conda activate ebl-sim 2>/dev/null || echo "Using base environment"
+elif [ -d "/home/dreece23/miniconda3" ]; then
     source /home/dreece23/miniconda3/bin/activate
     conda activate ebl-sim
 else
@@ -24,14 +33,5 @@ fi
 # Launch GUI
 cd "$(dirname "$0")"
 
-# Check which GUI to launch
-if [ -f "python/ebl_sim/gui/launcher.py" ]; then
-    echo "🚀 Launching Professional GUI..."
-    python python/ebl_sim/gui/launcher.py
-elif [ -f "scripts/gui/ebl_gui.py" ]; then
-    echo "🚀 Launching Legacy GUI..."
-    python scripts/gui/ebl_gui.py
-else
-    echo "❌ No GUI found. Please check the installation."
-    exit 1
-fi
+echo "🚀 Launching EBL GUI..."
+python scripts/gui/ebl_gui.py

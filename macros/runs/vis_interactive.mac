@@ -1,0 +1,70 @@
+# Interactive visualization macro for MLD materials
+# Use Qt6 GUI to rotate/zoom, then run events manually
+
+# ============================================================
+# GEOMETRY SETUP - Zincone 100nm (can change before /run/initialize)
+# ============================================================
+/det/setResistComposition Zn:1,C:2,H:4,O:2
+/det/setResistDensity 2.1 g/cm3
+/det/setResistThickness 100 nm
+
+# Initialize geometry
+/run/initialize
+
+# ============================================================
+# BEAM CONFIGURATION
+# ============================================================
+/gun/particle e-
+/gun/energy 100 keV
+/gun/position 0 0 150 nm
+/gun/direction 0 0 -1
+/gun/beamSize 0 nm
+
+# ============================================================
+# VISUALIZATION SETUP - Qt6 Interactive
+# ============================================================
+/vis/open OGL 1200x800
+
+# Draw geometry with solid surfaces
+/vis/drawVolume
+/vis/viewer/set/style surface
+/vis/viewer/set/hiddenEdge true
+/vis/viewer/set/background white
+
+# Initial camera position (adjust in GUI)
+/vis/viewer/set/viewpointThetaPhi 90 180
+/vis/viewer/zoom 1.5
+
+# Setup trajectory visualization
+/vis/scene/add/trajectories smooth
+/vis/modeling/trajectories/create/drawByParticleID
+/vis/modeling/trajectories/drawByParticleID-0/default/setDrawStepPts true
+
+# Filter particles
+/vis/filtering/trajectories/create/particleFilter
+/vis/filtering/trajectories/particleFilter-0/add e-
+/vis/filtering/trajectories/particleFilter-0/add e+
+/vis/filtering/trajectories/particleFilter-0/add gamma
+
+# Add scale and axes
+/vis/scene/add/axes 0 0 0 50 nm
+/vis/scene/add/scale
+
+# Hide world volume
+/vis/geometry/set/visibility World 0 false
+
+# Enable auto-refresh for interactive use
+/vis/viewer/set/autoRefresh true
+
+# ============================================================
+# READY FOR INTERACTIVE USE
+# ============================================================
+# Use mouse to rotate/zoom in Qt window
+# When ready, type in terminal:
+#   /run/beamOn 100
+# To export image:
+#   /vis/ogl/export myimage.pdf
+# To change material:
+#   /det/setResistComposition Al:1,C:5,H:4,O:2
+#   /det/setResistDensity 1.35 g/cm3
+#   /run/reinitialize

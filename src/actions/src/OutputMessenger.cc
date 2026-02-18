@@ -1,8 +1,11 @@
 // OutputMessenger.cc
 #include "OutputMessenger.hh"
 #include "RunAction.hh"
+#include "TrajectoryRecorder.hh"
 #include "G4UIdirectory.hh"
 #include "G4UIcmdWithAString.hh"
+#include "G4UIcmdWithoutParameter.hh"
+#include "G4UIcmdWithABool.hh"
 
 OutputMessenger::OutputMessenger(RunAction* runAction)
     : G4UImessenger(),
@@ -35,6 +38,21 @@ OutputMessenger::OutputMessenger(RunAction* runAction)
     fBeamerFileCmd->SetGuidance("Set BEAMER output filename");
     fBeamerFileCmd->SetParameterName("filename", false);
     fBeamerFileCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
+
+    // Trajectory recording commands
+    fTrajEnableCmd = new G4UIcmdWithABool("/ebl/trajectory/enable", this);
+    fTrajEnableCmd->SetGuidance("Enable/disable trajectory recording for visualization");
+    fTrajEnableCmd->SetParameterName("enable", false);
+    fTrajEnableCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
+
+    fTrajFileCmd = new G4UIcmdWithAString("/ebl/trajectory/setFile", this);
+    fTrajFileCmd->SetGuidance("Set trajectory output filename (JSON)");
+    fTrajFileCmd->SetParameterName("filename", false);
+    fTrajFileCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
+
+    fTrajWriteCmd = new G4UIcmdWithoutParameter("/ebl/trajectory/write", this);
+    fTrajWriteCmd->SetGuidance("Write recorded trajectories to file");
+    fTrajWriteCmd->AvailableForStates(G4State_Idle);
 }
 
 OutputMessenger::~OutputMessenger()
@@ -45,6 +63,9 @@ OutputMessenger::~OutputMessenger()
     delete fBeamerFileCmd;
     delete fOutputDirCmd;
     delete fOutputDir;
+    delete fTrajEnableCmd;
+    delete fTrajFileCmd;
+    delete fTrajWriteCmd;
 }
 
 void OutputMessenger::SetNewValue(G4UIcommand* command, G4String newValue)
@@ -63,5 +84,17 @@ void OutputMessenger::SetNewValue(G4UIcommand* command, G4String newValue)
     }
     else if (command == fBeamerFileCmd) {
         fRunAction->SetBeamerFilename(newValue);
+    }
+    // Trajectory recording commands
+    else if (command == fTrajEnableCmd) {
+        TrajectoryRecorder::Instance()->SetEnabled(fTrajEnableCmd->GetNewBoolValue(newValue));
+        G4cout << "Trajectory recording: " << (fTrajEnableCmd->GetNewBoolValue(newValue) ? "ENABLED" : "DISABLED") << G4endl;
+    }
+    else if (command == fTrajFileCmd) {
+        TrajectoryRecorder::Instance()->SetOutputFile(newValue);
+        G4cout << "Trajectory output file: " << newValue << G4endl;
+    }
+    else if (command == fTrajWriteCmd) {
+        TrajectoryRecorder::Instance()->WriteAllData();
     }
 }

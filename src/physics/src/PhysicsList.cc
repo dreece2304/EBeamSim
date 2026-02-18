@@ -17,6 +17,7 @@
 #include "G4ProcessManager.hh"
 #include "G4LossTableManager.hh"
 #include "G4EmParameters.hh"
+#include "G4StepLimiterPhysics.hh"
 #include "G4UnitsTable.hh"
 #include "G4Region.hh"
 #include "G4RegionStore.hh"
@@ -44,6 +45,10 @@ PhysicsList::PhysicsList()
 
     // EM physics - Use Livermore for better low-energy accuracy (down to 10 eV)
     fEmPhysics = new G4EmLivermorePhysics();
+
+    // CRITICAL: Add step limiter physics to respect G4UserLimits in geometry
+    // Without this, user limits in DetectorConstruction have no effect
+    RegisterPhysics(new G4StepLimiterPhysics());
 
     // DNA physics disabled - causes process duplication with Livermore
     // Would need separate implementation for < 100 eV region
@@ -137,14 +142,9 @@ void PhysicsList::SetupEmParameters()
     // Verbose
     param->SetVerbose(0);  // Reduced for BEAMER production runs
 
-    G4cout << "\n========================================" << G4endl;
-    G4cout << "EM Parameters configured for BEAMER PSF:" << G4endl;
-    G4cout << "  Resist-optimized with region-specific cuts" << G4endl;
-    G4cout << "  Min tracking energy: " << param->MinKinEnergy() / eV << " eV" << G4endl;
-    G4cout << "  Fluorescence: " << param->Fluo() << G4endl;
-    G4cout << "  Auger: " << param->Auger() << G4endl;
-    G4cout << "  Deexcitation ignore cut: " << param->DeexcitationIgnoreCut() << G4endl;
-    G4cout << "========================================\n" << G4endl;
+    // Minimal output - key settings only
+    G4cout << "Physics: Livermore EM, " << param->MinKinEnergy()/eV << " eV threshold, "
+           << "Fluo=" << param->Fluo() << " Auger=" << param->Auger() << G4endl;
 }
 
 void PhysicsList::ConstructParticle()
@@ -168,6 +168,23 @@ void PhysicsList::ConstructProcess()
 
     // Decay physics
     fDecayPhysics->ConstructProcess();
+
+    // CRITICAL FIX: Construct ALL registered physics modules
+    // This includes G4StepLimiterPhysics which enforces G4UserLimits from DetectorConstruction.
+    // Without this, user limits have NO effect and electrons skip through resist in huge steps!
+    G4int idx = 0;
+    const G4VPhysicsConstructor* physics;
+    while ((physics = GetPhysics(idx)) != nullptr) {
+        G4String name = physics->GetPhysicsName();
+        // Skip if it's one we already handled manually (EM, Decay)
+        // Only construct registered modules we haven't handled
+        if (name != fEmPhysics->GetPhysicsName() &&
+            name != fDecayPhysics->GetPhysicsName()) {
+            const_cast<G4VPhysicsConstructor*>(physics)->ConstructProcess();
+            G4cout << "Constructed registered physics: " << name << G4endl;
+        }
+        idx++;
+    }
 }
 
 void PhysicsList::SetCuts()
@@ -194,13 +211,6 @@ void PhysicsList::SetCuts()
     SetCutValue(fCutForElectron, "e-");
     SetCutValue(fCutForPositron, "e+");
 
-    // Report the cuts
-    G4cout << "\nPhysicsList::SetCuts() - BEAMER Optimized Production Thresholds:" << G4endl;
-    G4cout << "  Global defaults:" << G4endl;
-    G4cout << "    Gamma:    " << G4BestUnit(fCutForGamma, "Length") << G4endl;
-    G4cout << "    Electron: " << G4BestUnit(fCutForElectron, "Length") << G4endl;
-    G4cout << "    Positron: " << G4BestUnit(fCutForPositron, "Length") << G4endl;
-
     // Set region-specific cuts
     G4RegionStore* regionStore = G4RegionStore::GetInstance();
 
@@ -219,13 +229,6 @@ void PhysicsList::SetCuts()
         resistCuts->SetProductionCut(resistCutValue, "e-");
         resistCuts->SetProductionCut(resistCutValue, "e+");
         resistRegion->SetProductionCuts(resistCuts);
-
-        G4cout << "  Resist region (ultra-fine for PSF accuracy): "
-            << G4BestUnit(resistCutValue, "Length");
-        if (fUseHighZOptimization) {
-            G4cout << " [High-Z optimized]";
-        }
-        G4cout << G4endl;
     }
 
     // OPTIMIZATION: Coarser cuts in substrate for efficiency
@@ -238,39 +241,21 @@ void PhysicsList::SetCuts()
         substrateCuts->SetProductionCut(10.0 * nanometer, "e-");
         substrateCuts->SetProductionCut(10.0 * nanometer, "e+");
         substrateRegion->SetProductionCuts(substrateCuts);
-
-        G4cout << "  Substrate region (coarse for efficiency): "
-            << G4BestUnit(10.0 * nanometer, "Length") << G4endl;
     }
 
-    // Add world region with even coarser cuts
+    // World region with coarse cuts
     G4Region* defaultRegion = regionStore->GetRegion("DefaultRegionForTheWorld", false);
     if (defaultRegion) {
         G4ProductionCuts* worldCuts = new G4ProductionCuts();
-        // Very coarse cuts outside substrate
         worldCuts->SetProductionCut(100.0 * nanometer, "gamma");
         worldCuts->SetProductionCut(100.0 * nanometer, "e-");
         worldCuts->SetProductionCut(100.0 * nanometer, "e+");
         defaultRegion->SetProductionCuts(worldCuts);
-
-        G4cout << "  World region (very coarse): "
-            << G4BestUnit(100.0 * nanometer, "Length") << G4endl;
     }
 
-    // Dump the full particle/process list for verification
-    if (GetVerboseLevel() > 0) {
-        DumpCutValuesTable();
-    }
-
-    // Additional validation for BEAMER
-    G4EmParameters* param = G4EmParameters::Instance();
-    G4double lowestE = param->LowestElectronEnergy();
-
-    G4cout << "\nBEAMER PSF Optimization Summary:" << G4endl;
-    G4cout << "  Resist: Ultra-fine cuts (0.05 nm) for accuracy" << G4endl;
-    G4cout << "  Substrate: Coarse cuts (10 nm) for efficiency" << G4endl;
-    G4cout << "  Tracking threshold: " << lowestE/eV << " eV" << G4endl;
-    G4cout << "  This configuration optimizes for resist-only PSF calculation\n" << G4endl;
+    // Concise summary
+    G4cout << "Cuts: Resist=0.05nm, Substrate=10nm, World=100nm"
+           << (fUseHighZOptimization ? " [High-Z]" : "") << G4endl;
 }
 
 G4bool PhysicsList::IsHighZMaterial() const
@@ -283,79 +268,37 @@ G4bool PhysicsList::IsHighZMaterial() const
         runManager->GetUserDetectorConstruction());
     if (!detector) return false;
 
-    // Check resist elements for high-Z materials
+    // Check resist elements for high-Z materials (Sn, Bi, Hf, Zr, W)
     const auto& elements = detector->GetResistElements();
-
-    // Debug output
-    G4cout << "Checking for high-Z materials in resist composition:" << G4endl;
-    for (const auto& elem : elements) {
-        G4cout << "  Element: " << elem.first << " (count: " << elem.second << ")" << G4endl;
-    }
-
-    // High-Z elements commonly used in EUV/e-beam resists
-    G4bool isHighZ = (elements.count("Sn") > 0 ||   // Tin (Z=50)
-                      elements.count("Bi") > 0 ||   // Bismuth (Z=83)
-                      elements.count("Hf") > 0 ||   // Hafnium (Z=72)
-                      elements.count("Zr") > 0 ||   // Zirconium (Z=40)
-                      elements.count("W") > 0);     // Tungsten (Z=74)
-
-    G4cout << "High-Z material detected: " << (isHighZ ? "YES" : "NO") << G4endl;
-    return isHighZ;
+    return (elements.count("Sn") > 0 || elements.count("Bi") > 0 ||
+            elements.count("Hf") > 0 || elements.count("Zr") > 0 ||
+            elements.count("W") > 0);
 }
 
 void PhysicsList::ConfigureForHighZMaterial()
 {
-    G4cout << "\n========================================" << G4endl;
-    G4cout << "Configuring physics for HIGH-Z material:" << G4endl;
-
-    // Get EM parameters for additional tuning
     G4EmParameters* param = G4EmParameters::Instance();
 
-    // Lower bremsstrahlung threshold for high-Z
+    // High-Z optimizations: lower bremsstrahlung threshold, finer MSC
     param->SetBremsstrahlungTh(EBL::Physics::BREMSSTRAHLUNG_THRESHOLD_HIGH_Z);
-    G4cout << "  Bremsstrahlung threshold: "
-           << G4BestUnit(EBL::Physics::BREMSSTRAHLUNG_THRESHOLD_HIGH_Z, "Energy") << G4endl;
-
-    // Finer multiple scattering for high-Z
     param->SetMscRangeFactor(EBL::Physics::MSC_RANGE_FACTOR_HIGH_Z);
-    G4cout << "  MSC range factor: " << EBL::Physics::MSC_RANGE_FACTOR_HIGH_Z << G4endl;
-
-    // Enhanced angular generator for better scattering
     param->SetMscMuHadRangeFactor(0.2);
+    param->SetNumberOfBinsPerDecade(30);
+    param->SetUseMottCorrection(true);
 
-    // More bins for better accuracy with complex cross-sections
-    param->SetNumberOfBinsPerDecade(30);  // Increased from 20
-
-    // Use Penelope model for better high-Z accuracy below 1 GeV
-    param->SetUseMottCorrection(true);  // Mott corrections for high-Z
-
-    G4cout << "  Mott corrections: enabled" << G4endl;
-    G4cout << "  Bins per decade: 30" << G4endl;
-    G4cout << "========================================\n" << G4endl;
+    G4cout << "High-Z config: Mott=ON, MSC=" << EBL::Physics::MSC_RANGE_FACTOR_HIGH_Z
+           << ", Bins=30/decade" << G4endl;
 }
 
 void PhysicsList::ReconfigureForMaterial()
 {
-    // Re-check if we have high-Z material after material update
     G4bool wasHighZ = fUseHighZOptimization;
     fUseHighZOptimization = IsHighZMaterial();
 
     if (fUseHighZOptimization != wasHighZ) {
-        G4cout << "\n=== Physics Reconfiguration ===" << G4endl;
-        G4cout << "Material type changed from "
-               << (wasHighZ ? "high-Z" : "normal")
-               << " to "
-               << (fUseHighZOptimization ? "high-Z" : "normal")
-               << G4endl;
-
-        // Reconfigure EM parameters
         SetupEmParameters();
-
-        // Apply high-Z specific configurations if needed
         if (fUseHighZOptimization) {
             ConfigureForHighZMaterial();
         }
-
-        G4cout << "Physics reconfiguration complete\n" << G4endl;
     }
 }

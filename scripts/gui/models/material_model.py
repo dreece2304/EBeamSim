@@ -43,6 +43,11 @@ class MaterialModel:
             "composition": "Sn:1,C:8,H:8,O:4",
             "density": 2.0,
             "description": "Organic-inorganic hybrid Sn resist via MLD (TDMASn + 2-butyne-1,4-diol), ideal [-Sn(O-C4H4-O)2-] repeating unit"
+        },
+        "Zincone": {
+            "composition": "Zn:1,C:2,H:4,O:2",
+            "density": 2.1,
+            "description": "Zinc-based MLD hybrid material (DEZ + ethylene glycol), [-Zn-O-CH2-CH2-O-] repeating unit"
         }
     }
     

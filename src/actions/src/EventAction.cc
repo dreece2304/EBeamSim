@@ -4,6 +4,7 @@
 #include "DetectorConstruction.hh"
 #include "DataManager.hh"
 #include "EBLConstants.hh"
+#include "TrajectoryRecorder.hh"
 #include "G4UnitsTable.hh"
 #include "G4Event.hh"
 #include "G4RunManager.hh"
@@ -35,14 +36,8 @@ EventAction::EventAction(RunAction* runAction, DetectorConstruction* detConstruc
     }
 
     // Pre-compute log binning constants to avoid std::log() in hot path
-    // This is called 100k+ times per event, so avoiding log() saves significant CPU
     fLogBinDenominator = std::log(EBL::PSF::MAX_RADIUS / EBL::PSF::MIN_RADIUS);
     fInvLogBinDenominator = 1.0 / fLogBinDenominator;
-
-    G4cout << "EventAction initialized with:" << G4endl;
-    G4cout << "  1D radial bins: " << EBL::PSF::NUM_RADIAL_BINS << " (for BEAMER PSF)" << G4endl;
-    G4cout << "  2D bins: " << NUM_DEPTH_BINS << " x " << NUM_RADIAL_BINS << " (for visualization)" << G4endl;
-    G4cout << "  >>> Sequential mode initialized with BEAMER optimizations" << G4endl;
 }
 
 EventAction::~EventAction()
@@ -51,6 +46,9 @@ EventAction::~EventAction()
 
 void EventAction::BeginOfEventAction(const G4Event* event)
 {
+    // Notify trajectory recorder of new event
+    TrajectoryRecorder::Instance()->StartNewEvent(event->GetEventID());
+
     fEnergyDeposit = 0.;
     fTotalTrackLength = 0.;
     fResistEnergy = 0.;
@@ -131,6 +129,9 @@ void EventAction::BeginOfEventAction(const G4Event* event)
 
 void EventAction::EndOfEventAction(const G4Event* event)
 {
+    // Notify trajectory recorder of event end
+    TrajectoryRecorder::Instance()->EndEvent();
+
     // Pass accumulated energy data to run action
     if (fResistEnergy > 0 || fSubstrateEnergy > 0 || fAboveResistEnergy > 0) {
         // 1D data for BEAMER PSF

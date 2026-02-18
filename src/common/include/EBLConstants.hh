@@ -67,7 +67,7 @@ namespace EBL {
 
     // Geometry namespace (inline constexpr)
     namespace Geometry {
-        inline constexpr G4double WORLD_SIZE = 200.0 * mm;  // Large enough to contain substrate
+        inline constexpr G4double WORLD_SIZE = 1.0 * mm;  // Enough to contain 500um substrate + margin
         inline constexpr G4double SUBSTRATE_THICKNESS = Materials::Substrate::THICKNESS;
         inline constexpr G4double SUBSTRATE_RADIUS = Materials::Substrate::RADIUS;
     }
@@ -77,7 +77,7 @@ namespace EBL {
         // Production cuts - fine in resist, coarse elsewhere
         inline constexpr G4double ELECTRON_RANGE_CUTOFF = 10.0 * nm;
         inline constexpr G4double PHOTON_RANGE_CUTOFF = 10.0 * nm;
-        inline constexpr G4double MAX_STEP_SIZE = 5.0 * nm;
+        inline constexpr G4double MAX_STEP_SIZE = 2.0 * nm;  // Fine stepping for energy density maps
         inline constexpr G4bool USE_ADVANCED_MULTIPLE_SCATTERING = true;
 
         // Region-specific cuts for Geant4 11.3+ optimization

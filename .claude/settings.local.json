@@ -30,8 +30,30 @@
       "Bash(MPLBACKEND=Agg python advanced_pattern_designer.py)",
       "Bash(export:*)",
       "Bash(./ebl_sim:*)",
-      "WebFetch(domain:www.nature.com)"
+      "WebFetch(domain:www.nature.com)",
+      "Bash(python3:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(for f in /home/dreece23/projects/research/ebl-simulation/scripts/gui/psf_output/summary_*_100keV.txt)",
+      "Bash(do echo \"\")",
+      "Bash(basename:*)",
+      "Bash(done)",
+      "Bash(/home/dreece23/projects/research/ebl-simulation/build/bin/ebl_sim:*)",
+      "Bash(sort:*)",
+      "Bash(wc:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(git status:*)",
+      "Bash(git rm:*)",
+      "Bash(git diff:*)",
+      "Bash(rmdir:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)"
     ],
     "deny": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "literature"
+  ]
 }

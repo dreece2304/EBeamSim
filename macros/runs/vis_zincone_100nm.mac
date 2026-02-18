@@ -1,0 +1,77 @@
+# Visualization macro for Zincone - 100nm thick resist
+# Generates trajectory image for electron scattering visualization
+
+# ============================================================
+# GEOMETRY SETUP - Zincone 100nm
+# ============================================================
+/det/setResistComposition Zn:1,C:2,H:4,O:2
+/det/setResistDensity 2.1 g/cm3
+/det/setResistThickness 100 nm
+
+# ============================================================
+# INITIALIZE GEOMETRY (required before visualization)
+# ============================================================
+/run/initialize
+
+# ============================================================
+# BEAM CONFIGURATION - 100 keV point source
+# ============================================================
+/gun/particle e-
+/gun/energy 100 keV
+/gun/position 0 0 150 nm
+/gun/direction 0 0 -1
+/gun/beamSize 0 nm
+
+# ============================================================
+# VISUALIZATION SETUP - OpenGL
+# ============================================================
+/vis/open OGL 1200x800
+/vis/viewer/set/autoRefresh false
+/vis/verbose errors
+
+# Draw geometry
+/vis/drawVolume
+
+# Camera setup - side view for trajectory visualization
+/vis/viewer/set/viewpointThetaPhi 80 160
+/vis/viewer/zoom 2.0
+
+# Surface rendering for better image
+/vis/viewer/set/style surface
+/vis/viewer/set/hiddenEdge true
+
+# Set background to white for better export
+/vis/viewer/set/background white
+
+# Add trajectories with smooth rendering
+/vis/scene/add/trajectories smooth
+
+# Filter to show electrons, positrons, and gammas
+/vis/filtering/trajectories/create/particleFilter
+/vis/filtering/trajectories/particleFilter-0/add e-
+/vis/filtering/trajectories/particleFilter-0/add e+
+/vis/filtering/trajectories/particleFilter-0/add gamma
+
+# Color by particle type
+/vis/modeling/trajectories/create/drawByParticleID
+/vis/modeling/trajectories/drawByParticleID-0/default/setDrawStepPts true
+/vis/modeling/trajectories/drawByParticleID-0/default/setStepPtsSize 1
+
+# Add scale reference
+/vis/scene/add/axes 0 0 0 50 nm
+/vis/scene/add/scale
+
+# Hide world volume
+/vis/geometry/set/visibility World 0 false
+
+# ============================================================
+# RUN SIMULATION - 100 events for visualization
+# ============================================================
+/vis/viewer/set/autoRefresh true
+/run/beamOn 100
+
+# ============================================================
+# EXPORT IMAGE - save to PDF (convertible to other formats)
+# ============================================================
+/vis/viewer/flush
+/vis/ogl/export vis_zincone_100nm.pdf

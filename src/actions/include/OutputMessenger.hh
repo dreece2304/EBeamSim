@@ -8,6 +8,8 @@
 class RunAction;
 class G4UIdirectory;
 class G4UIcmdWithAString;
+class G4UIcmdWithABool;
+class G4UIcmdWithoutParameter;
 
 class OutputMessenger : public G4UImessenger {
 public:
@@ -25,6 +27,11 @@ private:
     G4UIcmdWithAString* fSummaryFileCmd;
     G4UIcmdWithAString* fBeamerFileCmd;
     G4UIcmdWithAString* fOutputDirCmd;
+
+    // Trajectory recording commands
+    G4UIcmdWithABool* fTrajEnableCmd;
+    G4UIcmdWithAString* fTrajFileCmd;
+    G4UIcmdWithoutParameter* fTrajWriteCmd;
 };
 
 #endif

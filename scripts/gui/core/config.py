@@ -71,13 +71,19 @@ class Config:
         # Determine executable extension based on platform
         exe_ext = ".exe" if platform.system() == "Windows" else ""
         
+        # Get the project root directory (relative to this config file)
+        config_dir = Path(__file__).parent.resolve()
+        project_root = config_dir.parent.parent.parent  # scripts/gui/core -> project root
+
         possible_paths = [
+            # Primary: project root build directory
+            project_root / "build" / "bin" / ("ebl_sim" + exe_ext),
+            # Relative paths from working directory
             Path("../../build/bin/ebl_sim" + exe_ext),
-            Path("../../out/build/x64-Release/bin/ebl_sim" + exe_ext),
-            Path("C:/Users/dreec/Geant4Projects/EBeamSim/build/bin/ebl_sim" + exe_ext),
-            # Also try absolute paths from current working directory
-            Path("build/bin/ebl_sim" + exe_ext),
             Path("../build/bin/ebl_sim" + exe_ext),
+            Path("build/bin/ebl_sim" + exe_ext),
+            # Windows Visual Studio build paths
+            Path("../../out/build/x64-Release/bin/ebl_sim" + exe_ext),
         ]
         
         for path in possible_paths:

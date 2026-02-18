@@ -1,0 +1,19 @@
+# Trajectory setup macro - use with: ./ebl_sim traj_setup.mac -n <events>
+# Sets up 100 keV electrons through 100 nm zincone, no beamOn (use -n flag)
+
+/det/setResistComposition Zn:1,C:2,H:4,O:2
+/det/setResistDensity 2.1 g/cm3
+/det/setResistThickness 100 nm
+/run/initialize
+
+/gun/particle e-
+/gun/energy 100 keV
+/gun/position 0 0 150 nm
+/gun/direction 0 0 -1
+/gun/beamSize 0 nm
+
+/ebl/trajectory/setFile trajectories_100keV_fine.json
+/ebl/trajectory/enable true
+
+# No beamOn here - use -n flag to specify event count
+# Example: ./ebl_sim traj_setup.mac -n 20000

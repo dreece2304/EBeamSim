@@ -24,8 +24,7 @@ public:
     virtual void BeginOfRunAction(const G4Run*);
     virtual void EndOfRunAction(const G4Run*);
 
-    // Methods to accumulate energy deposition data
-    void AddEnergyDeposit(G4double edep, G4double x, G4double y, G4double z);
+    // Methods to accumulate energy deposition data (called from EventAction)
     void AddRadialEnergyDeposit(const std::vector<G4double>& energyDeposit);
     void Add2DEnergyDeposit(const std::vector<std::vector<G4double>>& energy2D);
     void AddRegionEnergy(G4double resist, G4double substrate, G4double above);
@@ -93,12 +92,6 @@ private:
     void Save2DFormat(const std::string& outputDir);
     void SaveSummary(const std::string& outputDir);
     void SaveEnergyEquivalenceReport(const std::string& outputDir);
-
-    // Validation metrics
-    G4double CalculateRMSRadius() const;
-    G4double CalculateForwardBackscatterRatio() const;
-    G4double CalculateEnergyConservation() const;
-    void ReportValidationMetrics();
 
     // Thread-safe merge of local arrays to master
     void MergeLocalArrays();

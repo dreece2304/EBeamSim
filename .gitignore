@@ -12,12 +12,16 @@ ebl_env/
 venv/
 
 # Logs
-logs/*.log
+logs/
 
-# Output files
-output/*.root
-output/*.csv
-output/*.txt
+# Large generated files
+*.gif
+
+# Output files (keep directory structure via .gitkeep)
+output/**
+!output/
+!output/**/
+!output/**/.gitkeep
 *.root
 
 # IDE
@@ -25,6 +29,9 @@ output/*.txt
 .idea/
 *.swp
 *.swo
+
+# Agent/tool caches
+.serena/
 
 # OS
 .DS_Store
