@@ -37,6 +37,7 @@ private:
     G4double fResistEnergy;
     G4double fSubstrateEnergy;
     G4double fAboveResistEnergy;
+    G4double fOverflowEnergy;  // In-resist deposits beyond PSF::MAX_RADIUS
 
     // Radial energy distribution (1D) - primary for BEAMER
     std::vector<G4double> fRadialEnergyDeposit;

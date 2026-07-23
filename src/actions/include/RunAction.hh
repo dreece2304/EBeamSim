@@ -27,7 +27,8 @@ public:
     // Methods to accumulate energy deposition data (called from EventAction)
     void AddRadialEnergyDeposit(const std::vector<G4double>& energyDeposit);
     void Add2DEnergyDeposit(const std::vector<std::vector<G4double>>& energy2D);
-    void AddRegionEnergy(G4double resist, G4double substrate, G4double above);
+    void AddRegionEnergy(G4double resist, G4double substrate, G4double above,
+                         G4double overflow = 0.0);
 
     // Access methods for analysis (const-correct)
     const std::vector<G4double>& GetRadialEnergyProfile() const { return fRadialEnergyProfile; }
@@ -59,6 +60,7 @@ private:
     G4Accumulable<G4double> fResistEnergyTotal;
     G4Accumulable<G4double> fSubstrateEnergyTotal;
     G4Accumulable<G4double> fAboveResistEnergyTotal;
+    G4Accumulable<G4double> fOverflowEnergyTotal;  // In-resist deposits beyond PSF::MAX_RADIUS
 
     G4int fNumEvents;
 

@@ -1,30 +1,33 @@
 # Reference PSF: HSQ 100nm resist
 # Standard traditional negative-tone resist for comparison
 # Usage: ./ebl_sim ref_hsq_100nm.mac
+#
+# NOTE: Detector settings MUST come before /run/initialize so the geometry
+# is built with the requested thickness and the physics cuts match the material.
 
 /run/verbose 1
 /event/verbose 0
 /tracking/verbose 0
 
-# Initialize
-/run/initialize
-
 # HSQ (Hydrogen Silsesquioxane): SiH1O1.5 at 1.40 g/cm³
+# Decimal stoichiometry is supported by the composition parser.
 /det/setResistComposition "Si:1,H:1,O:1.5"
 /det/setResistThickness 100 nm
 /det/setResistDensity 1.40 g/cm3
-/det/update
+
+# Initialize (geometry built once with correct material and thickness)
+/run/initialize
 
 # Enable physics processes
 /process/em/fluo 1
 /process/em/auger 1
 
-# Standard 100 keV beam with small beam size for PSF
+# 100 keV point source: beam blur is applied separately by BEAMER,
+# so the PSF must be generated with beamSize 0.
 /gun/particle e-
 /gun/energy 100 keV
-/gun/position 0 0 200 nm
 /gun/direction 0 0 -1
-/gun/beamSize 2 nm
+/gun/beamSize 0 nm
 
-# 1M events for excellent statistics on reference PSF
-/run/beamOn 1000000
+# 300k events: good statistics at reasonable runtime (use 1M for production references)
+/run/beamOn 300000

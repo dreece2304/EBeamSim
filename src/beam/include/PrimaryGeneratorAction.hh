@@ -39,6 +39,10 @@ public:
     PatternGenerator* GetPatternGenerator() noexcept { return fPatternGenerator; }
     const PatternGenerator* GetPatternGenerator() const noexcept { return fPatternGenerator; }
 
+    // Beam energy readable from any thread (the MT master RunAction has no
+    // generator instance but still writes the summary/BEAMER headers)
+    static G4double GetGlobalBeamEnergy() { return fgBeamEnergy; }
+
 private:
     G4ParticleGun* fParticleGun;
     DetectorConstruction* fDetConstruction;
@@ -46,6 +50,7 @@ private:
 
     // Beam parameters
     G4double fBeamEnergy;
+    static G4double fgBeamEnergy;  // Last-set energy, shared for reporting
     G4double fBeamSize;  // Beam diameter (FWHM)
     G4ThreeVector fBeamPosition;
     G4ThreeVector fBeamDirection;

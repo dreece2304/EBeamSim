@@ -44,6 +44,7 @@ private:
     void SetupEmParameters();
     G4bool IsHighZMaterial() const;
     void ConfigureForHighZMaterial();
+    void ApplyRegionCuts();
 
 private:
     G4VPhysicsConstructor* fEmPhysics;

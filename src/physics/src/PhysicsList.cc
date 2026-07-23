@@ -13,6 +13,8 @@
 // #include "G4EmDNAPhysics_option2.hh"  // Disabled - causes process duplication
 
 #include "G4SystemOfUnits.hh"
+#include "G4NistManager.hh"
+#include "G4Element.hh"
 #include "G4ParticleDefinition.hh"
 #include "G4ProcessManager.hh"
 #include "G4LossTableManager.hh"
@@ -23,6 +25,8 @@
 #include "G4RegionStore.hh"
 #include "G4ProductionCuts.hh"
 #include "G4RunManager.hh"
+
+#include <sstream>
 
 PhysicsList::PhysicsList()
     : G4VModularPhysicsList(),
@@ -211,51 +215,50 @@ void PhysicsList::SetCuts()
     SetCutValue(fCutForElectron, "e-");
     SetCutValue(fCutForPositron, "e+");
 
-    // Set region-specific cuts
+    ApplyRegionCuts();
+}
+
+void PhysicsList::ApplyRegionCuts()
+{
+    // Reuses each region's existing G4ProductionCuts so this can be called
+    // again after a material change without leaking or losing the couple table
     G4RegionStore* regionStore = G4RegionStore::GetInstance();
 
-    // CRITICAL: Ultra-fine cuts in resist region for PSF accuracy
-    G4Region* resistRegion = regionStore->GetRegion("ResistRegion", false);
-    if (resistRegion) {
-        G4ProductionCuts* resistCuts = new G4ProductionCuts();
+    auto setRegionCuts = [](G4Region* region, G4double cutValue) {
+        if (!region) return;
+        G4ProductionCuts* cuts = region->GetProductionCuts();
+        if (!cuts) {
+            cuts = new G4ProductionCuts();
+            region->SetProductionCuts(cuts);
+        }
+        cuts->SetProductionCut(cutValue, "gamma");
+        cuts->SetProductionCut(cutValue, "e-");
+        cuts->SetProductionCut(cutValue, "e+");
+    };
 
-        // Use even finer cuts for high-Z materials
-        G4double resistCutValue = fUseHighZOptimization ?
-            EBL::Physics::RESIST_CUT_HIGH_Z :
-            EBL::Physics::RESIST_CUT;
+    // CRITICAL: Ultra-fine cuts in resist region for PSF accuracy;
+    // even finer for high-Z materials
+    const G4double resistCutValue = fUseHighZOptimization ?
+        EBL::Physics::RESIST_CUT_HIGH_Z :
+        EBL::Physics::RESIST_CUT;
+    setRegionCuts(regionStore->GetRegion("ResistRegion", false), resistCutValue);
 
-        // Ultra-fine cuts for maximum accuracy in resist
-        resistCuts->SetProductionCut(resistCutValue, "gamma");
-        resistCuts->SetProductionCut(resistCutValue, "e-");
-        resistCuts->SetProductionCut(resistCutValue, "e+");
-        resistRegion->SetProductionCuts(resistCuts);
-    }
-
-    // OPTIMIZATION: Coarser cuts in substrate for efficiency
-    // We still track backscatter but with less detail
-    G4Region* substrateRegion = regionStore->GetRegion("SubstrateRegion", false);
-    if (substrateRegion) {
-        G4ProductionCuts* substrateCuts = new G4ProductionCuts();
-        // Much coarser cuts in substrate - 200x larger than resist
-        substrateCuts->SetProductionCut(10.0 * nanometer, "gamma");
-        substrateCuts->SetProductionCut(10.0 * nanometer, "e-");
-        substrateCuts->SetProductionCut(10.0 * nanometer, "e+");
-        substrateRegion->SetProductionCuts(substrateCuts);
-    }
+    // Coarser cuts in substrate for efficiency (backscatter still tracked)
+    setRegionCuts(regionStore->GetRegion("SubstrateRegion", false),
+                  EBL::Physics::SUBSTRATE_CUT);
 
     // World region with coarse cuts
-    G4Region* defaultRegion = regionStore->GetRegion("DefaultRegionForTheWorld", false);
-    if (defaultRegion) {
-        G4ProductionCuts* worldCuts = new G4ProductionCuts();
-        worldCuts->SetProductionCut(100.0 * nanometer, "gamma");
-        worldCuts->SetProductionCut(100.0 * nanometer, "e-");
-        worldCuts->SetProductionCut(100.0 * nanometer, "e+");
-        defaultRegion->SetProductionCuts(worldCuts);
-    }
+    setRegionCuts(regionStore->GetRegion("DefaultRegionForTheWorld", false),
+                  EBL::Physics::WORLD_CUT);
 
-    // Concise summary
-    G4cout << "Cuts: Resist=0.05nm, Substrate=10nm, World=100nm"
-           << (fUseHighZOptimization ? " [High-Z]" : "") << G4endl;
+    // Fresh stream so inherited precision/fixed flags on G4cout can't
+    // truncate small cut values (e.g. 0.01 printed as 0.0)
+    std::ostringstream cutsMsg;
+    cutsMsg << "Cuts: Resist=" << resistCutValue / nanometer << "nm"
+            << ", Substrate=" << EBL::Physics::SUBSTRATE_CUT / nanometer << "nm"
+            << ", World=" << EBL::Physics::WORLD_CUT / nanometer << "nm"
+            << (fUseHighZOptimization ? " [High-Z]" : "");
+    G4cout << cutsMsg.str() << G4endl;
 }
 
 G4bool PhysicsList::IsHighZMaterial() const
@@ -268,11 +271,16 @@ G4bool PhysicsList::IsHighZMaterial() const
         runManager->GetUserDetectorConstruction());
     if (!detector) return false;
 
-    // Check resist elements for high-Z materials (Sn, Bi, Hf, Zr, W)
-    const auto& elements = detector->GetResistElements();
-    return (elements.count("Sn") > 0 || elements.count("Bi") > 0 ||
-            elements.count("Hf") > 0 || elements.count("Zr") > 0 ||
-            elements.count("W") > 0);
+    // Any constituent with Z >= 30 (Zn, Zr, Sn, Hf, W, Bi, ...) gets the
+    // high-Z treatment: finer cuts, Mott correction, lower brems threshold
+    auto* nist = G4NistManager::Instance();
+    for (const auto& elem : detector->GetResistElements()) {
+        const G4Element* element = nist->FindOrBuildElement(elem.first);
+        if (element && element->GetZasInt() >= 30) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void PhysicsList::ConfigureForHighZMaterial()
@@ -299,6 +307,14 @@ void PhysicsList::ReconfigureForMaterial()
         SetupEmParameters();
         if (fUseHighZOptimization) {
             ConfigureForHighZMaterial();
+        }
+        // Region cut values changed (resist 0.05nm <-> 0.01nm): re-apply and
+        // tell the run manager so the couple/physics tables rebuild at next beamOn.
+        // GeometryHasBeenModified() alone does not pick up changed cut values.
+        ApplyRegionCuts();
+        auto* runManager = G4RunManager::GetRunManager();
+        if (runManager) {
+            runManager->PhysicsHasBeenModified();
         }
     }
 }

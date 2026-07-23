@@ -46,8 +46,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Enable testing if requested
 if(BUILD_TESTING)
-    enable_testing()
-    add_subdirectory(tests)
+    if(EXISTS ${PROJECT_SOURCE_DIR}/tests/CMakeLists.txt)
+        enable_testing()
+        add_subdirectory(tests)
+    else()
+        message(WARNING "BUILD_TESTING=ON but tests/ directory is missing - skipping tests")
+    endif()
 endif()
 
 # Add subdirectories for modular components

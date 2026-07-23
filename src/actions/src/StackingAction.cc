@@ -30,8 +30,8 @@ StackingAction::~StackingAction()
     // Report final statistics
     if (fTotalTracks > 0) {
         printf("\n=== StackingAction Final Statistics ===\n");
-        printf("Total tracks: %ld\n", fTotalTracks);
-        printf("Killed tracks: %ld\n", fKilledTracks);
+        printf("Total tracks: %d\n", fTotalTracks);
+        printf("Killed tracks: %d\n", fKilledTracks);
         printf("Kill rate: %.1f%%\n", (100.0 * fKilledTracks / fTotalTracks));
         printf("======================================\n");
         fflush(stdout);
@@ -123,7 +123,7 @@ G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track* track
 
     if (fTotalTracks % reportInterval == 0) {
         G4double killRate = 100.0 * fKilledTracks / fTotalTracks;
-        printf("StackingAction: Processed %ld tracks, killed %.1f%%\n",
+        printf("StackingAction: Processed %d tracks, killed %.1f%%\n",
                fTotalTracks, killRate);
         fflush(stdout);
     }

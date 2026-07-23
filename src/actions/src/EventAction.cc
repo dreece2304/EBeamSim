@@ -54,6 +54,7 @@ void EventAction::BeginOfEventAction(const G4Event* event)
     fResistEnergy = 0.;
     fSubstrateEnergy = 0.;
     fAboveResistEnergy = 0.;
+    fOverflowEnergy = 0.;
 
     // Reset radial energy bins (1D)
     std::fill(fRadialEnergyDeposit.begin(), fRadialEnergyDeposit.end(), 0.0);
@@ -141,7 +142,8 @@ void EventAction::EndOfEventAction(const G4Event* event)
         fRunAction->Add2DEnergyDeposit(f2DEnergyDeposit);
 
         // Region energy totals
-        fRunAction->AddRegionEnergy(fResistEnergy, fSubstrateEnergy, fAboveResistEnergy);
+        fRunAction->AddRegionEnergy(fResistEnergy, fSubstrateEnergy, fAboveResistEnergy,
+                                    fOverflowEnergy);
     }
 
     // Skip verbose event reporting for efficiency
@@ -160,9 +162,15 @@ G4int EventAction::GetLogBin(G4double radius) const
     }
 
     // Logarithmic binning - early exit for edge cases
-    if (radius <= 0) return -1;
+    // r == 0 is REAL data: the point-source primary travels straight down the
+    // axis, so its deposits are at exactly r = 0 and belong in bin 0 (whose
+    // area normalization already uses rInner = 0). Dropping them loses ~1/3
+    // of the resist energy and understates the PSF forward peak.
+    if (radius < 0) return -1;
     if (radius < EBL::PSF::MIN_RADIUS) return 0;
-    if (radius >= EBL::PSF::MAX_RADIUS) return EBL::PSF::NUM_RADIAL_BINS - 1;
+    // Beyond the PSF range: excluded from binning (counted as overflow by the
+    // caller). Clamping into the last bin would inflate the outermost PSF point.
+    if (radius >= EBL::PSF::MAX_RADIUS) return -1;
 
     // OPTIMIZED: Use pre-computed inverse denominator (computed once in constructor)
     // Old: logRatio = log(r/r_min) / log(r_max/r_min)  -- 2 log calls
@@ -266,6 +274,8 @@ void EventAction::AddEnergyDeposit(G4double edep, G4double x, G4double y, G4doub
     G4int radialBin1D = GetLogBin(r);
     if (radialBin1D >= 0 && radialBin1D < static_cast<G4int>(fRadialEnergyDeposit.size())) {
         fRadialEnergyDeposit[radialBin1D] += edep;  // No weight applied
+    } else if (r >= EBL::PSF::MAX_RADIUS) {
+        fOverflowEnergy += edep;  // Reported in simulation_summary.txt
     }
 
     // 2D binning (for visualization) - ALL energy deposits

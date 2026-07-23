@@ -31,28 +31,29 @@ public:
     void SetResistThickness(G4double thickness);
     void SetResistDensity(G4double density);
     void SetResistVisualizationThickness(G4double thickness);
-    void AddResistElement(G4String element, G4int count);
+    void AddResistElement(G4String element, G4double count);
     void ClearResistElements();
-    void SetResistComposition(G4String composition);  // Format: "Al:1,C:5,H:4,O:2"
+    void SetResistComposition(G4String composition);  // Format: "Al:1,C:5,H:4,O:2" (decimal counts allowed, e.g. "O:1.5")
 
     // Material update method
     void UpdateMaterial();
 
     // Return current parameters (const-correct)
     G4double GetResistDensity() const noexcept { return fResistDensity; }
-    const std::map<G4String, G4int>& GetResistElements() const noexcept { return fResistElements; }
+    const std::map<G4String, G4double>& GetResistElements() const noexcept { return fResistElements; }
 
 protected:
     G4LogicalVolume* fScoringVolume;
     G4LogicalVolume* fWorldVolume;
     G4LogicalVolume* fResistLogical;  // Store resist logical volume for material updates
+    G4VPhysicalVolume* fResistPhysical;  // Stored so /det/update can reposition after a thickness change
     G4Region* fResistRegion;
     G4double fActualResistThickness;
 
     // Parameter storage
     G4double fResistDensity;
     G4double fResistVisualizationThickness;
-    std::map<G4String, G4int> fResistElements;
+    std::map<G4String, G4double> fResistElements;
     G4bool fParametersChanged;
 
     // Messenger for UI commands

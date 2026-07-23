@@ -70,6 +70,11 @@ namespace EBL {
         inline constexpr G4double WORLD_SIZE = 1.0 * mm;  // Enough to contain 500um substrate + margin
         inline constexpr G4double SUBSTRATE_THICKNESS = Materials::Substrate::THICKNESS;
         inline constexpr G4double SUBSTRATE_RADIUS = Materials::Substrate::RADIUS;
+        // Lateral (full-width) extent of substrate and resist. Half-width must cover
+        // PSF::MAX_RADIUS plus the ~70um electron range in Si at 100 keV so the
+        // backscatter tail is not truncated by electrons escaping the substrate side.
+        // Must equal 2 * Thresholds::MAX_TRACKING_RADIUS.
+        inline constexpr G4double SUBSTRATE_XY = 400.0 * micrometer;
     }
 
     // Physics parameters - OPTIMIZED FOR BEAMER (inline constexpr)

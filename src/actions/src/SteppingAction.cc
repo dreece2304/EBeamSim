@@ -4,6 +4,7 @@
 #include "DetectorConstruction.hh"
 #include "DataManager.hh"
 #include "TrajectoryRecorder.hh"
+#include "EBLConstants.hh"
 
 #include "G4Step.hh"
 #include "G4RunManager.hh"
@@ -64,9 +65,9 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
     // Calculate radial distance from beam axis
     G4double r = std::sqrt(pos.x() * pos.x() + pos.y() * pos.y());
 
-    // Skip if radius is beyond reasonable bounds
-    const G4double maxRadius = 200.0 * micrometer;  // Slightly beyond PSF max
-    if (r > maxRadius) {
+    // Skip if radius is beyond reasonable bounds (matches lateral geometry
+    // half-width: EBL::Geometry::SUBSTRATE_XY / 2)
+    if (r > EBL::Thresholds::MAX_TRACKING_RADIUS) {
         return;
     }
 

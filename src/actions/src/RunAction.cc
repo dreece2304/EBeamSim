@@ -40,6 +40,7 @@ RunAction::RunAction(DetectorConstruction* detConstruction,
       fResistEnergyTotal("ResistEnergy", 0.0),
       fSubstrateEnergyTotal("SubstrateEnergy", 0.0),
       fAboveResistEnergyTotal("AboveResistEnergy", 0.0),
+      fOverflowEnergyTotal("OverflowEnergy", 0.0),
       fNumEvents(0),
       fOutputDirectory(""),
       fPSFFilename("ebl_psf_data.csv"),
@@ -66,6 +67,7 @@ RunAction::RunAction(DetectorConstruction* detConstruction,
     accumulableManager->RegisterAccumulable(&fResistEnergyTotal);
     accumulableManager->RegisterAccumulable(&fSubstrateEnergyTotal);
     accumulableManager->RegisterAccumulable(&fAboveResistEnergyTotal);
+    accumulableManager->RegisterAccumulable(&fOverflowEnergyTotal);
 
     // Initialize master arrays once (thread-safe)
     G4AutoLock lock(&arrayMergeMutex);
@@ -225,12 +227,14 @@ void RunAction::Add2DEnergyDeposit(const std::vector<std::vector<G4double>>& ene
     }
 }
 
-void RunAction::AddRegionEnergy(G4double resist, G4double substrate, G4double above)
+void RunAction::AddRegionEnergy(G4double resist, G4double substrate, G4double above,
+                                G4double overflow)
 {
     // Update scalar accumulables (optimized with single conditionals)
     if (resist > 0.0) fResistEnergyTotal += resist;
     if (substrate > 0.0) fSubstrateEnergyTotal += substrate;
     if (above > 0.0) fAboveResistEnergyTotal += above;
+    if (overflow > 0.0) fOverflowEnergyTotal += overflow;
 }
 
 // Helper function to get radius for logarithmic bin
@@ -376,7 +380,7 @@ void RunAction::SaveBEAMERFormat(const std::string& outputDir)
 
     // Write header
     beamerFile << "# EBL PSF for BEAMER - Geant4 Simulation" << std::endl;
-    beamerFile << "# Beam: " << (fPrimaryGenerator ? fPrimaryGenerator->GetParticleGun()->GetParticleEnergy() / CLHEP::keV : 100.0) << " keV, ";
+    beamerFile << "# Beam: " << PrimaryGeneratorAction::GetGlobalBeamEnergy() / CLHEP::keV << " keV, ";
     beamerFile << "Resist: " << (fDetConstruction ? fDetConstruction->GetActualResistThickness() / CLHEP::nanometer : 30.0) << " nm" << std::endl;
     beamerFile << "# Events: " << fNumEvents << std::endl;
 
@@ -460,15 +464,21 @@ void RunAction::SaveSummary(const std::string& outputDir)
         summaryFile << "Resist fraction: " << fResistEnergyTotal.GetValue() / fTotalEnergyDeposit.GetValue() * 100 << "%\n";
     }
 
+    // Energy deposited in resist beyond PSF::MAX_RADIUS (excluded from PSF bins)
+    if (fResistEnergyTotal.GetValue() > 0) {
+        summaryFile << "Overflow beyond PSF max radius: "
+                    << fOverflowEnergyTotal.GetValue()/CLHEP::eV << " eV ("
+                    << fOverflowEnergyTotal.GetValue() / fResistEnergyTotal.GetValue() * 100
+                    << "% of resist energy)\n";
+    }
+
     summaryFile << "Time: " << duration.count() << "s";
     if (duration.count() > 0) {
         summaryFile << " (" << fNumEvents / duration.count() << " evt/s)";
     }
     summaryFile << "\n";
 
-    if (fPrimaryGenerator) {
-        summaryFile << "Beam: " << fPrimaryGenerator->GetParticleGun()->GetParticleEnergy()/CLHEP::keV << " keV\n";
-    }
+    summaryFile << "Beam: " << PrimaryGeneratorAction::GetGlobalBeamEnergy()/CLHEP::keV << " keV\n";
     if (fDetConstruction) {
         summaryFile << "Resist: " << fDetConstruction->GetActualResistThickness()/CLHEP::nanometer << " nm, "
                    << fDetConstruction->GetResistDensity()/(CLHEP::g/CLHEP::cm3) << " g/cm3\n";
@@ -532,8 +542,7 @@ void RunAction::SaveEnergyEquivalenceReport(const std::string& outputDir)
     G4double energyPerPrimary_eV = GetPerPrimaryResistEnergyAbsorption() / CLHEP::eV;
     G4double K_coefficient = CalculateEnergyAbsorptionCoefficient();
 
-    G4double beamEnergy_keV = fPrimaryGenerator ?
-        fPrimaryGenerator->GetParticleGun()->GetParticleEnergy() / CLHEP::keV : 100.0;
+    G4double beamEnergy_keV = PrimaryGeneratorAction::GetGlobalBeamEnergy() / CLHEP::keV;
     G4double resistThickness_nm = fDetConstruction ?
         fDetConstruction->GetActualResistThickness() / CLHEP::nanometer : 30.0;
 

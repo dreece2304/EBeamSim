@@ -18,6 +18,8 @@
 #include "G4UnitsTable.hh"  // For G4BestUnit
 #include "Randomize.hh"
 
+G4double PrimaryGeneratorAction::fgBeamEnergy = EBL::Beam::DEFAULT_ENERGY;
+
 PrimaryGeneratorAction::PrimaryGeneratorAction(DetectorConstruction* detConstruction)
 : G4VUserPrimaryGeneratorAction(),
   fParticleGun(nullptr),
@@ -162,6 +164,7 @@ void PrimaryGeneratorAction::GeneratePSFPrimary(G4Event* anEvent)
         fBeamEnergy = gunEnergy;  // Sync our value with the particle gun
     }
     fParticleGun->SetParticleEnergy(fBeamEnergy);
+    fgBeamEnergy = fBeamEnergy;  // Benign write race in MT: all workers agree
 
     // Debug output for first few events
     G4int eventID = anEvent->GetEventID();
@@ -201,6 +204,7 @@ void PrimaryGeneratorAction::ValidateBeamPosition() const
 void PrimaryGeneratorAction::SetBeamEnergy(G4double energy)
 {
     fBeamEnergy = energy;
+    fgBeamEnergy = energy;
     G4cout << ">>> SetBeamEnergy called: " << energy/keV << " keV" << G4endl;
 }
 

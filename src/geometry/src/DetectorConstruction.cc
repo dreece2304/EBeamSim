@@ -20,44 +20,36 @@
 
 #include <sstream>
 #include <algorithm>
+#include <cstdlib>
 
 // Helper function to parse composition string
 namespace {
     void parseComposition(const G4String& composition,
-        std::map<G4String, G4int>& elements) {
+        std::map<G4String, G4double>& elements) {
         elements.clear();
 
-        // Single pass parsing without creating temporary strings
-        const char* str = composition.c_str();
-        const char* end = str + composition.length();
-        
-        while (str < end) {
-            // Skip whitespace
-            while (str < end && *str == ' ') ++str;
-            if (str >= end) break;
-            
-            // Find element name end
-            const char* elemStart = str;
-            while (str < end && *str != ':' && *str != ' ') ++str;
-            if (str >= end || *str != ':') break;
-            
-            G4String element(elemStart, static_cast<size_t>(str - elemStart));
-            
-            // Skip colon and whitespace
-            ++str;
-            while (str < end && *str == ' ') ++str;
-            
-            // Parse number
-            G4int count = 0;
-            while (str < end && *str >= '0' && *str <= '9') {
-                count = count * 10 + (*str - '0');
-                ++str;
+        // Decimal counts are allowed (e.g. HSQ "Si:1,H:1,O:1.5")
+        std::stringstream ss(composition);
+        std::string token;
+        while (std::getline(ss, token, ',')) {
+            const auto colon = token.find(':');
+            if (colon == std::string::npos) continue;
+
+            std::string element = token.substr(0, colon);
+            element.erase(std::remove(element.begin(), element.end(), ' '), element.end());
+            if (element.empty()) continue;
+
+            char* parseEnd = nullptr;
+            const std::string countStr = token.substr(colon + 1);
+            const G4double count = std::strtod(countStr.c_str(), &parseEnd);
+            if (parseEnd == countStr.c_str() || count <= 0.0) {
+                G4Exception("DetectorConstruction::parseComposition",
+                            "DC003", JustWarning,
+                            ("Ignoring malformed composition token: " + token).c_str());
+                continue;
             }
-            
+
             elements[element] = count;
-            
-            // Skip to next element (past comma)
-            while (str < end && (*str == ' ' || *str == ',')) ++str;
         }
     }
 }
@@ -67,6 +59,7 @@ DetectorConstruction::DetectorConstruction()
     fScoringVolume(nullptr),
     fWorldVolume(nullptr),
     fResistLogical(nullptr),
+    fResistPhysical(nullptr),
     fResistRegion(nullptr),
     fActualResistThickness(EBL::Resist::DEFAULT_THICKNESS),
     fResistDensity(EBL::Resist::DEFAULT_DENSITY),
@@ -119,7 +112,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     G4Material* substrate_mat = nist->FindOrBuildMaterial("G4_Si");
 
     G4double substrate_thickness = EBL::Geometry::SUBSTRATE_THICKNESS;
-    G4double substrate_xy = 100.0 * um;  // 100 micrometers - sufficient for electron scattering visualization
+    G4double substrate_xy = EBL::Geometry::SUBSTRATE_XY;
 
     G4Box* solidSubstrate = new G4Box("Substrate",
         0.5 * substrate_xy, 0.5 * substrate_xy, 0.5 * substrate_thickness);
@@ -159,7 +152,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     fResistLogical = logicResist;
 
     // Position resist on top of substrate (bottom at z=0)
-    new G4PVPlacement(0,
+    fResistPhysical = new G4PVPlacement(0,
         G4ThreeVector(0, 0, 0.5 * resist_thickness),
         logicResist,
         "Resist",
@@ -236,12 +229,12 @@ G4Material* DetectorConstruction::CreateResistMaterial()
     }
 
     // Validate composition
-    G4int totalAtoms = 0;
+    G4double totalAtoms = 0.0;
     for (const auto& elem : fResistElements) {
         totalAtoms += elem.second;
     }
 
-    if (totalAtoms == 0) {
+    if (totalAtoms <= 0.0) {
         G4Exception("DetectorConstruction::CreateResistMaterial",
                     "DC001", FatalException,
                     "No elements defined for resist material!");
@@ -301,7 +294,7 @@ void DetectorConstruction::SetResistVisualizationThickness(G4double thickness)
     fResistVisualizationThickness = thickness;
 }
 
-void DetectorConstruction::AddResistElement(G4String element, G4int count)
+void DetectorConstruction::AddResistElement(G4String element, G4double count)
 {
     fResistElements[element] = count;
     fParametersChanged = true;
@@ -325,21 +318,41 @@ void DetectorConstruction::UpdateMaterial()
         return;
     }
 
-    G4Material* newResistMaterial = CreateResistMaterial();
-    G4Material* oldMaterial = fResistLogical->GetMaterial();
+    G4bool changed = false;
 
-    if (oldMaterial != newResistMaterial) {
+    // Material swap
+    G4Material* newResistMaterial = CreateResistMaterial();
+    if (fResistLogical->GetMaterial() != newResistMaterial) {
         fResistLogical->SetMaterial(newResistMaterial);
-        G4RunManager::GetRunManager()->GeometryHasBeenModified();
+        changed = true;
+    }
+
+    // Thickness: mutate the existing solid in place (a full re-Construct would
+    // double-register ResistRegion in the region store)
+    auto* resistBox = dynamic_cast<G4Box*>(fResistLogical->GetSolid());
+    if (resistBox) {
+        const G4double targetHalfZ = 0.5 * fActualResistThickness;
+        if (std::abs(resistBox->GetZHalfLength() - targetHalfZ) > 1.0e-6 * nm) {
+            resistBox->SetZHalfLength(targetHalfZ);
+            if (fResistPhysical) {
+                // Keep the resist bottom at z=0 (on top of the substrate)
+                fResistPhysical->SetTranslation(G4ThreeVector(0, 0, targetHalfZ));
+            }
+            changed = true;
+            G4cout << "Resist geometry updated: thickness = "
+                   << fActualResistThickness / nm << " nm" << G4endl;
+        }
+    }
+
+    if (changed) {
+        auto* runManager = G4RunManager::GetRunManager();
+        runManager->GeometryHasBeenModified();
 
         // Reconfigure physics for new material (important for high-Z)
-        auto* runManager = G4RunManager::GetRunManager();
-        if (runManager) {
-            auto* physicsList = dynamic_cast<PhysicsList*>(
-                const_cast<G4VUserPhysicsList*>(runManager->GetUserPhysicsList()));
-            if (physicsList) {
-                physicsList->ReconfigureForMaterial();
-            }
+        auto* physicsList = dynamic_cast<PhysicsList*>(
+            const_cast<G4VUserPhysicsList*>(runManager->GetUserPhysicsList()));
+        if (physicsList) {
+            physicsList->ReconfigureForMaterial();
         }
     }
 }
