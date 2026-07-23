@@ -2,6 +2,7 @@
 #include "DetectorConstruction.hh"
 #include "DetectorMessenger.hh"
 #include "EBLConstants.hh"
+#include "EBLParsing.hh"
 #include "../../physics/include/PhysicsList.hh"
 
 #include "G4Material.hh"
@@ -22,34 +23,22 @@
 #include <algorithm>
 #include <cstdlib>
 
-// Helper function to parse composition string
+// Helper function to parse composition string (logic shared with unit tests)
 namespace {
+    void reportBadToken(const std::string& token) {
+        G4Exception("DetectorConstruction::parseComposition",
+                    "DC003", JustWarning,
+                    ("Ignoring malformed composition token: " + token).c_str());
+    }
+
     void parseComposition(const G4String& composition,
         std::map<G4String, G4double>& elements) {
+        std::map<std::string, double> parsed;
+        EBL::ParseComposition(composition, parsed, &reportBadToken);
+
         elements.clear();
-
-        // Decimal counts are allowed (e.g. HSQ "Si:1,H:1,O:1.5")
-        std::stringstream ss(composition);
-        std::string token;
-        while (std::getline(ss, token, ',')) {
-            const auto colon = token.find(':');
-            if (colon == std::string::npos) continue;
-
-            std::string element = token.substr(0, colon);
-            element.erase(std::remove(element.begin(), element.end(), ' '), element.end());
-            if (element.empty()) continue;
-
-            char* parseEnd = nullptr;
-            const std::string countStr = token.substr(colon + 1);
-            const G4double count = std::strtod(countStr.c_str(), &parseEnd);
-            if (parseEnd == countStr.c_str() || count <= 0.0) {
-                G4Exception("DetectorConstruction::parseComposition",
-                            "DC003", JustWarning,
-                            ("Ignoring malformed composition token: " + token).c_str());
-                continue;
-            }
-
-            elements[element] = count;
+        for (const auto& elem : parsed) {
+            elements[G4String(elem.first)] = elem.second;
         }
     }
 }

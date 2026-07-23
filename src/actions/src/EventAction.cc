@@ -4,6 +4,7 @@
 #include "DetectorConstruction.hh"
 #include "DataManager.hh"
 #include "EBLConstants.hh"
+#include "EBLParsing.hh"
 #include "TrajectoryRecorder.hh"
 #include "G4UnitsTable.hh"
 #include "G4Event.hh"
@@ -161,28 +162,10 @@ G4int EventAction::GetLogBin(G4double radius) const
         return bin;
     }
 
-    // Logarithmic binning - early exit for edge cases
-    // r == 0 is REAL data: the point-source primary travels straight down the
-    // axis, so its deposits are at exactly r = 0 and belong in bin 0 (whose
-    // area normalization already uses rInner = 0). Dropping them loses ~1/3
-    // of the resist energy and understates the PSF forward peak.
-    if (radius < 0) return -1;
-    if (radius < EBL::PSF::MIN_RADIUS) return 0;
-    // Beyond the PSF range: excluded from binning (counted as overflow by the
-    // caller). Clamping into the last bin would inflate the outermost PSF point.
-    if (radius >= EBL::PSF::MAX_RADIUS) return -1;
-
-    // OPTIMIZED: Use pre-computed inverse denominator (computed once in constructor)
-    // Old: logRatio = log(r/r_min) / log(r_max/r_min)  -- 2 log calls
-    // New: logRatio = log(r/r_min) * fInvLogBinDenominator  -- 1 log call
-    G4double logRatio = std::log(radius / EBL::PSF::MIN_RADIUS) * fInvLogBinDenominator;
-    G4int bin = static_cast<G4int>(logRatio * (EBL::PSF::NUM_RADIAL_BINS - 1));
-
-    // Ensure bin is within valid range
-    if (bin < 0) bin = 0;
-    if (bin >= EBL::PSF::NUM_RADIAL_BINS) bin = EBL::PSF::NUM_RADIAL_BINS - 1;
-
-    return bin;
+    // Logarithmic binning - shared logic (see EBLParsing.hh for the edge-case
+    // rationale: r == 0 belongs in bin 0, r >= MAX is overflow, not clamped)
+    return EBL::LogBin(radius, EBL::PSF::MIN_RADIUS, EBL::PSF::MAX_RADIUS,
+                       EBL::PSF::NUM_RADIAL_BINS);
 }
 
 G4double EventAction::GetBinRadius(G4int bin) const
