@@ -75,10 +75,11 @@ Single monolithic entry point plus small support packages:
 
 ```
 scripts/gui/
-├── ebl_gui.py      # Main entry point: EBLMainWindow + inline PlotWidget/Enhanced2DPlotWidget,
-│                   #   inline macro generation (generate_macro) and BEAMER conversion
+├── ebl_gui.py      # Main entry point: EBLMainWindow (tabs, menus, inline macro
+│                   #   generation via generate_macro, simulation lifecycle)
 ├── core/           # file_manager, validator, geant4_detector, constants
-├── widgets/        # settings_dialog, pattern_heatmap_widget, common/status_button
+├── widgets/        # psf_plot_widget (1D PSF + BEAMER conversion), enhanced_2d_plot,
+│                   #   settings_dialog, pattern_heatmap_widget, common/status_button
 ├── utils/          # threading_utils (SimulationWorker - runs ebl_sim, parses progress)
 ├── tests/          # pytest suite (run offscreen, see below)
 └── archive/        # superseded code (do not import from here)

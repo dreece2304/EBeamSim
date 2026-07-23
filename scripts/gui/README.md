@@ -18,16 +18,17 @@ or `pip install -r scripts/gui/requirements.txt`.
 
 ## Architecture
 
-Everything user-facing lives in `ebl_gui.py` (one large file, ~5,100 lines):
-`EBLMainWindow` (tabs, menus, inline macro generation, simulation lifecycle) plus the inline
-`PlotWidget` (1D PSF + BEAMER conversion) and `Enhanced2DPlotWidget` (2D maps).
+`ebl_gui.py` (~2,700 lines) holds `EBLMainWindow` (tabs, menus, inline macro generation,
+simulation lifecycle). The plot widgets live in `widgets/`.
 
 ```
 scripts/gui/
-├── ebl_gui.py              # MAIN GUI (single source of truth for the UI)
+├── ebl_gui.py              # MAIN GUI: EBLMainWindow
 ├── core/                   # Support: file_manager, validator, geant4_detector, constants
 ├── utils/                  # threading_utils (SimulationWorker), plotting/data helpers
-├── widgets/                # settings_dialog, pattern_heatmap_widget, common/status_button
+├── widgets/                # psf_plot_widget (1D PSF + BEAMER conversion),
+│                           #   enhanced_2d_plot (2D maps), settings_dialog,
+│                           #   pattern_heatmap_widget, common/status_button
 ├── tests/                  # pytest suite (headless-safe)
 └── archive/                # Superseded code kept for reference - never import from here
 ```
