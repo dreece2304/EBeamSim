@@ -37,13 +37,15 @@ class SimulationWorker(QObject):
     RE_TOTAL_EVENTS = re.compile(r'(\d+)\s+events?\s+will be processed')
     RE_PROCESSING_EVENT = re.compile(r'Processing event\s+(\d+)')
     RE_MILESTONE_EVENTS = re.compile(r'(\d+)/(\d+) events')
+    RE_PATTERN_EVENT = re.compile(r'Pattern (?:exposure|milestone):.*Event\s+(\d+)/')
 
     # Simulation size thresholds
     LARGE_SIMULATION_THRESHOLD = 100000
     VERY_LARGE_SIMULATION_THRESHOLD = 1000000
     MAX_GUI_LINES = 3000
 
-    def __init__(self, executable_path: str, macro_path: str, working_dir: str, g4_path: Optional[str] = None):
+    def __init__(self, executable_path: str, macro_path: str, working_dir: str,
+                 g4_path: Optional[str] = None, expected_events: Optional[int] = None):
         super().__init__()
         self.executable_path = executable_path
         self.macro_path = macro_path
@@ -51,7 +53,9 @@ class SimulationWorker(QObject):
         self.g4_path = g4_path
         self.process: Optional[subprocess.Popen] = None
         self.should_stop = False
-        self.total_events: Optional[int] = None
+        # The GUI wrote the macro, so it knows the event count exactly; stdout
+        # parsing (RE_TOTAL_EVENTS) is only a fallback.
+        self.total_events: Optional[int] = expected_events
         self.last_reported_progress = -1
         self.mutex = QMutex()  # Thread-safe access to shared state
 
@@ -64,8 +68,21 @@ class SimulationWorker(QObject):
         finally:
             self.mutex.unlock()
 
+    def _emit_finished(self, success: bool, message: str):
+        """Emit the terminal signal unconditionally.
+
+        Must NOT go through _safe_emit: after stop() sets should_stop, the
+        suppression there would swallow the finished signal and leave the GUI
+        stuck with the Run button disabled.
+        """
+        self.mutex.lock()
+        try:
+            self.finished.emit(success, message)
+        finally:
+            self.mutex.unlock()
+
     def stop(self):
-        """Request worker to stop - thread-safe"""
+        """Request worker to stop - thread-safe. Escalates terminate -> kill."""
         self.mutex.lock()
         try:
             self.should_stop = True
@@ -75,6 +92,10 @@ class SimulationWorker(QObject):
         if self.process:
             try:
                 self.process.terminate()
+                try:
+                    self.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
             except Exception:
                 pass
 
@@ -248,16 +269,26 @@ class SimulationWorker(QObject):
                     if "Processing event" in line and "complete" in line:
                         match = self.RE_PROCESSING_EVENT.search(line)
                         if match:
-                            event_num = int(match.group(1))
+                            # max(): in MT mode worker threads report out of order
+                            event_num = max(int(match.group(1)), last_event_number)
                             last_event_number = event_num
                             self._safe_emit(self.progress, event_num)
                             progress_updated = True
 
                     # Method 2: Milestone messages for very large sims
-                    elif "Milestone:" in line:
+                    elif "Milestone:" in line and "Pattern" not in line:
                         match = self.RE_MILESTONE_EVENTS.search(line)
                         if match:
-                            event_num = int(match.group(1))
+                            event_num = max(int(match.group(1)), last_event_number)
+                            last_event_number = event_num
+                            self._safe_emit(self.progress, event_num)
+                            progress_updated = True
+
+                    # Method 2b: Pattern-mode progress ("Pattern exposure: ... Event N/total")
+                    elif "Pattern exposure:" in line or "Pattern milestone:" in line:
+                        match = self.RE_PATTERN_EVENT.search(line)
+                        if match:
+                            event_num = max(int(match.group(1)), last_event_number)
                             last_event_number = event_num
                             self._safe_emit(self.progress, event_num)
                             progress_updated = True
@@ -325,11 +356,11 @@ class SimulationWorker(QObject):
             return_code = self.process.wait()
 
             if return_code == 0 and not self.should_stop:
-                self._safe_emit(self.finished, True, "Simulation completed successfully")
+                self._emit_finished(True, "Simulation completed successfully")
             elif self.should_stop:
-                self._safe_emit(self.finished, False, "Simulation stopped by user")
+                self._emit_finished(False, "Simulation stopped by user")
             else:
-                self._safe_emit(self.finished, False, f"Simulation failed (code: {return_code})")
+                self._emit_finished(False, f"Simulation failed (code: {return_code})")
 
         except Exception as e:
-            self._safe_emit(self.finished, False, f"Error: {str(e)}")
+            self._emit_finished(False, f"Error: {str(e)}")

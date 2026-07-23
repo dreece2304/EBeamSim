@@ -1,18 +1,6 @@
 """
 Widget modules for EBL GUI
+
+Live widgets: settings_dialog, pattern_heatmap_widget, common.status_button.
+Unused widget modules were moved to archive/cleanup_20260723/.
 """
-
-from .enhanced_beam_widget import EnhancedBeamWidget
-from .resist_properties_widget import ResistPropertiesWidget
-from .plotting import PlotWidget, Enhanced2DPlotWidget
-
-# Legacy alias for backward compatibility
-BeamWidget = EnhancedBeamWidget
-
-__all__ = [
-    'BeamWidget',
-    'EnhancedBeamWidget',
-    'ResistPropertiesWidget',
-    'PlotWidget',
-    'Enhanced2DPlotWidget'
-]

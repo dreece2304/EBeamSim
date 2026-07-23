@@ -47,8 +47,8 @@ import pandas as pd
 # Import consolidated BEAMER converter
 import scipy.interpolate
 # Add services directory to path for direct import
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'services'))
-from beamer_converter import BeamerConverterService as BEAMERConverter
+# BEAMER conversion is implemented inline in PlotWidget below
+# (the old services/beamer_converter.py was unused and is archived)
 
 # Import Geant4 detector and settings dialog
 from core.geant4_detector import Geant4PathDetector, setup_geant4_environment
@@ -1749,8 +1749,13 @@ class PlotWidget(QWidget):
             QMessageBox.warning(self, "Warning", "No PSF data loaded for conversion")
             return
 
-        # Get beam energy from main window (we'll need to pass this)
-        beam_energy = 100.0  # Default, should be passed from main window
+        # Use the beam energy currently set in the main window; 100 keV only
+        # as a last-resort fallback if the widget is ever used standalone
+        main_window = self.window()
+        if hasattr(main_window, 'energy_spin'):
+            beam_energy = main_window.energy_spin.value()
+        else:
+            beam_energy = 100.0
 
         self.beamer_button.set_working(True, "Converting...")
 
@@ -1788,9 +1793,9 @@ class PlotWidget(QWidget):
                         # Show success with parameters
                         QMessageBox.information(self, "BEAMER Conversion Complete",
                                                 f"PSF saved to: {Path(file_path).name}\n\n"
-                                                f"Proximity parameters:\n"
-                                                f"alpha (forward): {alpha:.3f}\n"
-                                                f"beta (backscatter): {beta:.3f}\n\n"
+                                                f"Energy split (not the Gaussian alpha/beta ranges):\n"
+                                                f"forward fraction (r < 1 um): {alpha:.3f}\n"
+                                                f"backscatter fraction (r > 1 um): {beta:.3f}\n\n"
                                                 f"Data points: {len(output_radius)}")
 
                         # Offer to visualize BEAMER format
@@ -1892,7 +1897,9 @@ class PlotWidget(QWidget):
                         output_radius.append(r_extrap)
                         output_psf.append(p_extrap)
 
-            # Calculate proximity parameters
+            # Energy split diagnostics. NOTE: these are the forward/backscatter
+            # ENERGY FRACTIONS (dimensionless), not the double-Gaussian range
+            # parameters alpha/beta in um.
             forward_energy = 0
             total_energy = 0
 
@@ -2547,8 +2554,9 @@ class EBLMainWindow(QMainWindow):
         super().__init__()
         self.settings = QSettings("EBL", "SimulationGUI")
 
-        # Initialize file manager first
-        self.working_dir = str(Path(__file__).resolve().parent.parent.parent / "cmake-build-release" / "bin")
+        # Initialize file manager first. working_dir is where simulation
+        # outputs land (the repo's gitignored output/), not the binary's dir.
+        self.working_dir = str(Path(__file__).resolve().parent.parent.parent / "output")
         self.file_manager = FileManager(self.working_dir)
 
         # Initialize Geant4 path (load from settings or auto-detect)
@@ -3001,6 +3009,9 @@ class EBLMainWindow(QMainWindow):
         self.beam_size_spin.setRange(0.0, 1000.0)  # Allow 0 for point source
         self.beam_size_spin.setValue(0.0)  # Point source default (BEAMER handles blur)
         self.beam_size_spin.setDecimals(1)
+        self.beam_size_spin.setToolTip(
+            "Leave at 0 (point source) for BEAMER PSFs - BEAMER applies the tool's "
+            "beam blur separately, so a finite size here would double-count it.")
         beam_layout.addWidget(self.beam_size_spin, 1, 1)
 
         beam_group.setLayout(beam_layout)
@@ -3463,18 +3474,22 @@ class EBLMainWindow(QMainWindow):
         ]
 
         self.executable_path = ""
-        self.working_dir = str(project_root / "build" / "bin")
+        # Outputs always go to the repo's output/ dir regardless of which
+        # build directory the binary was found in
+        self.working_dir = str(project_root / "output")
+        self.file_manager.working_dir = Path(self.working_dir)
 
         for path in possible_paths:
             if path.exists():
                 self.executable_path = str(path)
-                self.working_dir = str(path.parent)
-                self.file_manager.working_dir = Path(self.working_dir)
                 self.log_output(f"Found executable: {self.executable_path}")
                 break
 
         if not self.executable_path:
-            self.log_output(f"Warning: Executable not found. Use File > Select Executable")
+            self.log_output("Warning: ebl_sim executable not found - build it first:")
+            self.log_output("  mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j8")
+            self.log_output("or use File > Select Executable if it is built elsewhere.")
+            self.status_label.setText("ebl_sim not found - build it or use File > Select Executable")
 
     # Enhanced material helper methods (keeping existing implementation)
     def parse_composition(self, composition_str):
@@ -3483,13 +3498,16 @@ class EBLMainWindow(QMainWindow):
         if not composition_str.strip():
             return elements
 
-        try:
-            for part in composition_str.split(','):
-                if ':' in part:
-                    element, ratio = part.strip().split(':')
-                    elements[element.strip()] = float(ratio.strip())
-        except ValueError:
-            pass
+        for part in composition_str.split(','):
+            if ':' not in part:
+                continue
+            try:
+                element, ratio = part.strip().split(':')
+                elements[element.strip()] = float(ratio.strip())
+            except ValueError:
+                # Report the bad token instead of silently returning {} -
+                # callers show their own "invalid composition" warnings
+                self.log_output(f"[WARNING] Malformed composition token ignored: '{part.strip()}'")
 
         return elements
 
@@ -3751,9 +3769,9 @@ class EBLMainWindow(QMainWindow):
                         success_msg.setText(f"PSF successfully converted to BEAMER format!")
                         success_msg.setInformativeText(
                             f"File: {Path(file_path).name}\n\n"
-                            f"Proximity Effect Parameters:\n"
-                            f"α (forward scatter): {alpha:.3f}\n"
-                            f"β (backscatter): {beta:.3f}\n\n"
+                            f"Energy split (not the Gaussian α/β ranges):\n"
+                            f"forward fraction (r < 1 μm): {alpha:.3f}\n"
+                            f"backscatter fraction (r > 1 μm): {beta:.3f}\n\n"
                             f"Data points: {len(output_radius)}\n"
                             f"Radius range: {output_radius[0]:.3f} - {output_radius[-1]:.3f} μm"
                         )
@@ -4151,6 +4169,10 @@ class EBLMainWindow(QMainWindow):
             else:
                 num_events = self.events_spin.value()
 
+            # Remembered so run_simulation can size the progress bar and tell
+            # the worker the exact event count (pattern mode != events_spin)
+            self.current_num_events = num_events
+
             with open(macro_path, 'w') as f:
                 f.write("# EBL Simulation Macro - Generated by Enhanced GUI v3.1\n")
                 f.write(f"# {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
@@ -4396,7 +4418,11 @@ class EBLMainWindow(QMainWindow):
             if not Path(self.executable_path).exists():
                 QMessageBox.critical(self, "Error",
                                      f"Executable not found: {self.executable_path}\n\n"
-                                     f"Please select the correct executable using File > Select Executable")
+                                     f"Build it from the project root:\n"
+                                     f"  mkdir -p build && cd build\n"
+                                     f"  cmake .. -DCMAKE_BUILD_TYPE=Release\n"
+                                     f"  make -j8\n\n"
+                                     f"Or select an existing binary via File > Select Executable")
                 return
 
         # Setup simulation UI state
@@ -4405,7 +4431,8 @@ class EBLMainWindow(QMainWindow):
         self.run_button.set_working(True, "Running...")
         self.stop_button.setEnabled(True)
         self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, self.events_spin.value())
+        total_events = getattr(self, 'current_num_events', None) or self.events_spin.value()
+        self.progress_bar.setRange(0, total_events)
         self.progress_bar.setValue(0)
 
         # Switch to output tab
@@ -4413,7 +4440,8 @@ class EBLMainWindow(QMainWindow):
 
         # Create worker thread
         self.simulation_thread = QThread()
-        self.simulation_worker = SimulationWorker(self.executable_path, macro_path, self.working_dir, self.geant4_path)
+        self.simulation_worker = SimulationWorker(self.executable_path, macro_path, self.working_dir,
+                                                  self.geant4_path, expected_events=total_events)
         self.simulation_worker.moveToThread(self.simulation_thread)
 
         # Connect signals with UniqueConnection to prevent duplicates
@@ -4466,18 +4494,27 @@ class EBLMainWindow(QMainWindow):
             # Enhanced success handling with better file detection
             available_files = []
 
+            empty_files = []
             if hasattr(self, 'current_output_files'):
-                # Check generated files
+                # Check generated files (0-byte files count as failures, not results)
                 for file_type, file_path in self.current_output_files.items():
                     if Path(file_path).exists():
                         file_size = Path(file_path).stat().st_size
-                        available_files.append(f"{file_type.upper()}: {Path(file_path).name} ({file_size//1024} KB)")
+                        if file_size == 0:
+                            empty_files.append(Path(file_path).name)
+                        else:
+                            available_files.append(f"{file_type.upper()}: {Path(file_path).name} ({file_size//1024} KB)")
+
+            if empty_files:
+                self.log_output(f"[WARNING] Empty output files: {', '.join(empty_files)}")
 
             if available_files:
                 reply = QMessageBox.question(
                     self, "Simulation Complete!",
                     f"Simulation completed successfully!\n\n"
+                    f"Output directory:\n{self.working_dir}\n\n"
                     f"Generated files:\n• " + "\n• ".join(available_files) +
+                    (f"\n\nWarning - empty files: {', '.join(empty_files)}" if empty_files else "") +
                     f"\n\nWould you like to automatically load and visualize the results?",
                     QMessageBox.Yes | QMessageBox.No
                 )
@@ -4486,8 +4523,9 @@ class EBLMainWindow(QMainWindow):
                     self._auto_load_simulation_results()
             else:
                 QMessageBox.information(self, "Simulation Complete",
-                                        "Simulation completed, but no output files were detected.\n"
-                                        "Check the log for any errors or warnings.")
+                                        f"Simulation completed, but no usable output files were detected in:\n"
+                                        f"{self.working_dir}\n\n"
+                                        "Check the Output Log tab for errors or warnings.")
         else:
             QMessageBox.warning(self, "Simulation Failed",
                                 f"Simulation did not complete successfully.\n\n{message}")
@@ -4550,6 +4588,16 @@ class EBLMainWindow(QMainWindow):
                     self.plot_widget.update_comparison_list()
 
                     self.status_label.setText("1D PSF data loaded successfully")
+                else:
+                    self.log_output(f"[WARNING] No PSF data rows found in {Path(file_path).name}")
+                    QMessageBox.warning(self, "Empty PSF Data",
+                                        f"The PSF file contains no data rows:\n{file_path}\n\n"
+                                        "The simulation may have recorded no energy deposits. "
+                                        "Check the Output Log tab.")
+            else:
+                self.log_output(f"[WARNING] Could not load PSF CSV: {message}")
+                QMessageBox.warning(self, "PSF Load Failed",
+                                    f"Could not load PSF data:\n{file_path}\n\n{message}")
 
         except Exception as e:
             self.log_output(f"Error auto-loading 1D data: {str(e)}")
@@ -4727,8 +4775,8 @@ class EBLMainWindow(QMainWindow):
 
         if file_path:
             self.executable_path = file_path
-            self.working_dir = str(Path(file_path).parent)
-            self.file_manager.working_dir = Path(self.working_dir)
+            # working_dir (output location) intentionally unchanged: outputs
+            # stay in the repo's output/ dir, not the binary's directory
             self.log_output(f"Selected executable: {file_path}")
 
     def load_configuration(self):
@@ -5011,8 +5059,7 @@ study parameter dependencies (energy, material, thickness).</i></p>
         exe_path = self.settings.value("executable_path")
         if exe_path and Path(exe_path).exists():
             self.executable_path = exe_path
-            self.working_dir = str(Path(exe_path).parent)
-            self.file_manager.working_dir = Path(self.working_dir)
+            # working_dir (output location) intentionally left at output/
 
     def save_settings(self):
         """Save application settings"""
